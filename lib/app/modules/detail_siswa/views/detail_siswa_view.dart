@@ -77,11 +77,11 @@ class DetailSiswaView extends GetView<DetailSiswaController> {
                                     InfoDetailSiswa(
                                         data: data,
                                         icon:
-                                            data['jenisKelamin'] == "Perempuan"
+                                            data['jeniskelamin'] == "Perempuan"
                                                 ? Icon(Icons.woman)
                                                 : Icon(Icons.man),
-                                        isi: 'jenisKelamin'.isNotEmpty
-                                            ? "jenisKelamin"
+                                        isi: 'jeniskelamin'.isNotEmpty
+                                            ? "jeniskelamin"
                                             : "-"),
                                     InfoDetailSiswa(
                                         data: data,

@@ -114,6 +114,8 @@ class KelompokHalaqohView extends GetView<KelompokHalaqohController> {
               ],
             ),
 
+            // SizedBox(height: 20),
+
             FutureBuilder<List<String>>(
               future: controller.getDataKelasYangAda(),
               builder: (context, snapshotkelas) {
@@ -121,168 +123,171 @@ class KelompokHalaqohView extends GetView<KelompokHalaqohController> {
                   return CircularProgressIndicator();
                 } else if (snapshotkelas.hasData) {
                   List<String> kelasAjarGuru = snapshotkelas.data!;
-                  return SingleChildScrollView(
-                    child: Row(
-                      children:
-                          kelasAjarGuru.map((k) {
-                            return GestureDetector(
-                              onTap: () {
-                                controller.kelasSiswaC.text = k;
-                                Get.bottomSheet(
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 30,
-                                      vertical: 30,
-                                    ),
-                                    color: Colors.white,
-                                    child: Center(
-                                      child: StreamBuilder<
-                                        QuerySnapshot<Map<String, dynamic>>
-                                      >(
-                                        stream:
-                                            controller.getDataSiswaStreamBaru(),
-                                        builder: (context, snapshotsiswa) {
-                                          if (snapshotsiswa.connectionState ==
-                                              ConnectionState.waiting) {
-                                            return CircularProgressIndicator();
-                                          }
-                                          if (snapshotsiswa.data?.docs.length ==
-                                                  0 ||
-                                              snapshotsiswa.data == null) {
-                                            return Center(
-                                              child: Text(
-                                                'Siswa sudah terpilih semua',
-                                              ),
-                                            );
-                                          } else if (snapshotsiswa.hasData) {
-                                            return ListView.builder(
-                                              itemCount:
-                                                  snapshotsiswa
-                                                      .data!
-                                                      .docs
-                                                      .length,
-                                              itemBuilder: (context, index) {
-                                                String namaSiswa =
-                                                    snapshotsiswa
-                                                        .data!
-                                                        .docs[index]
-                                                        .data()['namasiswa'] ??
-                                                    'No Name';
-                                                String nisnSiswa =
-                                                    snapshotsiswa
-                                                        .data!
-                                                        .docs[index]
-                                                        .data()['nisn'] ??
-                                                    'No NISN';
-                                                // ignore: prefer_is_empty
-                                                if (snapshotsiswa
-                                                            .data!
-                                                            .docs
-                                                            .length ==
-                                                        0 ||
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 20, left: 20),
+                    child: SingleChildScrollView(
+                      child: Row(
+                        children:
+                            kelasAjarGuru.map((k) {
+                              return GestureDetector(
+                                onTap: () {
+                                  controller.kelasSiswaC.text = k;
+                                  Get.bottomSheet(
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 30,
+                                        vertical: 30,
+                                      ),
+                                      color: Colors.white,
+                                      child: Center(
+                                        child: StreamBuilder<
+                                          QuerySnapshot<Map<String, dynamic>>
+                                        >(
+                                          stream:
+                                              controller.getDataSiswaStreamBaru(),
+                                          builder: (context, snapshotsiswa) {
+                                            if (snapshotsiswa.connectionState ==
+                                                ConnectionState.waiting) {
+                                              return CircularProgressIndicator();
+                                            }
+                                            // ignore: prefer_is_empty
+                                            if (snapshotsiswa.data?.docs.length == 0 ||
+                                                snapshotsiswa.data == null) {
+                                              return Center(
+                                                child: Text(
+                                                  'Siswa sudah terpilih semua',
+                                                ),
+                                              );
+                                            } else if (snapshotsiswa.hasData) {
+                                              return ListView.builder(
+                                                itemCount:
                                                     snapshotsiswa
                                                         .data!
                                                         .docs
-                                                        .isEmpty) {
-                                                  return Center(
-                                                    child: Text(
-                                                      'Semua siswa sudah terpilih',
-                                                    ),
-                                                  );
-                                                } else {
-                                                  return ListTile(
-                                                    onTap: () {
-                                                      controller
-                                                          .simpanSiswaKelompok(
-                                                            namaSiswa,
-                                                            nisnSiswa,
-                                                          );
-                                                      // tampilkan siswa yang sudah terpilih
-                                                      controller.tampilkan();
-                                                      controller
-                                                          .refreshTampilan();
-                                                    },
-                                                    title: Text(
+                                                        .length,
+                                                itemBuilder: (context, index) {
+                                                  String namaSiswa =
                                                       snapshotsiswa
                                                           .data!
                                                           .docs[index]
-                                                          .data()['namasiswa'],
-                                                    ),
-                                                    subtitle: Text(
+                                                          .data()['namasiswa'] ??
+                                                      'No Name';
+                                                  String nisnSiswa =
                                                       snapshotsiswa
                                                           .data!
                                                           .docs[index]
-                                                          .data()['namakelas'],
-                                                    ),
-                                                    leading: CircleAvatar(
+                                                          .data()['nisn'] ??
+                                                      'No NISN';
+                                                  // ignore: prefer_is_empty
+                                                  if (snapshotsiswa
+                                                              .data!
+                                                              .docs
+                                                              .length ==
+                                                          0 ||
+                                                      snapshotsiswa
+                                                          .data!
+                                                          .docs
+                                                          .isEmpty) {
+                                                    return Center(
                                                       child: Text(
+                                                        'Semua siswa sudah terpilih',
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    return ListTile(
+                                                      onTap: () {
+                                                        controller
+                                                            .simpanSiswaKelompok(
+                                                              namaSiswa,
+                                                              nisnSiswa,
+                                                            );
+                                                        // tampilkan siswa yang sudah terpilih
+                                                        controller.tampilkan();
+                                                        controller
+                                                            .refreshTampilan();
+                                                      },
+                                                      title: Text(
                                                         snapshotsiswa
                                                             .data!
                                                             .docs[index]
-                                                            .data()['namasiswa'][0],
+                                                            .data()['namasiswa'],
                                                       ),
-                                                    ),
-                                                    trailing: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: <Widget>[
-                                                        IconButton(
-                                                          tooltip: 'Simpan',
-                                                          icon: const Icon(
-                                                            Icons.save_outlined,
-                                                          ),
-                                                          onPressed: () {
-                                                            controller
-                                                                .simpanSiswaKelompok(
-                                                                  namaSiswa,
-                                                                  nisnSiswa,
-                                                                );
-                                                            // tampilkan siswa yang sudah terpilih
-                                                            controller
-                                                                .tampilkan();
-                                                            controller
-                                                                .refreshTampilan();
-                                                            // print('simpan siswa');
-                                                          },
+                                                      subtitle: Text(
+                                                        snapshotsiswa
+                                                            .data!
+                                                            .docs[index]
+                                                            .data()['namakelas'],
+                                                      ),
+                                                      leading: CircleAvatar(
+                                                        child: Text(
+                                                          snapshotsiswa
+                                                              .data!
+                                                              .docs[index]
+                                                              .data()['namasiswa'][0],
                                                         ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                            );
-                                          } else {
-                                            return Center(
-                                              child: Text('No data available'),
-                                            );
-                                          }
-                                        },
+                                                      ),
+                                                      trailing: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: <Widget>[
+                                                          IconButton(
+                                                            tooltip: 'Simpan',
+                                                            icon: const Icon(
+                                                              Icons.save_outlined,
+                                                            ),
+                                                            onPressed: () {
+                                                              controller
+                                                                  .simpanSiswaKelompok(
+                                                                    namaSiswa,
+                                                                    nisnSiswa,
+                                                                  );
+                                                              // tampilkan siswa yang sudah terpilih
+                                                              controller
+                                                                  .tampilkan();
+                                                              controller
+                                                                  .refreshTampilan();
+                                                              // print('simpan siswa');
+                                                            },
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              );
+                                            } else {
+                                              return Center(
+                                                child: Text('No data available'),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.only(left: 15),
+                                  height: 50,
+                                  width: 45,
+                                  decoration: BoxDecoration(
+                                    color: Colors.indigo,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      k,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                              child: Container(
-                                margin: EdgeInsets.only(left: 15),
-                                height: 50,
-                                width: 45,
-                                decoration: BoxDecoration(
-                                  color: Colors.indigo,
-                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    k,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                              );
+                            }).toList(),
+                      ),
                     ),
                   );
                 } else {
@@ -291,7 +296,7 @@ class KelompokHalaqohView extends GetView<KelompokHalaqohController> {
               },
             ),
 
-            SizedBox(height: 30),
+            SizedBox(height: 20),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),

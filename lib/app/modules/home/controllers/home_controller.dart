@@ -175,9 +175,9 @@ class HomeController extends GetxController {
 
 
   Future<List<String>> getDataKelompok() async {
-    // String tahunajaranya = await getTahunAjaranTerakhir();
-    // String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    // String idSemester = 'Semester I';
+    String tahunajaranya = await getTahunAjaranTerakhir();
+    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+    String idSemester = 'Semester I';
 
     List<String> kelasList = [];
     await firestore
@@ -186,9 +186,9 @@ class HomeController extends GetxController {
         .collection('pegawai')
         .doc(idUser)
         .collection('tahunajarankelompok')
-        .doc("idTahunAjaran")
+        .doc(idTahunAjaran)
         .collection('semester')
-        .doc("idSemester")
+        .doc(idSemester)
         .collection('kelompokmengaji')
         .get()
         .then((querySnapshot) {
@@ -202,5 +202,13 @@ class HomeController extends GetxController {
     // return [];
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getProfileBaru() async* {
+    yield* firestore
+        .collection('Sekolah')
+        .doc(idSekolah)
+        .collection('pegawai')
+        .doc(idUser)
+        .snapshots();
+  }
 
 }

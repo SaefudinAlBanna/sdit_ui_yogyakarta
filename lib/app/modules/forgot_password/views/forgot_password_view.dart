@@ -10,13 +10,32 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ForgotPasswordView'),
+        title: const Text('FORGOT PASSWORD'),
         centerTitle: true,
       ),
-      body: const Center(
-        child: Text(
-          'ForgotPasswordView is working',
-          style: TextStyle(fontSize: 20),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: ListView(
+          children: [
+            TextField(
+              autocorrect: false,
+              controller: controller.emailC,
+              decoration: InputDecoration(
+                icon: Icon(Icons.email_outlined),
+                border: OutlineInputBorder(),
+                labelText: 'Email',
+              ),
+            ),
+            SizedBox(height: 20),
+            Obx(() => ElevatedButton(
+                  onPressed: () async {
+                    if (controller.isLoading.isFalse) {
+                      await controller.sendEmail();
+                    }
+                  },
+                  child: Text(controller.isLoading.isFalse ? 'SEND RESET PASSWORD' : 'LOADING...'),
+                )),
+          ],
         ),
       ),
     );
