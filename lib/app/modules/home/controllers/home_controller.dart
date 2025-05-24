@@ -13,6 +13,7 @@ class HomeController extends GetxController {
 
   TextEditingController kelasSiswaC = TextEditingController();
   TextEditingController tahunAjaranBaruC = TextEditingController();
+  TextEditingController mapelC = TextEditingController();
 
   FirebaseAuth auth = FirebaseAuth.instance;
   FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -117,16 +118,15 @@ class HomeController extends GetxController {
   Future<List<String>> getDataFase() async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String idSemester = 'Semester I';  // nanti ini diambil dari database
+    // String idSemester = 'Semester I';  // nanti ini diambil dari database
 
     List<String> faseList = [];
+
     await firestore
         .collection('Sekolah')
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(idSemester)
         .collection('kelompokmengaji')
         .get()
         .then((querySnapshot) {
@@ -138,8 +138,8 @@ class HomeController extends GetxController {
   }
 
   Future<List<String>> getDataKelasYangDiajar() async {
-    // String tahunajaranya = await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
-    // String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+    String tahunajaranya = await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
+    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
     List<String> kelasList = [];
     await firestore
         .collection('Sekolah')
@@ -147,7 +147,7 @@ class HomeController extends GetxController {
         .collection('pegawai')
         .doc(idUser)
         .collection('tahunajaran')
-        .doc("idTahunAjaran") // tahun ajaran yang d kelas pegawai
+        .doc(idTahunAjaran) // tahun ajaran yang d kelas pegawai
         .collection('kelasnya')
         .get()
         .then((querySnapshot) {
@@ -159,11 +159,16 @@ class HomeController extends GetxController {
   }
 
   Future<List<String>> getDataKelas() async {
+    String tahunajaranya = await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
+    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+
     List<String> kelasList = [];
     await firestore
         .collection('Sekolah')
         .doc(idSekolah)
-        .collection('kelas')
+        .collection('tahunajaran')
+        .doc(idTahunAjaran)
+        .collection('kelasaktif')
         .get()
         .then((querySnapshot) {
       for (var docSnapshot in querySnapshot.docs) {
@@ -174,10 +179,35 @@ class HomeController extends GetxController {
   }
 
 
+  Future<List<String>> getDataMapel(String kelas) async {
+    String tahunajaranya = await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
+    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+    
+    List<String> mapelList = [];
+    await firestore
+        .collection('Sekolah')
+        .doc(idSekolah)
+        .collection('pegawai')
+        .doc(idUser)
+        .collection('tahunajaran')
+        .doc(idTahunAjaran) // tahun ajaran yang d kelas pegawai
+        .collection('kelasnya')
+        .doc(kelas)
+        .collection('matapelajaran')
+        .get()
+        .then((querySnapshot) {
+      for (var docSnapshot in querySnapshot.docs) {
+        mapelList.add(docSnapshot.id);
+      }
+    });
+    return mapelList;
+  }
+
+
   Future<List<String>> getDataKelompok() async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String idSemester = 'Semester I';
+    // String idSemester = 'Semester I';
 
     List<String> kelasList = [];
     await firestore
@@ -187,8 +217,8 @@ class HomeController extends GetxController {
         .doc(idUser)
         .collection('tahunajarankelompok')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(idSemester)
+        // .collection('semester')
+        // .doc(idSemester)
         .collection('kelompokmengaji')
         .get()
         .then((querySnapshot) {

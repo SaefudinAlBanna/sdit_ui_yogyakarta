@@ -10,7 +10,7 @@ class DaftarNilaiController extends GetxController {
 
   String idSekolah = '20404148';
 
-   Future<String> getTahunAjaranTerakhir() async {
+  Future<String> getTahunAjaranTerakhir() async {
     CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
         .collection('Sekolah')
         .doc(idSekolah)
@@ -24,19 +24,15 @@ class DaftarNilaiController extends GetxController {
     return tahunAjaranTerakhir;
   }
 
-
   Future<QuerySnapshot<Map<String, dynamic>>> getDataNilai() async {
-
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    // String kelasnya = data.toString();
-    return await firestore
+
+    CollectionReference<Map<String, dynamic>> colSemester = firestore
         .collection('Sekolah')
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(dataNilai['namasemester'])
         .collection('kelompokmengaji')
         .doc(dataNilai['fase'])
         .collection('pengampu')
@@ -45,10 +41,34 @@ class DaftarNilaiController extends GetxController {
         .doc(dataNilai['tempatmengaji'])
         .collection('daftarsiswa')
         .doc(dataNilai['nisn'])
-        .collection('nilai')
-        .orderBy('tanggalinput', descending: true)
-        .get();
+        .collection('semester');
+
+    QuerySnapshot<Map<String, dynamic>> snapSemester = await colSemester.get();
+    if (snapSemester.docs.isNotEmpty) {
+      Map<String, dynamic> dataSemester = snapSemester.docs.first.data();
+      String namaSemester = dataSemester['namasemester'];
+
+      // String kelasnya = data.toString();
+      return await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(dataNilai['fase'])
+          .collection('pengampu')
+          .doc(dataNilai['namapengampu'])
+          .collection('tempat')
+          .doc(dataNilai['tempatmengaji'])
+          .collection('daftarsiswa')
+          .doc(dataNilai['nisn'])
+          .collection('semester')
+          .doc(namaSemester)
+          .collection('nilai')
+          .orderBy('tanggalinput', descending: true)
+          .get();
+    } else {
+      throw Exception('Semester data not found');
+    }
   }
-
-
 }

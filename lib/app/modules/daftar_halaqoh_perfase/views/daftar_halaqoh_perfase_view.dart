@@ -35,6 +35,7 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
                   itemBuilder: (context, index) {
                     var doc = snapshotfase.data!.docs[index];
                     return ListTile(
+                      onTap: () => Get.toNamed(Routes.DAFTAR_HALAQOH, arguments: doc),
                       leading: Container(
                         height: 50,
                         width: 50,

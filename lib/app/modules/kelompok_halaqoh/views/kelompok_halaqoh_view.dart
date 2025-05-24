@@ -14,6 +14,7 @@ class KelompokHalaqohView extends GetView<KelompokHalaqohController> {
   @override
   Widget build(BuildContext context) {
     var datacc = dataHalaqoh[0];
+
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         elevation: 0.0,
@@ -53,14 +54,14 @@ class KelompokHalaqohView extends GetView<KelompokHalaqohController> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          "${datacc['namasemester']}",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        // Text(
+                        //   "${datacc['namasemester']}",
+                        //   style: TextStyle(
+                        //     fontSize: 16,
+                        //     color: Colors.white,
+                        //     fontWeight: FontWeight.bold,
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),

@@ -271,17 +271,116 @@ class HomePage extends GetView<HomeController> {
                                                   child: Row(
                                                     children:
                                                         kelasAjarGuru.map((k) {
+                                                          // var kelas = k;
                                                           return SingleChildScrollView(
                                                             scrollDirection:
                                                                 Axis.horizontal,
                                                             child: GestureDetector(
                                                               onTap: () {
                                                                 Get.back();
-                                                                Get.toNamed(
-                                                                  Routes
-                                                                      .DAFTAR_KELAS,
-                                                                  arguments: k,
-                                                                );
+                                                                Get.toNamed(Routes.DAFTAR_KELAS,arguments: k);
+
+                                                                // Get.defaultDialog(
+                                                                //   onCancel:
+                                                                //       () =>
+                                                                //           Get.back(),
+                                                                //   title:
+                                                                //       'Guru mapel kelas',
+                                                                //   middleText:
+                                                                //       'Pilih Mapel',
+                                                                //   content: Column(
+                                                                //     children: [
+                                                                //       Column(
+                                                                //         crossAxisAlignment:
+                                                                //             CrossAxisAlignment.start,
+                                                                //         children: [
+                                                                //           Text(
+                                                                //             'Masukan Mapel',
+                                                                //             style: TextStyle(
+                                                                //               fontSize:
+                                                                //                   18,
+                                                                //               fontWeight:
+                                                                //                   FontWeight.bold,
+                                                                //             ),
+                                                                //           ),
+                                                                //           SizedBox(
+                                                                //             height:
+                                                                //                 10,
+                                                                //           ),
+                                                                //           DropdownSearch<
+                                                                //             String
+                                                                //           >(
+                                                                //             decoratorProps: DropDownDecoratorProps(
+                                                                //               decoration: InputDecoration(
+                                                                //                 border:
+                                                                //                     OutlineInputBorder(),
+                                                                //                 filled:
+                                                                //                     true,
+                                                                //                 prefixText:
+                                                                //                     'Mapel : ',
+                                                                //               ),
+                                                                //             ),
+                                                                //             selectedItem:
+                                                                //                 controller.mapelC.text,
+                                                                //             items:
+                                                                //                 (f, cs,) => controller.getDataMapel(kelas),
+                                                                //             onChanged: (
+                                                                //               String?
+                                                                //               value,
+                                                                //             ) {
+                                                                //               controller.mapelC.text = value!;
+                                                                //             },
+                                                                //             popupProps: PopupProps.menu(
+                                                                //               // disabledItemFn: (item) => item == '1A',
+                                                                //               fit:
+                                                                //                   FlexFit.tight,
+                                                                //             ),
+                                                                //           ),
+                                                                //           SizedBox(
+                                                                //             height:
+                                                                //                 20,
+                                                                //           ),
+                                                                //           Center(
+                                                                //             child: ElevatedButton(
+                                                                //               onPressed: () {
+                                                                //                 // ignore: unnecessary_null_comparison
+                                                                //                 if (controller.mapelC.text == null ||
+                                                                //                     // ignore: unnecessary_null_comparison
+                                                                //                     controller.mapelC.text.isEmpty) {
+                                                                //                   Get.snackbar(
+                                                                //                     'Peringatan',
+                                                                //                     'Mapel belum dipilih',
+                                                                //                   );
+                                                                //                 } else {
+                                                                //                   Get.back();
+                                                                //                   print("kelas = $kelas");
+                                                                //                   Get.toNamed(
+                                                                //                     Routes.MAPEL_SISWA, arguments: kelas,
+                                                                //                   );
+                                                                //                 }
+                                                                //               },
+                                                                //               style: ElevatedButton.styleFrom(
+                                                                //                 padding: EdgeInsets.symmetric(
+                                                                //                   horizontal:
+                                                                //                       40,
+                                                                //                   vertical:
+                                                                //                       15,
+                                                                //                 ),
+                                                                //                 textStyle: TextStyle(
+                                                                //                   fontSize:
+                                                                //                       16,
+                                                                //                 ),
+                                                                //               ),
+                                                                //               child: Text(
+                                                                //                 'Daftar Matapelajaran',
+                                                                //               ),
+                                                                //             ),
+                                                                //           ),
+                                                                //         ],
+                                                                //       ),
+                                                                //     ],
+                                                                //   ),
+                                                                // );
                                                               },
                                                               child: Container(
                                                                 margin:
@@ -361,6 +460,7 @@ class HomePage extends GetView<HomeController> {
                                                       ConnectionState.waiting) {
                                                     return CircularProgressIndicator();
                                                   } else if (snapshot.hasData) {
+                                                    // var data = snapshot.data;
                                                     List<String>
                                                     kelompokPengampu =
                                                         snapshot.data
@@ -601,7 +701,7 @@ class HomePage extends GetView<HomeController> {
                                     height: 150,
                                     viewportFraction: 1.0,
                                     aspectRatio: 2 / 1,
-                                    // autoPlay: true,
+                                    autoPlay: true,
                                     autoPlayInterval: Duration(seconds: 5),
                                     // autoPlayAnimationDuration: Duration(milliseconds: 800),
                                     enlargeCenterPage: true,
@@ -656,9 +756,13 @@ class HomePage extends GetView<HomeController> {
                                                                 .waiting) {
                                                           return CircularProgressIndicator();
                                                         } else if (snapshot
-                                                                .data ==
-                                                            // ignore: prefer_is_empty
-                                                            null || snapshot.data?.length == 0) {
+                                                                    .data ==
+                                                                // ignore: prefer_is_empty
+                                                                null ||
+                                                            snapshot
+                                                                    .data
+                                                                    ?.length ==
+                                                                0) {
                                                           return Center(
                                                             child: SizedBox(
                                                               height: 100,
@@ -681,13 +785,17 @@ class HomePage extends GetView<HomeController> {
                                                                 Axis.horizontal,
                                                             child: Row(
                                                               children:
-                                                                  kelompokPengampu.map((p) {
+                                                                  kelompokPengampu.map((
+                                                                    p,
+                                                                  ) {
                                                                     return GestureDetector(
                                                                       onTap: () {
                                                                         Get.back();
                                                                         Get.toNamed(
-                                                                          Routes.DAFTAR_HALAQOH_PERFASE,
-                                                                          arguments: p,
+                                                                          Routes
+                                                                              .DAFTAR_HALAQOH_PERFASE,
+                                                                          arguments:
+                                                                              p,
                                                                         );
                                                                       },
                                                                       child: Container(
@@ -1017,7 +1125,10 @@ class HomePage extends GetView<HomeController> {
                                                                   .text
                                                                   .isEmpty ||
                                                               // ignore: unnecessary_null_comparison
-                                                              controller.kelasSiswaC.text == null) {
+                                                              controller
+                                                                      .kelasSiswaC
+                                                                      .text ==
+                                                                  null) {
                                                             Get.snackbar(
                                                               'Peringatan',
                                                               'Kelas belum dipilih',
@@ -1060,12 +1171,110 @@ class HomePage extends GetView<HomeController> {
                                       MenuManagement(
                                         title: 'Update Kelas',
                                         icon: Icon(Icons.account_tree_outlined),
-                                        onTap:
-                                            () => Get.defaultDialog(
-                                              title: 'Update Kelas',
-                                              middleText:
-                                                  'Fitur dalam pengembangan',
+                                        onTap: () {
+                                          Get.defaultDialog(
+                                            onCancel: () => Get.back(),
+                                            title: 'Guru mapel kelas',
+                                            middleText:
+                                                'Silahkan masukan kelas',
+                                            content: Column(
+                                              children: [
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Masukan Kelas',
+                                                      style: TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 10),
+                                                    DropdownSearch<String>(
+                                                      decoratorProps:
+                                                          DropDownDecoratorProps(
+                                                            decoration:
+                                                                InputDecoration(
+                                                                  border:
+                                                                      OutlineInputBorder(),
+                                                                  filled: true,
+                                                                  prefixText:
+                                                                      'kelas : ',
+                                                                ),
+                                                          ),
+                                                      selectedItem:
+                                                          controller
+                                                              .kelasSiswaC
+                                                              .text,
+                                                      items:
+                                                          (f, cs) =>
+                                                              controller
+                                                                  .getDataKelas(),
+                                                      onChanged: (
+                                                        String? value,
+                                                      ) {
+                                                        controller
+                                                            .kelasSiswaC
+                                                            .text = value!;
+                                                      },
+                                                      popupProps: PopupProps.menu(
+                                                        // disabledItemFn: (item) => item == '1A',
+                                                        fit: FlexFit.tight,
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 20),
+                                                    Center(
+                                                      child: ElevatedButton(
+                                                        onPressed: () {
+                                                          // ignore: unnecessary_null_comparison
+                                                          if (controller
+                                                                  .kelasSiswaC
+                                                                  .text
+                                                                  .isEmpty ||
+                                                              // ignore: unnecessary_null_comparison
+                                                              controller
+                                                                      .kelasSiswaC
+                                                                      .text ==
+                                                                  null) {
+                                                            Get.snackbar(
+                                                              'Peringatan',
+                                                              'Kelas belum dipilih',
+                                                            );
+                                                          } else {
+                                                            Get.back();
+                                                            Get.toNamed(
+                                                              Routes
+                                                                  .PEMBERIAN_GURU_MAPEL,
+                                                              arguments:
+                                                                  controller
+                                                                      .kelasSiswaC
+                                                                      .text,
+                                                            );
+                                                          }
+                                                        },
+                                                        style: ElevatedButton.styleFrom(
+                                                          padding:
+                                                              EdgeInsets.symmetric(
+                                                                horizontal: 40,
+                                                                vertical: 15,
+                                                              ),
+                                                          textStyle: TextStyle(
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          'Daftar Matapelajaran',
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
+                                          );
+                                        },
                                         // Get.toNamed(Routes.UPDATE_KELAS_TAHUN_AJARAN),
                                         colors: Colors.teal.shade700,
                                       ),

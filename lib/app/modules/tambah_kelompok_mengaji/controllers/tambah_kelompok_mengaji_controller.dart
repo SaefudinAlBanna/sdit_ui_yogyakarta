@@ -84,17 +84,12 @@ class TambahKelompokMengajiController extends GetxController {
 
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String semesterNya =
-        (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
-
-    // print('idSekolah = $idSekolah');
+    
     return await firestore
         .collection('Sekolah')
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesterNya)
         .collection('kelompokmengaji')
         .doc(faseC.text)
         .collection('pengampu')
@@ -138,8 +133,8 @@ class TambahKelompokMengajiController extends GetxController {
   Future<void> isiTahunAjaranKelompokPadaPegawai() async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String semesterNya =
-        (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
+    // String semesterNya =
+    //     (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
     QuerySnapshot<Map<String, dynamic>> querySnapshotGuru = await firestore
         .collection('Sekolah')
         .doc(idSekolah)
@@ -166,10 +161,8 @@ class TambahKelompokMengajiController extends GetxController {
           .doc(idPengampu)
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(semesterNya)
           .set({
-        'namasemester': semesterNya,
+        // 'namasemester': semesterNya,
         'tahunajaran': tahunajaranya,
         'emailpenginput': emailAdmin,
         'idpenginput': idUser,
@@ -183,8 +176,8 @@ class TambahKelompokMengajiController extends GetxController {
           .doc(idPengampu)
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(semesterNya)
+          // .collection('semester')
+          // .doc(semesterNya)
           .collection('kelompokmengaji')
           .doc(faseC.text)
           .set({
@@ -192,7 +185,7 @@ class TambahKelompokMengajiController extends GetxController {
         'tempatmengaji': tempatC.text,
         'namapengampu': pengampuC.text,
         'idpengampu': idPengampu,
-        'namasemester': semesterNya,
+        // 'namasemester': semesterNya,
         'tahunajaran': tahunajaranya,
         'emailpenginput': emailAdmin,
         'idpenginput': idUser,
@@ -206,8 +199,8 @@ class TambahKelompokMengajiController extends GetxController {
           .doc(idPengampu)
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(semesterNya)
+          // .collection('semester')
+          // .doc(semesterNya)
           .collection('kelompokmengaji')
           .doc(faseC.text)
           .collection('tempat')
@@ -217,7 +210,7 @@ class TambahKelompokMengajiController extends GetxController {
         'tempatmengaji': tempatC.text,
         'namapengampu': pengampuC.text,
         'idpengampu': idPengampu,
-        'namasemester': semesterNya,
+        // 'namasemester': semesterNya,
         'tahunajaran': tahunajaranya,
         'emailpenginput': emailAdmin,
         'idpenginput': idUser,
@@ -231,8 +224,8 @@ class TambahKelompokMengajiController extends GetxController {
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
     // String idKelompokmengaji = "${pengampuC.text} ${tempatC.text}";
 
-    String semesterNya =
-        (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
+    // String semesterNya =
+    //     (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
 
     QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore
         .collection('Sekolah')
@@ -249,8 +242,8 @@ class TambahKelompokMengajiController extends GetxController {
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesterNya)
+        // .collection('semester')
+        // .doc(semesterNya)
         .collection('kelompokmengaji')
         .doc(faseC.text)
         .collection('pengampu')
@@ -262,7 +255,7 @@ class TambahKelompokMengajiController extends GetxController {
       'tempatmengaji': tempatC.text,
       'tahunajaran': tahunajaranya,
       'kelompokmengaji': pengampuC.text,
-      'namasemester': semesterNya,
+      // 'namasemester': semesterNya,
       'namapengampu': pengampuC.text,
       'idpengampu': idPengampu,
       'emailpenginput': emailAdmin,
@@ -275,15 +268,15 @@ class TambahKelompokMengajiController extends GetxController {
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesterNya)
+        // .collection('semester')
+        // .doc(semesterNya)
         .collection('kelompokmengaji')
         .doc(faseC.text)
         .collection('pengampu')
         .doc(pengampuC.text)
         .set({
       'fase': faseC.text,
-      'namasemester': semesterNya,
+      // 'namasemester': semesterNya,
       'kelompokmengaji': pengampuC.text,
       'idpengampu': idPengampu,
       'namapengampu': pengampuC.text,
@@ -295,43 +288,47 @@ class TambahKelompokMengajiController extends GetxController {
     });
   }
 
-  Future<void> buatIsiSemester1() async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+  // Future<void> buatIsiSemester1() async {
+  //   String tahunajaranya = await getTahunAjaranTerakhir();
+  //   String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    String semesterNya =
-        (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
+  //   // String semesterNya =
+  //   //     (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
 
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesterNya)
-        .set({
-      'namasemester': semesterNya,
-      'tahunajaran': tahunajaranya,
-      'emailpenginput': emailAdmin,
-      'idpenginput': idUser,
-      'tanggalinput': DateTime.now().toIso8601String(),
-    });
-  }
+  //   await firestore
+  //       .collection('Sekolah')
+  //       .doc(idSekolah)
+  //       .collection('tahunajaran')
+  //       .doc(idTahunAjaran)
+  //       // .collection('semester')
+  //       // .doc(semesterNya)
+  //       .collection('kelompokmengaji')
+  //       .doc(faseC.text)
+  //       .collection('pengampu')
+  //       .doc(pengampuC.text)
+  //       .set({
+  //     'namasemester': 'Semester I',
+  //     'tahunajaran': tahunajaranya,
+  //     'emailpenginput': emailAdmin,
+  //     'idpenginput': idUser,
+  //     'tanggalinput': DateTime.now().toIso8601String(),
+  //   });
+  // }
   
   Future<void> testBuat() async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    String semesterNya =
-        (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
+    // String semesterNya =
+    //     (semesterC.text == 'semester1') ? "Semester I" : "Semester II";
 
     QuerySnapshot<Map<String, dynamic>> colTempat = await firestore
         .collection('Sekolah')
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesterNya)
+        // .collection('semester')
+        // .doc('Semester I')
         .collection('kelompokmengaji')
         .doc(faseC.text)
         .collection('pengampu')
@@ -355,23 +352,22 @@ class TambahKelompokMengajiController extends GetxController {
             .get();
 
         String idPengampu = querySnapshot.docs.first.data()['uid'];
-        // buatIsiKelompokMengajiTahunAjaran();
         isiFieldPengampuKelompok();
-        buatIsiSemester1();
+        // buatIsiSemester1();
 
         await firestore
             .collection('Sekolah')
             .doc(idSekolah)
             .collection('tahunajaran')
             .doc(idTahunAjaran)
-            .collection('semester')
-            .doc(semesterNya)
+            // .collection('semester')
+            // .doc('Semester I')
             .collection('kelompokmengaji')
             .doc(faseC.text)
             .set({
           'fase': faseC.text,
           'tahunajaran': tahunajaranya,
-          'semester': semesterNya,
+          // 'semester': 'Semester I',
           'emailpenginput': emailAdmin,
           'idpenginput': idUser,
           'tanggalinput': DateTime.now().toIso8601String(),
@@ -382,8 +378,8 @@ class TambahKelompokMengajiController extends GetxController {
             .doc(idSekolah)
             .collection('tahunajaran')
             .doc(idTahunAjaran)
-            .collection('semester')
-            .doc(semesterNya)
+            // .collection('semester')
+            // .doc('Semester I')
             .collection('kelompokmengaji')
             .doc(faseC.text)
             .collection('pengampu')
@@ -395,7 +391,7 @@ class TambahKelompokMengajiController extends GetxController {
           'tempatmengaji': tempatC.text,
           'tahunajaran': tahunajaranya,
           'kelompokmengaji': pengampuC.text,
-          'namasemester': semesterNya,
+          // 'namasemester': 'Semester I',
           'namapengampu': pengampuC.text,
           'idpengampu': idPengampu,
           'emailpenginput': emailAdmin,

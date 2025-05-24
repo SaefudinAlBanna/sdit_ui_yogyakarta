@@ -136,14 +136,14 @@ class TambahKelompokMengajiView
                                     return controller.getDataTempat();
                                   },
                                 ),
-                                FieldTambahKelompok(
-                                  controller: controller,
-                                  controllerNya: controller.semesterC,
-                                  label: 'Semester',
-                                  getOptions: () {
-                                    return controller.getDataSemester();
-                                  },
-                                ),
+                                // FieldTambahKelompok(
+                                //   controller: controller,
+                                //   controllerNya: controller.semesterC,
+                                //   label: 'Semester',
+                                //   getOptions: () {
+                                //     return controller.getDataSemester();
+                                //   },
+                                // ),
                               ],
                             ),
                           ),
@@ -162,13 +162,13 @@ class TambahKelompokMengajiView
                     Get.snackbar('Peringatan', 'Pengampu kosong');
                   } else if (controller.tempatC.text.isEmpty) {
                     Get.snackbar('Peringatan', 'Tempat kosong');
-                  } else if (controller.semesterC.text.isEmpty) {
-                    Get.snackbar('Peringatan', 'Semester kosong');
-                  } else {
+                  } 
+                  // else if (controller.semesterC.text.isEmpty) {
+                  //   Get.snackbar('Peringatan', 'Semester kosong');
+                  // } 
+                  else {
                     // controller.buatKelompok();
                     controller.testBuat();
-                    // Get.offAllNamed(Routes.TAMBAH_SISWA_KELOMPOK,
-                    //     arguments: controller.pengampuC.text);
                   }
                 },
                 child: Text('Buat Kelompok'),

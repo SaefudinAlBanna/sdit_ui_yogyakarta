@@ -20,6 +20,9 @@ abstract class Routes {
   static const DAFTAR_NILAI = _Paths.DAFTAR_NILAI;
   static const PEMBERIAN_NILAI_HALAQOH = _Paths.PEMBERIAN_NILAI_HALAQOH;
   static const DETAIL_SISWA = _Paths.DETAIL_SISWA;
+  static const DETAIL_NILAI_HALAQOH = _Paths.DETAIL_NILAI_HALAQOH;
+  static const PEMBERIAN_GURU_MAPEL = _Paths.PEMBERIAN_GURU_MAPEL;
+  static const MAPEL_SISWA = _Paths.MAPEL_SISWA;
 }
 
 abstract class _Paths {
@@ -41,4 +44,7 @@ abstract class _Paths {
   static const DAFTAR_NILAI = '/daftar-nilai';
   static const PEMBERIAN_NILAI_HALAQOH = '/pemberian-nilai-halaqoh';
   static const DETAIL_SISWA = '/detail-siswa';
+  static const DETAIL_NILAI_HALAQOH = '/detail-nilai-halaqoh';
+  static const PEMBERIAN_GURU_MAPEL = '/pemberian-guru-mapel';
+  static const MAPEL_SISWA = '/mapel-siswa';
 }

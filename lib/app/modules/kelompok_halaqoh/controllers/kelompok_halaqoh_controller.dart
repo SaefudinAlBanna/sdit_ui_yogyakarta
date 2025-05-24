@@ -33,46 +33,6 @@ class KelompokHalaqohController extends GetxController {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok = await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('pegawai')
-        .where('alias', isEqualTo: argumenData[0]['namapengampu'])
-        .get();
-    if (querySnapshotKelompok.docs.isNotEmpty) {
-      Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
-      String idPengampu = dataGuru['uid'];
-
-      QuerySnapshot<Map<String, dynamic>> querySnapshotSemester =
-          await firestore
-              .collection('Sekolah')
-              .doc(idSekolah)
-              .collection('pegawai')
-              .doc(idPengampu)
-              .collection('tahunajarankelompok')
-              .doc(idTahunAjaran)
-              .collection('semester')
-              .get();
-      if (querySnapshotSemester.docs.isNotEmpty) {
-        Map<String, dynamic> dataSemester =
-            querySnapshotSemester.docs.last.data();
-        String semesterNya = dataSemester['namasemester'];
-
-        QuerySnapshot<Map<String, dynamic>> querySnapshotFase = await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('pegawai')
-            .doc(idPengampu)
-            .collection('tahunajarankelompok')
-            .doc(idTahunAjaran)
-            .collection('semester')
-            .doc(semesterNya)
-            .collection('kelompokmengaji')
-            .get();
-        if (querySnapshotFase.docs.isNotEmpty) {
-          // Map<String, dynamic> dataFase = querySnapshotFase.docs.last.data();
-          // String faseNya = dataFase['fase'];
-
           List<String> kelasList = [];
           await firestore
               .collection('Sekolah')
@@ -88,17 +48,13 @@ class KelompokHalaqohController extends GetxController {
             }
           });
           return kelasList;
-        }
-      }
-    }
-    throw Exception('belum ada kelas');
   }
 
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getDataSiswaStreamBaru() async* {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    // String idSemester = await getDataSemester();
+
     yield* firestore
         .collection('Sekolah')
         .doc(idSekolah)
@@ -106,8 +62,6 @@ class KelompokHalaqohController extends GetxController {
         .doc(idTahunAjaran)
         .collection('kelastahunajaran')
         .doc(kelasSiswaC.text)
-        .collection('semester')
-        .doc('Semester I') // ini nanti diganti otomatis // sudah di pasang -->> kalo sudah dihapus comment
         .collection('daftarsiswa')
         .where('statuskelompok', isEqualTo: 'baru')
         .snapshots();
@@ -126,9 +80,6 @@ class KelompokHalaqohController extends GetxController {
         .doc(idTahunAjaran)
         .collection('kelastahunajaran')
         .doc(kelasSiswaC.text)
-        .collection('semester')
-        // .doc(semesterNya)
-        .doc('Semester I')
         .collection('daftarsiswa')
         .doc(nisnSiSwa)
         .update({
@@ -148,8 +99,8 @@ class KelompokHalaqohController extends GetxController {
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(tahunAjaranya)
-        .collection('semester')
-        .doc(argumenData[0]['namasemester'])
+        // .collection('semester')
+        // .doc(argumenData[0]['namasemester'])
         .collection('kelompokmengaji')
         .doc(argumenData[0]['fase'])
         .collection('pengampu')
@@ -174,7 +125,6 @@ class KelompokHalaqohController extends GetxController {
     if (querySnapshotKelompok.docs.isNotEmpty) {
       Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
       String idPengampu = dataGuru['uid'];
-      // String namaPengampu = dataGuru['alias'];
 
       //buat pada tahunpelajaran sekolah
       await firestore
@@ -182,8 +132,6 @@ class KelompokHalaqohController extends GetxController {
           .doc(idSekolah)
           .collection('tahunajaran')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(argumenData[0]['namasemester'])
           .collection('kelompokmengaji')
           .doc(argumenData[0]['fase'])
           .collection('pengampu')
@@ -200,7 +148,6 @@ class KelompokHalaqohController extends GetxController {
         'tempatmengaji': argumenData[0]['tempatmengaji'],
         'tahunajaran': argumenData[0]['tahunajaran'],
         'kelompokmengaji': argumenData[0]['namapengampu'],
-        'namasemester': argumenData[0]['namasemester'],
         'namapengampu': argumenData[0]['namapengampu'],
         'idpengampu': argumenData[0]['idpengampu'],
         'emailpenginput': emailAdmin,
@@ -209,37 +156,38 @@ class KelompokHalaqohController extends GetxController {
         'idsiswa': nisnSiswa,
       });
 
-      // await firestore
-      //     .collection('Sekolah')
-      //     .doc(idSekolah)
-      //     .collection('pegawai')
-      //     .doc(idPengampu)
-      //     .collection('tahunajarankelompok')
-      //     .doc(idTahunAjaran)
-      //     .collection('semester')
-      //     .doc(argumenData[0]['namasemester'])
-      //     .collection('kelompokmengaji')
-      //     .doc(argumenData[0]['fase'])
-      //     .collection('tempat')
-      //     .doc(argumenData[0]['tempatmengaji'])
-      //     .collection('daftarsiswa')
-      //     .doc(nisnSiswa)
-      //     .set({
-      //   'namasiswa': namaSiswa,
-      //   'nisn': nisnSiswa,
-      //   'kelas': kelasSiswaC.text,
-      //   'fase': argumenData[0]['fase'],
-      //   'tempatmengaji': argumenData[0]['tempatmengaji'],
-      //   'tahunajaran': argumenData[0]['tahunajaran'],
-      //   'kelompokmengaji': argumenData[0]['namapengampu'],
-      //   'namasemester': argumenData[0]['namasemester'],
-      //   'namapengampu': argumenData[0]['namapengampu'],
-      //   'idpengampu': idPengampu,
-      //   'emailpenginput': emailAdmin,
-      //   'idpenginput': idUser,
-      //   'tanggalinput': DateTime.now().toIso8601String(),
-      //   'idsiswa': nisnSiswa,
-      // });
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(argumenData[0]['fase'])
+          .collection('pengampu')
+          .doc(argumenData[0]['namapengampu'])
+          .collection('tempat')
+          .doc(argumenData[0]['tempatmengaji'])
+          .collection('daftarsiswa')
+          .doc(nisnSiswa)
+          .collection('semester')
+          .doc('Semester I')
+          .set({
+        'ummi' : "0",
+        'namasiswa': namaSiswa,
+        'nisn': nisnSiswa,
+        'kelas': kelasSiswaC.text,
+        'fase': argumenData[0]['fase'],
+        'tempatmengaji': argumenData[0]['tempatmengaji'],
+        'tahunajaran': argumenData[0]['tahunajaran'],
+        'kelompokmengaji': argumenData[0]['namapengampu'],
+        'namasemester': 'Semester I',
+        'namapengampu': argumenData[0]['namapengampu'],
+        'idpengampu': idPengampu,
+        'emailpenginput': emailAdmin,
+        'idpenginput': idUser,
+        'tanggalinput': DateTime.now().toIso8601String(),
+        'idsiswa': nisnSiswa,
+      });
 
       await firestore
           .collection('Sekolah')
@@ -256,23 +204,7 @@ class KelompokHalaqohController extends GetxController {
         'tanggalinput': DateTime.now().toIso8601String(),
       });
 
-      await firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(argumenData[0]['namasemester'])
-          .set({
-        'fase': argumenData[0]['fase'],
-        'namasemester': argumenData[0]['namasemester'],
-        'tahunajaran': tahunajaranya,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
+      
 
       await firestore
           .collection('Sekolah')
@@ -281,8 +213,8 @@ class KelompokHalaqohController extends GetxController {
           .doc(nisnSiswa)
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(argumenData[0]['namasemester'])
+          // .collection('semester')
+          // .doc(argumenData[0]['namasemester'])
           .collection('kelompokmengaji')
           .doc(argumenData[0]['fase'])
           .set({
@@ -291,7 +223,7 @@ class KelompokHalaqohController extends GetxController {
         'namapengampu': argumenData[0]['namapengampu'],
         'kelompokmengaji': argumenData[0]['namapengampu'],
         'idpengampu': idPengampu,
-        'namasemester': argumenData[0]['namasemester'],
+        // 'namasemester': argumenData[0]['namasemester'],
         'tahunajaran': tahunajaranya,
         'emailpenginput': emailAdmin,
         'idpenginput': idUser,
@@ -305,10 +237,35 @@ class KelompokHalaqohController extends GetxController {
           .doc(nisnSiswa)
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(argumenData[0]['namasemester'])
           .collection('kelompokmengaji')
           .doc(argumenData[0]['fase'])
+          .collection('pengampu')
+          .doc(argumenData[0]['namapengampu'])
+          .set({
+        'nisn': nisnSiswa,
+        // 'tempatmengaji': argumenData[0]['tempatmengaji'],
+        'fase': argumenData[0]['fase'],
+        'tahunajaran': idTahunAjaran,
+        'kelompokmengaji': argumenData[0]['namapengampu'],
+        'namapengampu': argumenData[0]['namapengampu'],
+        'idpengampu': idPengampu,
+        'emailpenginput': emailAdmin,
+        'idpenginput': idUser,
+        'tanggalinput': DateTime.now().toIso8601String(),
+      });
+
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(argumenData[0]['fase'])
+          .collection('pengampu')
+          .doc(argumenData[0]['namapengampu'])
           .collection('tempat')
           .doc(argumenData[0]['tempatmengaji'])
           .set({
@@ -317,7 +274,39 @@ class KelompokHalaqohController extends GetxController {
         'fase': argumenData[0]['fase'],
         'tahunajaran': idTahunAjaran,
         'kelompokmengaji': argumenData[0]['namapengampu'],
-        'namasemester': argumenData[0]['namasemester'],
+        // 'namasemester': 'Semester I',
+        'namapengampu': argumenData[0]['namapengampu'],
+        'idpengampu': idPengampu,
+        'emailpenginput': emailAdmin,
+        'idpenginput': idUser,
+        'tanggalinput': DateTime.now().toIso8601String(),
+      });
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          // .collection('semester')
+          // .doc(argumenData[0]['namasemester'])
+          .collection('kelompokmengaji')
+          .doc(argumenData[0]['fase'])
+          .collection('pengampu')
+          .doc(argumenData[0]['namapengampu'])
+          .collection('tempat')
+          .doc(argumenData[0]['tempatmengaji'])
+          .collection('semester')
+          .doc('Semester I')
+          .set({
+        'ummi' : "0",
+        'nisn': nisnSiswa,
+        'tempatmengaji': argumenData[0]['tempatmengaji'],
+        'fase': argumenData[0]['fase'],
+        'tahunajaran': idTahunAjaran,
+        'kelompokmengaji': argumenData[0]['namapengampu'],
+        'namasemester': 'Semester I',
         'namapengampu': argumenData[0]['namapengampu'],
         'idpengampu': idPengampu,
         'emailpenginput': emailAdmin,

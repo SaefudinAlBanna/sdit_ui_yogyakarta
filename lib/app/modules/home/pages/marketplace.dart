@@ -40,7 +40,7 @@ class MarketplacePage extends GetView<HomeController> {
                 height: 200,
                 // viewportFraction: 1.0,
                 aspectRatio: 2 / 1,
-                // autoPlay: true,
+                autoPlay: true,
                 autoPlayInterval: Duration(seconds: 5),
                 // autoPlayAnimationDuration: Duration(milliseconds: 800),
                 enlargeCenterPage: true,

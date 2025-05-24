@@ -14,6 +14,7 @@ class DaftarHalaqohPengampuView
 
   @override
   Widget build(BuildContext context) {
+    // print("data = $data");
     return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
         future: controller.getDaftarHalaqohPengampu(),
         builder: (context, snapshot) {
@@ -30,6 +31,11 @@ class DaftarHalaqohPengampuView
                   itemBuilder: (context, index) {
                     var doc = (snapshot.data as QuerySnapshot).docs[index];
                     return ListTile(
+                      onTap: () {
+                        String getNama =
+                                  snapshot.data!.docs[index].data()['nisn'];
+                              Get.toNamed(Routes.DETAIL_SISWA, arguments: getNama);
+                      },
                       leading: Container(
                         height: 50,
                         width: 50,
@@ -46,20 +52,6 @@ class DaftarHalaqohPengampuView
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          GestureDetector(
-                            onTap: () {
-                              String getNama =
-                                  snapshot.data!.docs[index].data()['nisn'];
-                              Get.toNamed(Routes.DETAIL_SISWA,
-                                  arguments: getNama);
-                            },
-                            child: SizedBox(
-                                height: 40,
-                                width: 40,
-                                // color: Colors.amber,
-                                child: Icon(Icons.info_outlined)),
-                          ),
-
 
                           GestureDetector(
                             onTap:() {
@@ -74,9 +66,7 @@ class DaftarHalaqohPengampuView
                                 width: 40,
                                 // color: Colors.amber,
                                 child: Icon(Icons.add_box_outlined)),
-                          
                           ),
-
 
                           GestureDetector(
                             onTap:() {

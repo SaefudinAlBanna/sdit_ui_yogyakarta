@@ -11,6 +11,7 @@ class DaftarHalaqohController extends GetxController {
   TextEditingController pengampuC = TextEditingController();
   TextEditingController kelasSiswaC = TextEditingController();
   TextEditingController alasanC = TextEditingController();
+  TextEditingController umiC = TextEditingController();
 
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   String idUser = FirebaseAuth.instance.currentUser!.uid;
@@ -45,11 +46,68 @@ class DaftarHalaqohController extends GetxController {
         .where('fase', isEqualTo: dataFase['fase'])
         .get()
         .then((querySnapshot) {
-      for (var docSnapshot in querySnapshot.docs) {
-        kelasList.add(docSnapshot.id);
-      }
-    });
+          for (var docSnapshot in querySnapshot.docs) {
+            kelasList.add(docSnapshot.id);
+          }
+        });
     return kelasList;
+  }
+
+  Future<List<String>> getDataUmi() async {
+    List<String> umiList = ['Umi', 'AlQuran'];
+    return umiList;
+  }
+
+  Future<void> updateUmi(String nisnSiswa) async {
+    String tahunajaranya = await getTahunAjaranTerakhir();
+    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+    // String idSekolah = '20404148';
+
+    if (idTahunAjaran.isNotEmpty) {
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .collection('tempat')
+          .doc(dataFase['tempatmengaji'])
+          .collection('daftarsiswa')
+          .doc(nisnSiswa)
+          .collection('semester')
+          .doc('Semester I')
+          .update({'ummi': umiC.text});
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          // .collection('semester')
+          // .doc(argumenData[0]['namasemester'])
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .collection('tempat')
+          .doc(dataFase['tempatmengaji'])
+          .collection('semester')
+          .doc('Semester I')
+          .update({'ummi': umiC.text});
+
+      Get.back();
+      Get.snackbar("Berhasil", "Umi Berhasil dibuat");
+    } else {
+      Get.snackbar(
+        "Error",
+        "Data tidak ditemukan, Atau periksa koneksi internet",
+      );
+    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getDataSiswaStreamBaru() async* {
@@ -63,9 +121,10 @@ class DaftarHalaqohController extends GetxController {
         .doc(idTahunAjaran)
         .collection('kelastahunajaran')
         .doc(kelasSiswaC.text)
-        .collection('semester')
-        .doc('Semester I') // ini nanti diganti otomatis // sudah di pasang -->> kalo sudah dihapus comment
         .collection('daftarsiswa')
+        // .collection('semester')
+        // .doc('Semester I') // ini nanti diganti otomatis // sudah di pasang -->> kalo sudah dihapus comment
+        // .collection('daftarsiswa')
         .where('statuskelompok', isEqualTo: 'baru')
         .snapshots();
 
@@ -76,12 +135,13 @@ class DaftarHalaqohController extends GetxController {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok = await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('pegawai')
-        .where('alias', isEqualTo: dataFase['namapengampu'])
-        .get();
+    QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok =
+        await firestore
+            .collection('Sekolah')
+            .doc(idSekolah)
+            .collection('pegawai')
+            .where('alias', isEqualTo: dataFase['namapengampu'])
+            .get();
     if (querySnapshotKelompok.docs.isNotEmpty) {
       Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
       String idPengampu = dataGuru['uid'];
@@ -94,11 +154,11 @@ class DaftarHalaqohController extends GetxController {
           .collection('tahunajarankelompok')
           .doc(idTahunAjaran)
           .set({
-        'fase': dataFase['fase'],
-        'namatahunajaran': tahunajaranya,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
+            'fase': dataFase['fase'],
+            'namatahunajaran': tahunajaranya,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
 
       await firestore
           .collection('Sekolah')
@@ -110,13 +170,13 @@ class DaftarHalaqohController extends GetxController {
           .collection('semester')
           .doc(dataFase['namasemester'])
           .set({
-        'fase': dataFase['fase'],
-        'namasemester': dataFase['namasemester'],
-        'tahunajaran': tahunajaranya,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
+            'fase': dataFase['fase'],
+            'namasemester': dataFase['namasemester'],
+            'tahunajaran': tahunajaranya,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
 
       await firestore
           .collection('Sekolah')
@@ -130,17 +190,17 @@ class DaftarHalaqohController extends GetxController {
           .collection('kelompokmengaji')
           .doc(dataFase['fase'])
           .set({
-        'fase': dataFase['fase'],
-        'tempatmengaji': dataFase['tempatmengaji'],
-        'namapengampu': dataFase['namapengampu'],
-        'kelompokmengaji': dataFase['namapengampu'],
-        'idpengampu': idPengampu,
-        'namasemester': dataFase['namasemester'],
-        'tahunajaran': tahunajaranya,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
+            'fase': dataFase['fase'],
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'namapengampu': dataFase['namapengampu'],
+            'kelompokmengaji': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'namasemester': dataFase['namasemester'],
+            'tahunajaran': tahunajaranya,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
 
       await firestore
           .collection('Sekolah')
@@ -156,18 +216,18 @@ class DaftarHalaqohController extends GetxController {
           .collection('tempat')
           .doc(dataFase['tempatmengaji'])
           .set({
-        'nisn': nisnSiswa,
-        'tempatmengaji': dataFase['tempatmengaji'],
-        'fase': dataFase['fase'],
-        'tahunajaran': dataFase['tahunajaran'],
-        'kelompokmengaji': dataFase['namapengampu'],
-        'namasemester': dataFase['namasemester'],
-        'namapengampu': dataFase['namapengampu'],
-        'idpengampu': idPengampu,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
+            'nisn': nisnSiswa,
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'fase': dataFase['fase'],
+            'tahunajaran': dataFase['tahunajaran'],
+            'kelompokmengaji': dataFase['namapengampu'],
+            'namasemester': dataFase['namasemester'],
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
     }
   }
 
@@ -182,19 +242,25 @@ class DaftarHalaqohController extends GetxController {
         .doc(idTahunAjaran)
         .collection('kelastahunajaran')
         .doc(kelasSiswaC.text)
-        .collection('semester')
-        // .doc(semesterNya)
-        .doc('Semester I')
         .collection('daftarsiswa')
         .doc(nisnSiSwa)
-        .update({
-      'statuskelompok': 'aktif',
-    });
+        .update({'statuskelompok': 'aktif'});
   }
-  
+
   Future<void> simpanSiswaKelompok(String namaSiswa, String nisnSiswa) async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+
+    QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok =
+        await firestore
+            .collection('Sekolah')
+            .doc(idSekolah)
+            .collection('pegawai')
+            .where('alias', isEqualTo: dataFase['namapengampu'])
+            .get();
+    if (querySnapshotKelompok.docs.isNotEmpty) {
+      Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
+      String idPengampu = dataGuru['uid'];
 
       //buat pada tahunpelajaran sekolah
       await firestore
@@ -202,8 +268,6 @@ class DaftarHalaqohController extends GetxController {
           .doc(idSekolah)
           .collection('tahunajaran')
           .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(dataFase['namasemester'])
           .collection('kelompokmengaji')
           .doc(dataFase['fase'])
           .collection('pengampu')
@@ -213,57 +277,179 @@ class DaftarHalaqohController extends GetxController {
           .collection('daftarsiswa')
           .doc(nisnSiswa)
           .set({
-        'namasiswa': namaSiswa,
-        'nisn': nisnSiswa,
-        'kelas': kelasSiswaC.text,
-        'fase': dataFase['fase'],
-        'tempatmengaji': dataFase['tempatmengaji'],
-        'tahunajaran': dataFase['tahunajaran'],
-        'kelompokmengaji': dataFase['namapengampu'],
-        'namasemester': dataFase['namasemester'],
-        'namapengampu': dataFase['namapengampu'],
-        'idpengampu': dataFase['idpengampu'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-        'idsiswa': nisnSiswa,
-      });
+            'namasiswa': namaSiswa,
+            'nisn': nisnSiswa,
+            'kelas': kelasSiswaC.text,
+            'fase': dataFase['fase'],
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'tahunajaran': dataFase['tahunajaran'],
+            'kelompokmengaji': dataFase['namapengampu'],
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': dataFase['idpengampu'],
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+            'idsiswa': nisnSiswa,
+          });
 
-      
-      //     .collection('Sekolah')
-      //     .doc(idSekolah)
-      //     .collection('pegawai')
-      //     .doc(idPengampu)
-      //     .collection('tahunajarankelompok')
-      //     .doc(idTahunAjaran)
-      //     .collection('semester')
-      //     .doc(dataFase['namasemester'])
-      //     .collection('kelompokmengaji')
-      //     .doc(dataFase['fase'])
-      //     .collection('tempat')
-      //     .doc(dataFase['tempatmengaji'])
-      //     .collection('daftarsiswa')
-      //     .doc(nisnSiswa)
-      //     .set({
-      //   'namasiswa': namaSiswa,
-      //   'nisn': nisnSiswa,
-      //   'kelas': kelasSiswaC.text,
-      //   'fase': dataFase['fase'],
-      //   'tempatmengaji': dataFase['tempatmengaji'],
-      //   'tahunajaran': dataFase['tahunajaran'],
-      //   'kelompokmengaji': dataFase['namapengampu'],
-      //   'namasemester': dataFase['namasemester'],
-      //   'namapengampu': dataFase['namapengampu'],
-      //   'idpengampu': idPengampu,
-      //   'emailpenginput': emailAdmin,
-      //   'idpenginput': idUser,
-      //   'tanggalinput': DateTime.now().toIso8601String(),
-      //   'idsiswa': nisnSiswa,
-      // });
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .collection('tempat')
+          .doc(dataFase['tempatmengaji'])
+          .collection('daftarsiswa')
+          .doc(nisnSiswa)
+          .collection('semester')
+          .doc('Semester I')
+          .set({
+            'ummi': "0",
+            'namasiswa': namaSiswa,
+            'nisn': nisnSiswa,
+            'kelas': kelasSiswaC.text,
+            'fase': dataFase['fase'],
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'tahunajaran': dataFase['tahunajaran'],
+            'kelompokmengaji': dataFase['namapengampu'],
+            'namasemester': 'Semester I',
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+            'idsiswa': nisnSiswa,
+          });
 
-      halaqohUntukSiswaNext(nisnSiswa);
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          .set({
+            'fase': dataFase['fase'],
+            'nisn': nisnSiswa,
+            'namatahunajaran': tahunajaranya,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          // .collection('semester')
+          // .doc(argumenData[0]['namasemester'])
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .set({
+            'fase': dataFase['fase'],
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'namapengampu': dataFase['namapengampu'],
+            'kelompokmengaji': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            // 'namasemester': argumenData[0]['namasemester'],
+            'tahunajaran': tahunajaranya,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .set({
+            'nisn': nisnSiswa,
+            // 'tempatmengaji': dataFase['tempatmengaji'],
+            'fase': dataFase['fase'],
+            'tahunajaran': idTahunAjaran,
+            'kelompokmengaji': dataFase['namapengampu'],
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .collection('tempat')
+          .doc(dataFase['tempatmengaji'])
+          .set({
+            'nisn': nisnSiswa,
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'fase': dataFase['fase'],
+            'tahunajaran': idTahunAjaran,
+            'kelompokmengaji': dataFase['namapengampu'],
+            // 'namasemester': 'Semester I',
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
+
+      await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('siswa')
+          .doc(nisnSiswa)
+          .collection('tahunajarankelompok')
+          .doc(idTahunAjaran)
+          // .collection('semester')
+          // .doc(argumenData[0]['namasemester'])
+          .collection('kelompokmengaji')
+          .doc(dataFase['fase'])
+          .collection('pengampu')
+          .doc(dataFase['namapengampu'])
+          .collection('tempat')
+          .doc(dataFase['tempatmengaji'])
+          .collection('semester')
+          .doc('Semester I')
+          .set({
+            'ummi': "0",
+            'nisn': nisnSiswa,
+            'tempatmengaji': dataFase['tempatmengaji'],
+            'fase': dataFase['fase'],
+            'tahunajaran': idTahunAjaran,
+            'kelompokmengaji': dataFase['namapengampu'],
+            'namasemester': 'Semester I',
+            'namapengampu': dataFase['namapengampu'],
+            'idpengampu': idPengampu,
+            'emailpenginput': emailAdmin,
+            'idpenginput': idUser,
+            'tanggalinput': DateTime.now().toIso8601String(),
+          });
+
+      // halaqohUntukSiswaNext(nisnSiswa);
       ubahStatusSiswa(nisnSiswa);
-    
+    }
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getDaftarHalaqoh() async* {
@@ -275,8 +461,8 @@ class DaftarHalaqohController extends GetxController {
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(dataFase['namasemester'])
+        // .collection('semester')
+        // .doc(dataFase['namasemester'])
         .collection('kelompokmengaji')
         .doc(dataFase['fase']) // ini nanti diganti otomatis
         .collection('pengampu')
@@ -305,11 +491,12 @@ class DaftarHalaqohController extends GetxController {
         .where('namapengampu', isNotEqualTo: dataFase['namapengampu'])
         .get()
         .then((querySnapshot) {
-      for (var docSnapshot in querySnapshot.docs
-          .where((doc) => doc['fase'] == dataFase['fase'])) {
-        pengampuList.add(docSnapshot.data()['namapengampu']);
-      }
-    });
+          for (var docSnapshot in querySnapshot.docs.where(
+            (doc) => doc['fase'] == dataFase['fase'],
+          )) {
+            pengampuList.add(docSnapshot.data()['namapengampu']);
+          }
+        });
     return pengampuList;
   }
 
@@ -317,24 +504,25 @@ class DaftarHalaqohController extends GetxController {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    DocumentSnapshot<Map<String, dynamic>> getPengampuNya = await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(dataFase['namasemester'])
-        .collection('kelompokmengaji')
-        .doc(dataFase['fase'])
-        .collection('pengampu')
-        // .where('namapengampu', isNotEqualTo: dataFase['namapengampu'])
-        .doc(pengampuC.text)
-        .get();
+    DocumentSnapshot<Map<String, dynamic>> getPengampuNya =
+        await firestore
+            .collection('Sekolah')
+            .doc(idSekolah)
+            .collection('tahunajaran')
+            .doc(idTahunAjaran)
+            .collection('semester')
+            .doc(dataFase['namasemester'])
+            .collection('kelompokmengaji')
+            .doc(dataFase['fase'])
+            .collection('pengampu')
+            // .where('namapengampu', isNotEqualTo: dataFase['namapengampu'])
+            .doc(pengampuC.text)
+            .get();
 
     // print('ini get pentampunya = ${getPengampuNya.docs.first.data()['test']}');
     return getPengampuNya;
   }
-  
+
   Future<void> pindahkan(String nisnSiswa) async {
     if (pengampuC.text.isEmpty || pengampuC.text == "") {
       // print('PENGAMPU BELUM DIISI');
@@ -354,44 +542,46 @@ class DaftarHalaqohController extends GetxController {
 
       String uid = firestore.collection('Sekolah').doc().id;
 
-      QuerySnapshot<Map<String, dynamic>> querySnapshotSiswa = await firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(tahunAjaranPengampu)
-          .collection('semester')
-          .doc(dataFase['namasemester'])
-          .collection('kelompokmengaji')
-          .doc(dataFase['fase']) // ini nanti diganti otomatis
-          .collection('pengampu')
-          .doc(dataFase['namapengampu'])
-          .collection('tempat')
-          .doc(dataFase['tempatmengaji'])
-          .collection('daftarsiswa')
-          .where('nisn', isEqualTo: nisnSiswa)
-          .get();
+      QuerySnapshot<Map<String, dynamic>> querySnapshotSiswa =
+          await firestore
+              .collection('Sekolah')
+              .doc(idSekolah)
+              .collection('tahunajaran')
+              .doc(tahunAjaranPengampu)
+              .collection('semester')
+              .doc(dataFase['namasemester'])
+              .collection('kelompokmengaji')
+              .doc(dataFase['fase']) // ini nanti diganti otomatis
+              .collection('pengampu')
+              .doc(dataFase['namapengampu'])
+              .collection('tempat')
+              .doc(dataFase['tempatmengaji'])
+              .collection('daftarsiswa')
+              .where('nisn', isEqualTo: nisnSiswa)
+              .get();
       if (querySnapshotSiswa.docs.isNotEmpty) {
         Map<String, dynamic> dataSiswa = querySnapshotSiswa.docs.first.data();
         String namasiswa = dataSiswa['namasiswa'];
         String kelassiswa = dataSiswa['kelas'];
 
-        QuerySnapshot<Map<String, dynamic>> getNilainya = await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('tahunajaran')
-            .doc(tahunAjaranPengampu)
-            .collection('semester')
-            .doc(pengampuData['namasemester'])
-            .collection('kelompokmengaji')
-            .doc(pengampuData['fase'])
-            .collection('pengampu')
-            .doc(dataFase['namapengampu'])
-            .collection('tempat')
-            .doc(dataFase['tempatmengaji'])
-            .collection('daftarsiswa')
-            .doc(nisnSiswa)
-            .collection('nilai')
-            .get();
+        QuerySnapshot<Map<String, dynamic>> getNilainya =
+            await firestore
+                .collection('Sekolah')
+                .doc(idSekolah)
+                .collection('tahunajaran')
+                .doc(tahunAjaranPengampu)
+                .collection('semester')
+                .doc(pengampuData['namasemester'])
+                .collection('kelompokmengaji')
+                .doc(pengampuData['fase'])
+                .collection('pengampu')
+                .doc(dataFase['namapengampu'])
+                .collection('tempat')
+                .doc(dataFase['tempatmengaji'])
+                .collection('daftarsiswa')
+                .doc(nisnSiswa)
+                .collection('nilai')
+                .get();
 
         // if (getNilainya.docs.isEmpty) {
         //   Get.snackbar(
@@ -439,21 +629,21 @@ class DaftarHalaqohController extends GetxController {
                 .collection('daftarsiswa')
                 .doc(nisnSiswa)
                 .set({
-              'namasiswa': namasiswa,
-              'nisn': nisnSiswa,
-              'kelas': kelassiswa,
-              'fase': pengampuData['fase'],
-              'tempatmengaji': pengampuData['tempatmengaji'],
-              'tahunajaran': pengampuData['tahunajaran'],
-              'kelompokmengaji': pengampuData['namapengampu'],
-              'namasemester': pengampuData['namasemester'],
-              'namapengampu': pengampuData['namapengampu'],
-              'idpengampu': pengampuData['idpengampu'],
-              'emailpenginput': emailAdmin,
-              'idpenginput': idUser,
-              'tanggalinput': DateTime.now().toIso8601String(),
-              'idsiswa': nisnSiswa,
-            });
+                  'namasiswa': namasiswa,
+                  'nisn': nisnSiswa,
+                  'kelas': kelassiswa,
+                  'fase': pengampuData['fase'],
+                  'tempatmengaji': pengampuData['tempatmengaji'],
+                  'tahunajaran': pengampuData['tahunajaran'],
+                  'kelompokmengaji': pengampuData['namapengampu'],
+                  'namasemester': pengampuData['namasemester'],
+                  'namapengampu': pengampuData['namapengampu'],
+                  'idpengampu': pengampuData['idpengampu'],
+                  'emailpenginput': emailAdmin,
+                  'idpenginput': idUser,
+                  'tanggalinput': DateTime.now().toIso8601String(),
+                  'idsiswa': nisnSiswa,
+                });
             // print('SIMPAN DATA SISWA PADA TAHUN AJARAN SEKOLAH (PENGAMPU BARU)');
 
             // SIMPAN NILAI DATA SISWA PADA TAHUN AJARAN SEKOLAH (PENGAMPU BARU)
@@ -478,31 +668,34 @@ class DaftarHalaqohController extends GetxController {
                   .collection('nilai')
                   .doc(element.id)
                   .set({
-                'tanggalinput': allDocNilai[element.id]['tanggalinput'],
-                //=========================================
-                "emailpenginput": emailAdmin,
-                "fase": allDocNilai[element.id]['fase'],
-                "idpengampu": allDocNilai[element.id]['idpengampu'],
-                "idsiswa": allDocNilai[element.id]['idsiswa'],
-                "kelas": allDocNilai[element.id]['kelas'],
-                "kelompokmengaji": allDocNilai[element.id]['kelompokmengaji'],
-                "namapengampu": allDocNilai[element.id]['namapengampu'],
-                "namasemester": allDocNilai[element.id]['namasemester'],
-                "namasiswa": allDocNilai[element.id]['namasiswa'],
-                "tahunajaran": allDocNilai[element.id]['tahunajaran'],
-                "tempatmengaji": allDocNilai[element.id]['tempatmengaji'],
-                "hafalansurat": allDocNilai[element.id]['hafalansurat'],
-                "ayathafalansurat": allDocNilai[element.id]['ayathafalansurat'],
-                "ummijilidatausurat": allDocNilai[element.id]
-                    ['ummijilidatausurat'],
-                "ummihalatauayat": allDocNilai[element.id]['ummihalatauayat'],
-                "materi": allDocNilai[element.id]['materi'],
-                "nilai": allDocNilai[element.id]['nilai'],
-                "keteranganpengampu": allDocNilai[element.id]
-                    ['keteranganpengampu'],
-                "keteranganorangtua": allDocNilai[element.id]
-                    ['keteranganorangtua']
-              });
+                    'tanggalinput': allDocNilai[element.id]['tanggalinput'],
+                    //=========================================
+                    "emailpenginput": emailAdmin,
+                    "fase": allDocNilai[element.id]['fase'],
+                    "idpengampu": allDocNilai[element.id]['idpengampu'],
+                    "idsiswa": allDocNilai[element.id]['idsiswa'],
+                    "kelas": allDocNilai[element.id]['kelas'],
+                    "kelompokmengaji":
+                        allDocNilai[element.id]['kelompokmengaji'],
+                    "namapengampu": allDocNilai[element.id]['namapengampu'],
+                    "namasemester": allDocNilai[element.id]['namasemester'],
+                    "namasiswa": allDocNilai[element.id]['namasiswa'],
+                    "tahunajaran": allDocNilai[element.id]['tahunajaran'],
+                    "tempatmengaji": allDocNilai[element.id]['tempatmengaji'],
+                    "hafalansurat": allDocNilai[element.id]['hafalansurat'],
+                    "ayathafalansurat":
+                        allDocNilai[element.id]['ayathafalansurat'],
+                    "ummijilidatausurat":
+                        allDocNilai[element.id]['ummijilidatausurat'],
+                    "ummihalatauayat":
+                        allDocNilai[element.id]['ummihalatauayat'],
+                    "materi": allDocNilai[element.id]['materi'],
+                    "nilai": allDocNilai[element.id]['nilai'],
+                    "keteranganpengampu":
+                        allDocNilai[element.id]['keteranganpengampu'],
+                    "keteranganorangtua":
+                        allDocNilai[element.id]['keteranganorangtua'],
+                  });
               // print('SIMPAN NILAI DATA SISWA PADA TAHUN AJARAN SEKOLAH (PENGAMPU BARU)');
             }
 
@@ -552,20 +745,20 @@ class DaftarHalaqohController extends GetxController {
                 // .doc(docIdPindah)
                 .doc(uid)
                 .set({
-              'namasiswa': namasiswa,
-              'nisn': nisnSiswa,
-              'kelas': kelassiswa,
-              'fase': pengampuData['fase'],
-              'emailpenginput': emailAdmin,
-              'idpenginput': idUser,
-              'tanggalpindah': DateTime.now().toIso8601String(),
-              'halaqohlama': dataFase['namapengampu'],
-              'tempathalaqohlama': dataFase['tempatmengaji'],
-              'halaqohbaru': pengampuData['namapengampu'],
-              'tempathalaqohbaru': pengampuData['tempatmengaji'],
-              'alasanpindah': alasanC.text,
-              'idsiswa': nisnSiswa,
-            });
+                  'namasiswa': namasiswa,
+                  'nisn': nisnSiswa,
+                  'kelas': kelassiswa,
+                  'fase': pengampuData['fase'],
+                  'emailpenginput': emailAdmin,
+                  'idpenginput': idUser,
+                  'tanggalpindah': DateTime.now().toIso8601String(),
+                  'halaqohlama': dataFase['namapengampu'],
+                  'tempathalaqohlama': dataFase['tempatmengaji'],
+                  'halaqohbaru': pengampuData['namapengampu'],
+                  'tempathalaqohbaru': pengampuData['tempatmengaji'],
+                  'alasanpindah': alasanC.text,
+                  'idsiswa': nisnSiswa,
+                });
 
             //HAPUS DATA PADA PENGAMPU LAMA
             // jika ada nilai pada siswa di pengampu lama, maka hapus semua data nilai pada pengampu lama
@@ -608,27 +801,27 @@ class DaftarHalaqohController extends GetxController {
                   .collection('nilai')
                   .get()
                   .then((querySnapshot) {
-                querySnapshot.docs.forEach((doc) async {
-                  await firestore
-                      .collection('Sekolah')
-                      .doc(idSekolah)
-                      .collection('tahunajaran')
-                      .doc(tahunAjaranPengampu)
-                      .collection('semester')
-                      .doc(pengampuData['namasemester'])
-                      .collection('kelompokmengaji')
-                      .doc(pengampuData['fase'])
-                      .collection('pengampu')
-                      .doc(dataFase['namapengampu'])
-                      .collection('tempat')
-                      .doc(dataFase['tempatmengaji'])
-                      .collection('daftarsiswa')
-                      .doc(nisnSiswa)
-                      .collection('nilai')
-                      .doc(doc.id)
-                      .delete();
-                });
-              });
+                    querySnapshot.docs.forEach((doc) async {
+                      await firestore
+                          .collection('Sekolah')
+                          .doc(idSekolah)
+                          .collection('tahunajaran')
+                          .doc(tahunAjaranPengampu)
+                          .collection('semester')
+                          .doc(pengampuData['namasemester'])
+                          .collection('kelompokmengaji')
+                          .doc(pengampuData['fase'])
+                          .collection('pengampu')
+                          .doc(dataFase['namapengampu'])
+                          .collection('tempat')
+                          .doc(dataFase['tempatmengaji'])
+                          .collection('daftarsiswa')
+                          .doc(nisnSiswa)
+                          .collection('nilai')
+                          .doc(doc.id)
+                          .delete();
+                    });
+                  });
             }
 
             if (docSnapIdSiswa.exists) {
@@ -684,12 +877,12 @@ class DaftarHalaqohController extends GetxController {
                 .collection('kelompokmengaji')
                 .doc(dataFase['fase'])
                 .update({
-              "idpengampu": pengampuData['idpengampu'],
-              "kelompokmengaji": pengampuData['namapengampu'],
-              "namapengampu": pengampuData['namapengampu'],
-              "tempatmengaji": pengampuData['tempatmengaji'],
-              "pernahpindah": "iya",
-            });
+                  "idpengampu": pengampuData['idpengampu'],
+                  "kelompokmengaji": pengampuData['namapengampu'],
+                  "namapengampu": pengampuData['namapengampu'],
+                  "tempatmengaji": pengampuData['tempatmengaji'],
+                  "pernahpindah": "iya",
+                });
 
             //DELETED TEMPAT LAMA PADA SISWA
             await firestore
@@ -722,18 +915,18 @@ class DaftarHalaqohController extends GetxController {
                 .collection('tempat')
                 .doc(pengampuData['tempatmengaji'])
                 .set({
-              'nisn': nisnSiswa,
-              'tempatmengaji': pengampuData['tempatmengaji'],
-              'fase': pengampuData['fase'],
-              'tahunajaran': pengampuData['tahunajaran'],
-              'kelompokmengaji': pengampuData['namapengampu'],
-              'namasemester': pengampuData['namasemester'],
-              'namapengampu': pengampuData['namapengampu'],
-              'idpengampu': pengampuData['idpengampu'],
-              'emailpenginput': emailAdmin,
-              'idpenginput': idUser,
-              'tanggalinput': DateTime.now().toIso8601String(),
-            });
+                  'nisn': nisnSiswa,
+                  'tempatmengaji': pengampuData['tempatmengaji'],
+                  'fase': pengampuData['fase'],
+                  'tahunajaran': pengampuData['tahunajaran'],
+                  'kelompokmengaji': pengampuData['namapengampu'],
+                  'namasemester': pengampuData['namasemester'],
+                  'namapengampu': pengampuData['namapengampu'],
+                  'idpengampu': pengampuData['idpengampu'],
+                  'emailpenginput': emailAdmin,
+                  'idpenginput': idUser,
+                  'tanggalinput': DateTime.now().toIso8601String(),
+                });
           }
         }
 
@@ -742,5 +935,4 @@ class DaftarHalaqohController extends GetxController {
       }
     }
   }
-
 }

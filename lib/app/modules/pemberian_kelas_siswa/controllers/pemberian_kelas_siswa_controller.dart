@@ -119,15 +119,6 @@ class PemberianKelasSiswaController extends GetxController {
         .collection('kelastahunajaran');
 
     try {
-      // DocumentSnapshot<Map<String, dynamic>> docIdKelas =
-      //     await colKelas.doc(argumentKelas).get();
-      // Add your logic here if needed
-      // if (docIdKelas.exists) {
-      //   print('namakelas = ${docIdKelas['namakelas']}');
-      //   print('walikelas = ${docIdKelas['walikelas']}');
-      // } else {
-      //   print('kelas tidak ada');
-      // }
       return await colKelas.get();
       // Example return statement
     } catch (e) {
@@ -167,7 +158,7 @@ class PemberianKelasSiswaController extends GetxController {
           .collection('tahunajaran')
           .doc(idTahunAjaran)
           .set({
-            'namatahunajaran': tahunajaranya,
+            'tahunajaran': tahunajaranya,
             'idpenginput': idUser,
             'tanggalinput': DateTime.now().toIso8601String(),
           });
@@ -213,7 +204,7 @@ class PemberianKelasSiswaController extends GetxController {
         .set({
           'fase': faseNya,
           'nisn': nisnSiswa,
-          'namatahunajaran': tahunajaranya,
+          'tahunajaran': tahunajaranya,
           'idpenginput': idUser,
           'tanggalinput': DateTime.now().toIso8601String(),
         });
@@ -298,7 +289,63 @@ class PemberianKelasSiswaController extends GetxController {
         });
   }
 
-  Future<void> buatIsiSemester1() async {
+  // Future<void> buatIsiSemester1(String namaSiswa, String nisnSiswa) async {
+  //   String tahunajaranya = await getTahunAjaranTerakhir();
+  //   String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+  //   String kelasNya = argumentKelas.substring(0, 1);
+  //   String faseNya =
+  //       (kelasNya == '1' || kelasNya == '2')
+  //           ? "Fase A"
+  //           : (kelasNya == '3' || kelasNya == '4')
+  //           ? "Fase B"
+  //           : "Fase C";
+
+  //   QuerySnapshot<Map<String, dynamic>> querySnapshot =
+  //       await firestore
+  //           .collection('Sekolah')
+  //           .doc(idSekolah)
+  //           .collection('pegawai')
+  //           .where('alias', isEqualTo: waliKelasSiswaC.text)
+  //           .get();
+
+  //   // Check if the query returned any documents
+  //   if (querySnapshot.docs.isEmpty) {
+  //     Get.snackbar(
+  //       'Error',
+  //       'Wali kelas tidak ditemukan. Pastikan alias wali kelas benar.',
+  //     );
+  //     return; // Exit the function if no documents are found
+  //   }
+
+  //   String uidWaliKelasnya = querySnapshot.docs.first.data()['uid'];
+
+  //   await firestore
+  //       .collection('Sekolah')
+  //       .doc(idSekolah)
+  //       .collection('tahunajaran')
+  //       .doc(idTahunAjaran)
+  //       .collection('kelastahunajaran')
+  //       .doc(argumentKelas)
+  //       .collection('daftarsiswa')
+  //       .doc(nisnSiswa)
+  //       .collection('semester')
+  //       .doc('Semester I')
+  //       .set({
+  //         'namasemester': 'Semester I',
+  //         'namasiswa': namaSiswa,
+  //         'nisnsiswa': nisnSiswa,
+  //         'namakelas': argumentKelas,
+  //         'fase': faseNya,
+  //         'walikelas': waliKelasSiswaC.text,
+  //         'idwalikelas': uidWaliKelasnya,
+  //         'tahunajaran': tahunajaranya,
+  //         'emailpenginput': emailAdmin,
+  //         'idpenginput': idUser,
+  //         'tanggalinput': DateTime.now().toIso8601String(),
+  //       });
+  // }
+
+  Future<void> simpanKelasBaru(String namaSiswa, String nisnSiswa) async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
     String kelasNya = argumentKelas.substring(0, 1);
@@ -309,142 +356,536 @@ class PemberianKelasSiswaController extends GetxController {
             ? "Fase B"
             : "Fase C";
 
-    QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('pegawai')
-            .where('alias', isEqualTo: waliKelasSiswaC.text)
-            .get();
-
-    // Check if the query returned any documents
-    if (querySnapshot.docs.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Wali kelas tidak ditemukan. Pastikan alias wali kelas benar.',
-      );
-      return; // Exit the function if no documents are found
-    }
-
-    String uidWaliKelasnya = querySnapshot.docs.first.data()['uid'];
-
-    await firestore
+    CollectionReference<Map<String, dynamic>> colKelas = firestore
         .collection('Sekolah')
         .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('kelastahunajaran')
-        .doc(argumentKelas)
-        .collection('semester')
-        .doc('Semester I')
-        .set({
-          'namasemester': 'Semester I',
-          'namakelas': argumentKelas,
-          'fase': faseNya,
-          'walikelas': waliKelasSiswaC.text,
-          'idwalikelas': uidWaliKelasnya,
-          'tahunajaran': tahunajaranya,
-          'emailpenginput': emailAdmin,
-          'idpenginput': idUser,
-          'tanggalinput': DateTime.now().toIso8601String(),
-        });
-  }
-  
+        .collection('kelastahunajaran');
+    DocumentSnapshot<Map<String, dynamic>> docIdKelas =
+        await colKelas.doc(argumentKelas).get();
 
-  Future<void> simpanKelasBaru(String namaSiswa, String nisnSiswa) async {
+    // Helper function untuk membuat data map yang konsisten
+    Map<String, dynamic> _createDataMap({
+      required String namaKelas,
+      required String fase,
+      required String tahunAjaran,
+      required String walikelas,
+      required String idwalikelas,
+      String? namaSiswa,
+      String? nisn,
+      String? namamatapelajaran,
+    }) {
+      return {
+        'namakelas': namaKelas,
+        'fase': fase,
+        'tahunajaran': tahunAjaran,
+        'walikelas': walikelas,
+        'idwalikelas': idwalikelas,
+        'emailpenginput': emailAdmin,
+        'idpenginput': idUser,
+        'tanggalinput': DateTime.now().toIso8601String(),
+        if (namaSiswa != null) 'namasiswa': namaSiswa,
+        if (nisn != null) 'nisn': nisn,
+        if (namamatapelajaran != null) 'namamatapelajaran': namamatapelajaran,
+      };
+    }
+
+    WriteBatch batch = firestore.batch();
+    // Inisialisasi batch
+    try {
+      if (docIdKelas.exists) {
+        // Ambil data wali kelas dan ID wali kelas dari dokumen kelas
+        String walikelas = docIdKelas.data()!['walikelas'];
+        String idwalikelas = docIdKelas.data()!['idwalikelas'];
+        // Data untuk kelas
+        Map<String, dynamic> dataKelas = _createDataMap(
+          namaKelas: argumentKelas,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: walikelas,
+          idwalikelas: idwalikelas,
+        );
+        //Data untuk semester
+        Map<String, dynamic> dataSemester = _createDataMap(
+          namaKelas: argumentKelas,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: walikelas,
+          idwalikelas: idwalikelas,
+        );
+        //Data untuk daftar siswa
+        Map<String, dynamic> dataDaftarSiswa = {
+          ..._createDataMap(
+            namaKelas: argumentKelas,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: walikelas,
+            idwalikelas: idwalikelas,
+            namaSiswa: namaSiswa,
+            nisn: nisnSiswa,
+          ),
+          'status': 'aktif',
+          'idsiswa': nisnSiswa,
+          'statuskelompok': 'baru',
+          'namasemester': 'Semester I',
+        };
+        // Referensi dokumen yang akan diubah
+        DocumentReference kelasDocRef = colKelas.doc(argumentKelas);
+        DocumentReference semesterDocRef = kelasDocRef
+            .collection('semester')
+            .doc('Semester I');
+        DocumentReference daftarSiswaDocRef = semesterDocRef
+            .collection('daftarsiswa')
+            .doc(nisnSiswa);
+        // Tambahkan operasi ke batch
+        batch.set(kelasDocRef, dataKelas);
+        batch.set(semesterDocRef, dataSemester);
+        batch.set(daftarSiswaDocRef, dataDaftarSiswa);
+        // Daftar mata pelajaran
+        List<String> mataPelajaran = [
+          "Pendidikan Pancasila dan Kewarganegaraan (PPKn)",
+          "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+          "Bahasa Indonesia",
+          "Pendidikan Agama Islam dan Budi Pekerti",
+          "Matematika",
+          "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)",
+          "Bahasa Inggris",
+        ];
+        // Tambahkan mata pelajaran ke batch
+        for (String pelajaran in mataPelajaran) {
+          Map<String, dynamic> dataMataPelajaran = _createDataMap(
+            namaKelas: argumentKelas,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: walikelas,
+            idwalikelas: idwalikelas,
+            namamatapelajaran: pelajaran,
+          );
+          batch.set(
+            daftarSiswaDocRef.collection('matapelajaran').doc(pelajaran),
+            dataMataPelajaran,
+          );
+        }
+        // Commit batch
+        await batch.commit();
+        // Panggil fungsi lain
+        await tambahDaftarKelasGuruAjar();
+        await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
+        await ubahStatusSiswaNext(nisnSiswa);
+      } else {
+        // Dokumen kelas tidak ditemukan -> buat data kelas baru
+        QuerySnapshot<Map<String, dynamic>> querySnapshot =
+            await firestore
+                .collection('Sekolah')
+                .doc(idSekolah)
+                .collection('pegawai')
+                .where('alias', isEqualTo: waliKelasSiswaC.text)
+                .get();
+        if (querySnapshot.docs.isEmpty) {
+          Get.snackbar('Error', 'Wali kelas tidak ditemukan.');
+          return;
+        }
+        String uidWaliKelasnya = querySnapshot.docs.first.data()!['uid'];
+        // Cek apakah wali kelas sudah ada di kelas lain
+        QuerySnapshot<Map<String, dynamic>> snapKelas = await colKelas.get();
+        List<String> waliKelasBaruList =
+            snapKelas.docs
+                .where((doc) => doc.data()!['walikelas'] != null)
+                .map((doc) => doc.data()!['walikelas'] as String)
+                .toList();
+        if (waliKelasBaruList.contains(waliKelasSiswaC.text)) {
+          Get.snackbar(
+            'Error',
+            'Wali kelas sudah ada di kelas lain, silakan pilih yang lain.',
+          );
+          return;
+        }
+        // Jika semua validasi lolos, buat data kelas baru
+        Map<String, dynamic> dataKelasBaru = _createDataMap(
+          namaKelas: argumentKelas,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: waliKelasSiswaC.text,
+          idwalikelas: uidWaliKelasnya,
+        );
+        //Data untuk semester
+        Map<String, dynamic> dataSemesterBaru = _createDataMap(
+          namaKelas: argumentKelas,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: waliKelasSiswaC.text,
+          idwalikelas: uidWaliKelasnya,
+        );
+        //Data untuk daftar siswa
+        Map<String, dynamic> dataDaftarSiswaBaru = {
+          ..._createDataMap(
+            namaKelas: argumentKelas,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: waliKelasSiswaC.text,
+            idwalikelas: uidWaliKelasnya,
+            namaSiswa: namaSiswa,
+            nisn: nisnSiswa,
+          ),
+          'status': 'aktif',
+          'idsiswa': nisnSiswa,
+          'statuskelompok': 'baru',
+          'namasemester': 'Semester I',
+        };
+        // Referensi dokumen yang akan diubah
+        DocumentReference kelasDocRefBaru = colKelas.doc(argumentKelas);
+        DocumentReference semesterDocRefBaru = kelasDocRefBaru
+            .collection('semester')
+            .doc('Semester I');
+        DocumentReference daftarSiswaDocRefBaru = semesterDocRefBaru
+            .collection('daftarsiswa')
+            .doc(nisnSiswa);
+        // Tambahkan operasi ke batch
+        batch.set(kelasDocRefBaru, dataKelasBaru);
+        batch.set(semesterDocRefBaru, dataSemesterBaru);
+        batch.set(daftarSiswaDocRefBaru, dataDaftarSiswaBaru);
+        // Daftar mata pelajaran
+        List<String> mataPelajaranBaru = [
+          "Pendidikan Pancasila dan Kewarganegaraan (PPKn)",
+          "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+          "Bahasa Indonesia",
+          "Pendidikan Agama Islam dan Budi Pekerti",
+          "Matematika",
+          "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)",
+          "Bahasa Inggris",
+        ];
+        // Tambahkan mata pelajaran ke batch
+        for (String pelajaran in mataPelajaranBaru) {
+          Map<String, dynamic> dataMataPelajaranBaru = _createDataMap(
+            namaKelas: argumentKelas,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: waliKelasSiswaC.text,
+            idwalikelas: uidWaliKelasnya,
+            namamatapelajaran: pelajaran,
+          );
+          batch.set(
+            daftarSiswaDocRefBaru.collection('matapelajaran').doc(pelajaran),
+            dataMataPelajaranBaru,
+          );
+        }
+        // Commit batch
+        await batch.commit();
+        // Panggil fungsi lain
+        await tambahDaftarKelasGuruAjar();
+        await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
+        await ubahStatusSiswaNext(nisnSiswa);
+      }
+    } catch (e) {
+      // Tangani error yang lebih spesifik
+      if (e is FirebaseException) {
+        print('FirebaseException: ${e.code} - ${e.message}');
+        Get.snackbar(
+          'Error Firestore',
+          'Terjadi kesalahan Firestore: ${e.message}',
+        );
+      } else {
+        print('Exception: $e');
+        Get.snackbar('Error', 'Terjadi kesalahan: $e');
+      }
+    }
+  }
+
+  Future<void> simpanKelasBaruLagi(String namaSiswa, String nisnSiswa) async {
+    isLoadingTambahKelas.value = true;
+
+    // Mulai loading
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
     String kelasNya = argumentKelas.substring(0, 1);
-    String faseNya = (kelasNya == '1' || kelasNya == '2') ? "Fase A" : (kelasNya == '3' || kelasNya == '4') ? "Fase B" : "Fase C";
+    String namaSemesternya = "Semester I";
+    String faseNya =
+        (kelasNya == '1' || kelasNya == '2')
+            ? "Fase A"
+            : (kelasNya == '3' || kelasNya == '4')
+            ? "Fase B"
+            : "Fase C";
 
-    CollectionReference<Map<String, dynamic>> colKelas = firestore .collection('Sekolah') .doc(idSekolah) .collection('tahunajaran') .doc(idTahunAjaran) .collection('kelastahunajaran'); DocumentSnapshot<Map<String, dynamic>> docIdKelas = await colKelas.doc(argumentKelas).get();
+    CollectionReference<Map<String, dynamic>> colKelas = firestore
+        .collection('Sekolah')
+        .doc(idSekolah)
+        .collection('tahunajaran')
+        .doc(idTahunAjaran)
+        .collection('kelastahunajaran');
+    DocumentSnapshot<Map<String, dynamic>> docIdKelas =
+        await colKelas.doc(argumentKelas).get();
 
     // Helper function untuk membuat data map yang konsisten
-    Map<String, dynamic> _createDataMap({ required String namaKelas, required String fase, required String tahunAjaran, required String walikelas, required String idwalikelas, String? namaSiswa, String? nisn, String? namamatapelajaran, }) {
-      return { 'namakelas': namaKelas, 'fase': fase, 'tahunajaran': tahunAjaran, 'walikelas': walikelas, 'idwalikelas': idwalikelas, 'emailpenginput': emailAdmin, 'idpenginput': idUser, 'tanggalinput': DateTime.now().toIso8601String(),
-      if (namaSiswa != null)
-      'namasiswa': namaSiswa, 
-      if (nisn != null) 'nisn': nisn,
-      if (namamatapelajaran != null) 'namamatapelajaran': namamatapelajaran, }; }
-      WriteBatch batch = firestore.batch();
-      // Inisialisasi batch
-      try {
-        if (docIdKelas.exists) {
-          // Ambil data wali kelas dan ID wali kelas dari dokumen kelas
-          String walikelas = docIdKelas.data()!['walikelas'];
-          String idwalikelas = docIdKelas.data()!['idwalikelas'];
-          // Data untuk kelas
-          Map<String, dynamic> dataKelas = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: walikelas, idwalikelas: idwalikelas, );
-          //Data untuk semester
-          Map<String, dynamic> dataSemester = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: walikelas, idwalikelas: idwalikelas, );
-          //Data untuk daftar siswa
-          Map<String, dynamic> dataDaftarSiswa = { ..._createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: walikelas, idwalikelas: idwalikelas, namaSiswa: namaSiswa, nisn: nisnSiswa, ), 'status': 'aktif', 'idsiswa': nisnSiswa, 'statuskelompok': 'baru', 'namasemester' : 'Semester I' };
-          // Referensi dokumen yang akan diubah
-          DocumentReference kelasDocRef = colKelas.doc(argumentKelas);
-          DocumentReference semesterDocRef = kelasDocRef .collection('semester') .doc('Semester I');
-          DocumentReference daftarSiswaDocRef = semesterDocRef .collection('daftarsiswa') .doc(nisnSiswa);
-          // Tambahkan operasi ke batch
-          batch.set(kelasDocRef, dataKelas); batch.set(semesterDocRef, dataSemester);
-          batch.set(daftarSiswaDocRef, dataDaftarSiswa);
-          // Daftar mata pelajaran 
-          List<String> mataPelajaran = [ "Pendidikan Pancasila dan Kewarganegaraan (PPKn)", "Ilmu Pengetahuan Alam dan Sosial (IPAS)", "Bahasa Indonesia", "Pendidikan Agama Islam dan Budi Pekerti", "Matematika", "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)", "Bahasa Inggris", ];
-          // Tambahkan mata pelajaran ke batch
-          for (String pelajaran in mataPelajaran) {
-            Map<String, dynamic> dataMataPelajaran = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: walikelas, idwalikelas: idwalikelas, namamatapelajaran: pelajaran, ); batch.set( daftarSiswaDocRef.collection('matapelajaran').doc(pelajaran), dataMataPelajaran);
-          }
-          // Commit batch
-          await batch.commit();
-          // Panggil fungsi lain 
-          await tambahDaftarKelasGuruAjar();
-          await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
-          await ubahStatusSiswaNext(nisnSiswa);
-        }  else {
-          // Dokumen kelas tidak ditemukan -> buat data kelas baru
-          QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore .collection('Sekolah') .doc(idSekolah) .collection('pegawai') .where('alias', isEqualTo: waliKelasSiswaC.text) .get();
-          if (querySnapshot.docs.isEmpty) { Get.snackbar('Error', 'Wali kelas tidak ditemukan.');
-          return;
-          }
-          String uidWaliKelasnya = querySnapshot.docs.first.data()!['uid'];
-          // Cek apakah wali kelas sudah ada di kelas lain
-          QuerySnapshot<Map<String, dynamic>> snapKelas = await colKelas.get();
-          List<String> waliKelasBaruList = snapKelas.docs .where((doc) => doc.data()!['walikelas'] != null) .map((doc) => doc.data()!['walikelas'] as String) .toList();
-          if (waliKelasBaruList.contains(waliKelasSiswaC.text)) { Get.snackbar( 'Error', 'Wali kelas sudah ada di kelas lain, silakan pilih yang lain.');
-          return;
-          }
-          // Jika semua validasi lolos, buat data kelas baru
-          Map<String, dynamic> dataKelasBaru = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: waliKelasSiswaC.text, idwalikelas: uidWaliKelasnya, );
-          //Data untuk semester
-          Map<String, dynamic> dataSemesterBaru = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: waliKelasSiswaC.text, idwalikelas: uidWaliKelasnya, );
-          //Data untuk daftar siswa
-          Map<String, dynamic> dataDaftarSiswaBaru = { ..._createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: waliKelasSiswaC.text, idwalikelas: uidWaliKelasnya, namaSiswa: namaSiswa, nisn: nisnSiswa, ), 'status': 'aktif', 'idsiswa': nisnSiswa, 'statuskelompok': 'baru', 'namasemester' : 'Semester I' };
-          // Referensi dokumen yang akan diubah
-          DocumentReference kelasDocRefBaru = colKelas.doc(argumentKelas); DocumentReference semesterDocRefBaru = kelasDocRefBaru .collection('semester') .doc('Semester I'); DocumentReference daftarSiswaDocRefBaru = semesterDocRefBaru .collection('daftarsiswa') .doc(nisnSiswa);
-          // Tambahkan operasi ke batch
-           batch.set(kelasDocRefBaru, dataKelasBaru); batch.set(semesterDocRefBaru, dataSemesterBaru);
-           batch.set(daftarSiswaDocRefBaru, dataDaftarSiswaBaru);
-           // Daftar mata pelajaran
-           List<String> mataPelajaranBaru = [ "Pendidikan Pancasila dan Kewarganegaraan (PPKn)", "Ilmu Pengetahuan Alam dan Sosial (IPAS)", "Bahasa Indonesia", "Pendidikan Agama Islam dan Budi Pekerti", "Matematika", "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)", "Bahasa Inggris", ];
-           // Tambahkan mata pelajaran ke batch
-           for (String pelajaran in mataPelajaranBaru) {
-            Map<String, dynamic> dataMataPelajaranBaru = _createDataMap( namaKelas: argumentKelas, fase: faseNya, tahunAjaran: tahunajaranya, walikelas: waliKelasSiswaC.text, idwalikelas: uidWaliKelasnya, namamatapelajaran: pelajaran, );
-            batch.set( daftarSiswaDocRefBaru.collection('matapelajaran').doc(pelajaran), dataMataPelajaranBaru); }
-            // Commit batch
-            await batch.commit();
-            // Panggil fungsi lain
-            await tambahDaftarKelasGuruAjar();
-            await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
-            await ubahStatusSiswaNext(nisnSiswa); } 
-            } catch (e) { 
-              // Tangani error yang lebih spesifik
-              if (e is FirebaseException) {
-                print('FirebaseException: ${e.code} - ${e.message}');
-                Get.snackbar('Error Firestore', 'Terjadi kesalahan Firestore: ${e.message}'); 
-                } else {
-                  print('Exception: $e');
-                  Get.snackbar('Error', 'Terjadi kesalahan: $e'); } } 
+    Map<String, dynamic> _createDataMap({
+      required String namasemester,
+      required String namaKelas,
+      required String fase,
+      required String tahunAjaran,
+      required String walikelas,
+      required String idwalikelas,
+      String? namaSiswa,
+      String? nisn,
+      String? namamatapelajaran,
+    }) {
+      return {
+        'namakelas': namaKelas,
+        'namasemester' : namasemester,
+        'fase': fase,
+        'tahunajaran': tahunAjaran,
+        'walikelas': walikelas,
+        'idwalikelas': idwalikelas,
+        'emailpenginput': emailAdmin,
+        'idpenginput': idUser,
+        'tanggalinput': DateTime.now().toIso8601String(),
+        if (namaSiswa != null) 'namasiswa': namaSiswa,
+        if (nisn != null) 'nisn': nisn,
+        if (namamatapelajaran != null) 'namamatapelajaran': namamatapelajaran,
+      };
+    }
 
+    WriteBatch batch = firestore.batch();
+    try {
+      if (docIdKelas.exists) {
+        // Ambil data wali kelas dan ID wali kelas dari dokumen kelas
+        String walikelas = docIdKelas.data()!['walikelas'];
+        String idwalikelas = docIdKelas.data()!['idwalikelas'];
 
+        // Data untuk kelas
+        Map<String, dynamic> dataKelas = _createDataMap(
+          namaKelas: argumentKelas,
+          namasemester: namaSemesternya,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: walikelas,
+          idwalikelas: idwalikelas,
+        );
+
+        //Data untuk daftar siswa
+        Map<String, dynamic> dataDaftarSiswa = {
+          ..._createDataMap(
+            namaKelas: argumentKelas,
+            namasemester: namaSemesternya,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: walikelas,
+            idwalikelas: idwalikelas,
+            namaSiswa: namaSiswa,
+            nisn: nisnSiswa,
+          ),
+          'status': 'aktif',
+          'idsiswa': nisnSiswa,
+          'statuskelompok': 'baru',
+        };
+
+        // Referensi dokumen yang akan diubah
+        DocumentReference kelasDocRef = colKelas.doc(argumentKelas);
+        DocumentReference daftarSiswaDocRef = kelasDocRef
+            .collection('daftarsiswa')
+            .doc(nisnSiswa);
+
+        //Data untuk semester
+        Map<String, dynamic> dataSemester = _createDataMap(
+          namaKelas: argumentKelas,
+          namasemester: namaSemesternya,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: walikelas,
+          idwalikelas: idwalikelas,
+        );
+        DocumentReference semesterDocRef = daftarSiswaDocRef
+            .collection('semester')
+            .doc('Semester I');
+
+        // Tambahkan operasi ke batch
+        batch.set(kelasDocRef, dataKelas);
+        batch.set(daftarSiswaDocRef, dataDaftarSiswa);
+        batch.set(semesterDocRef, dataSemester);
+
+        // Daftar mata pelajaran
+        List<String> mataPelajaran = [
+          "Pendidikan Pancasila dan Kewarganegaraan (PPKn)",
+          "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+          "Bahasa Indonesia",
+          "Pendidikan Agama Islam dan Budi Pekerti",
+          "Matematika",
+          "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)",
+          "Bahasa Inggris",
+        ];
+
+        // Tambahkan mata pelajaran ke batch
+        for (String pelajaran in mataPelajaran) {
+          Map<String, dynamic> dataMataPelajaran = _createDataMap(
+            namaKelas: argumentKelas,
+            namasemester: namaSemesternya,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: walikelas,
+            idwalikelas: idwalikelas,
+            namamatapelajaran: pelajaran,
+          );
+          batch.set(
+            semesterDocRef.collection('matapelajaran').doc(pelajaran),
+            dataMataPelajaran,
+          );
+        }
+
+        // Commit batch
+        await batch.commit();
+
+        // Panggil fungsi lain
+        await tambahDaftarKelasGuruAjar();
+        await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
+        await ubahStatusSiswaNext(nisnSiswa);
+      } else {
+        // Jika Dokumen kelas tidak ditemukan -> buat data kelas baru
+        QuerySnapshot<Map<String, dynamic>> querySnapshot =
+            await firestore
+                .collection('Sekolah')
+                .doc(idSekolah)
+                .collection('pegawai')
+                .where('alias', isEqualTo: waliKelasSiswaC.text)
+                .get();
+        if (querySnapshot.docs.isEmpty) {
+          Get.snackbar('Error', 'Wali kelas tidak ditemukan.');
+          return;
+        }
+        String uidWaliKelasnya = querySnapshot.docs.first.data()!['uid'];
+
+        // Cek apakah wali kelas sudah ada di kelas lain
+        QuerySnapshot<Map<String, dynamic>> snapKelas = await colKelas.get();
+        List<String> waliKelasBaruList =
+            snapKelas.docs
+                .where((doc) => doc.data()!['walikelas'] != null)
+                .map((doc) => doc.data()!['walikelas'] as String)
+                .toList();
+        if (waliKelasBaruList.contains(waliKelasSiswaC.text)) {
+          Get.snackbar(
+            'Error',
+            'Wali kelas sudah ada di kelas lain, silakan pilih yang lain.',
+          );
+          return;
+        }
+
+        // Jika semua validasi lolos, buat data kelas baru
+        Map<String, dynamic> dataKelasBaru = _createDataMap(
+          namaKelas: argumentKelas,
+          namasemester: namaSemesternya,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: waliKelasSiswaC.text,
+          idwalikelas: uidWaliKelasnya,
+        );
+
+        //Data untuk daftar siswa
+        Map<String, dynamic> dataDaftarSiswaBaru = {
+          ..._createDataMap(
+            namaKelas: argumentKelas,
+            namasemester: namaSemesternya,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: waliKelasSiswaC.text,
+            idwalikelas: uidWaliKelasnya,
+            namaSiswa: namaSiswa,
+            nisn: nisnSiswa,
+          ),
+          'status': 'aktif',
+          'idsiswa': nisnSiswa,
+          'statuskelompok': 'baru',
+        };
+
+        // Referensi dokumen yang akan diubah
+        DocumentReference kelasDocRefBaru = colKelas.doc(argumentKelas);
+        DocumentReference daftarSiswaDocRefBaru = kelasDocRefBaru
+            .collection('daftarsiswa')
+            .doc(nisnSiswa);
+
+        //Data untuk semester
+        Map<String, dynamic> dataSemesterBaru = _createDataMap(
+          namaKelas: argumentKelas,
+          namasemester: namaSemesternya,
+          fase: faseNya,
+          tahunAjaran: tahunajaranya,
+          walikelas: waliKelasSiswaC.text,
+          idwalikelas: uidWaliKelasnya,
+        );
+        DocumentReference semesterDocRefBaru = daftarSiswaDocRefBaru
+            .collection('semester')
+            .doc('Semester I');
+
+        // Tambahkan operasi ke batch
+        batch.set(kelasDocRefBaru, dataKelasBaru);
+        batch.set(daftarSiswaDocRefBaru, dataDaftarSiswaBaru);
+        batch.set(semesterDocRefBaru, dataSemesterBaru);
+
+        // Daftar mata pelajaran
+        List<String> mataPelajaranBaru = [
+          "Pendidikan Pancasila dan Kewarganegaraan (PPKn)",
+          "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+          "Bahasa Indonesia",
+          "Pendidikan Agama Islam dan Budi Pekerti",
+          "Matematika",
+          "Pendidikan Jasmani, Olahraga, dan Kesehatan (PJOK)",
+          "Bahasa Inggris",
+        ];
+
+        // Tambahkan mata pelajaran ke batch
+        for (String pelajaran in mataPelajaranBaru) {
+          Map<String, dynamic> dataMataPelajaranBaru = _createDataMap(
+            namaKelas: argumentKelas,
+            namasemester: namaSemesternya,
+            fase: faseNya,
+            tahunAjaran: tahunajaranya,
+            walikelas: waliKelasSiswaC.text,
+            idwalikelas: uidWaliKelasnya,
+            namamatapelajaran: pelajaran,
+          );
+          batch.set(
+            semesterDocRefBaru.collection('matapelajaran').doc(pelajaran),
+            dataMataPelajaranBaru,
+          );
+        }
+
+        // Commit batch
+        await batch.commit();
+
+        // Panggil fungsi lain
+        await firestore.collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelasaktif')
+          .doc(argumentKelas)
+          .set({
+            'namakelas': argumentKelas,
+            'fase': faseNya,
+            'tahunajaran' : tahunajaranya,
+            'emailpenginput' : emailAdmin,
+            'idpenginput' : idUser,
+          });
+        await tambahDaftarKelasGuruAjar();
+        await kelasUntukSiswaNext(nisnSiswa, namaSiswa);
+        await ubahStatusSiswaNext(nisnSiswa);
+      }
+    } catch (e) {
+      // Tangani error yang lebih spesifik
+      if (e is FirebaseException) {
+        // print('FirebaseException: ${e.code} - ${e.message}');
+        Get.snackbar(
+          'Error Firestore',
+          'Terjadi kesalahan Firestore: ${e.message}',
+        );
+      } else {
+        // print('Exception: $e');
+        Get.snackbar('Error', 'Terjadi kesalahan: $e');
+      }
+    } finally {
+      isLoadingTambahKelas.value = false;
+      // Selesai loading
+    }
   }
+
+
 }
 //==========================================================================================================================================================
 

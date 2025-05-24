@@ -30,29 +30,31 @@ class DaftarHalaqohPengampuController extends GetxController {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    QuerySnapshot<Map<String, dynamic>> querySnapshotPengampu = await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('pegawai')
-        .where('uid', isEqualTo: idUser)
-        .get();
+    QuerySnapshot<Map<String, dynamic>> querySnapshotPengampu =
+        await firestore
+            .collection('Sekolah')
+            .doc(idSekolah)
+            .collection('pegawai')
+            .where('uid', isEqualTo: idUser)
+            .get();
     if (querySnapshotPengampu.docs.isNotEmpty) {
       Map<String, dynamic> dataNama = querySnapshotPengampu.docs.last.data();
       String namaPengampu = dataNama['alias'];
 
-      QuerySnapshot<Map<String, dynamic>> querySnapshotTempat = await firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('semester')
-          .doc(idSemester)
-          .collection('kelompokmengaji')
-          .doc(dataHalaqoh) 
-          .collection('pengampu')
-          .doc(namaPengampu)
-          .collection('tempat')
-          .get();
+      QuerySnapshot<Map<String, dynamic>> querySnapshotTempat =
+          await firestore
+              .collection('Sekolah')
+              .doc(idSekolah)
+              .collection('tahunajaran')
+              .doc(idTahunAjaran)
+              // .collection('semester')
+              // .doc(idSemester)
+              .collection('kelompokmengaji')
+              .doc(dataHalaqoh)
+              .collection('pengampu')
+              .doc(namaPengampu)
+              .collection('tempat')
+              .get();
       if (querySnapshotTempat.docs.isNotEmpty) {
         Map<String, dynamic> dataTampat = querySnapshotTempat.docs.last.data();
         String namaTempat = dataTampat['tempatmengaji'];
@@ -62,8 +64,8 @@ class DaftarHalaqohPengampuController extends GetxController {
             .doc(idSekolah)
             .collection('tahunajaran')
             .doc(idTahunAjaran)
-            .collection('semester')
-            .doc(idSemester)
+            // .collection('semester')
+            // .doc(idSemester)
             .collection('kelompokmengaji')
             .doc(dataHalaqoh) // ini nanti diganti otomatis
             .collection('pengampu')
@@ -77,4 +79,56 @@ class DaftarHalaqohPengampuController extends GetxController {
     throw Exception('No data found for daftar halaqoh');
   }
 
+  // Future<QuerySnapshot<Map<String, dynamic>>> getDataUmi() async {
+  //   QuerySnapshot<Map<String, dynamic>> dataUmi =
+  //       await getDaftarHalaqohPengampu();
+  //   if (dataUmi.docs.isNotEmpty) {
+  //     print(dataUmi.docs.length);
+  //     // Map<String..dynamic>
+  //     // dataNama = dataUmi.docs.last.data();
+  //     // String namaPengampu = dataNama['alias'];
+  //     // QuerySnapshot<Map
+  //     // ..dynamic>
+  //     // querySnapshotTempat = await firestore
+  //     // .collection('Sekolah')
+  //     // .doc(idSekolah)
+  //     // .collection('tahunajaran')
+  //     // .doc(idTahunAjaran)
+  //     // // .collection('semester')
+  //     // // .doc(idSemester)
+  //     // .collection('kelompokmengaji')
+  //     // .doc(dataNama['idhalaqoh'])
+  //     // .collection('pengampu')
+  //     // .doc(namaPengampu)
+  //     // .collection('tempat')
+  //     // .get();
+  //     // if (querySnapshotTempat.docs.isNotEmpty) {
+  //     //   Map<String
+  //     //   ..dynamic>
+  //     //   dataTampat = querySnapshotTempat.docs.last.data();
+  //     //   String namaTempat = dataTampat['tempatmengaji'];
+  //     //   return await firestore
+  //     //   .collection('Sekolah')
+  //     //   .doc(idSekolah)
+  //     //   .collection('tahunajaran')
+  //     //   .doc(idTahunAjaran)
+  //     //   // .collection('semester')
+  //     //   // .doc(idSemester)
+  //     //   .collection('kelompokmengaji')
+  //     //   .doc(dataNama['idhalaqoh'])
+  //     //   .collection('pengampu')
+  //     //   .doc(namaPengampu)
+  //     //   .collection('tempat')
+  //     //   .doc(namaTempat)
+  //     //   .collection('daftarsiswa')
+  //     //   .get();
+  //     //   } else {
+  //     //     throw Exception('No data found for daftar siswa');
+  //     //     }
+  //     //     } else {
+  //     //       throw Exception('No data found for daftar pengampu');
+  //     //       }
+  //   }
+  //     return dataUmi;
+  // }
 }

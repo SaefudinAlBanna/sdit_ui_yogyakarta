@@ -19,7 +19,7 @@ class DaftarKelasView extends GetView<DaftarKelasController> {
       ),
 
       body: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        future: controller.getDataKelas(),
+        future: controller.getDataMapel(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.hasData) {
@@ -28,69 +28,70 @@ class DaftarKelasView extends GetView<DaftarKelasController> {
                 itemBuilder: (context, index) {
                   return ListTile(
                     onTap: () {
-                      String getNama =
-                                snapshot.data!.docs[index].data()['nisn'];
+                      String kelas = snapshot.data!.docs[index].data()['idKelas'];
                             Get.toNamed(Routes.DETAIL_SISWA,
-                                arguments: getNama);
+                                arguments: kelas);
                     },
-                    title: Text(snapshot.data!.docs[index].data()['namasiswa']),
-                    subtitle: Text(snapshot.data!.docs[index].data()['namakelas']),
-                    leading: CircleAvatar(
-                      child: Text(
-                          snapshot.data!.docs[index].data()['namasiswa'][0]),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        IconButton(
-                          tooltip: 'Info siswa',
-                          icon: const Icon(Icons.info_outlined),
-                          onPressed: () {
-                            String getNama =
-                                snapshot.data!.docs[index].data()['nisn'];
-                            Get.toNamed(Routes.DETAIL_SISWA,
-                                arguments: getNama);
-                          },
-                        ),
-                        IconButton(
-                          tooltip: 'Pemberian Nilai',
-                          icon: const Icon(Icons.add_box_rounded),
-                          onPressed: () {
-                            // Get.toNamed(Routes.CONTOH, arguments: snapshot.data!.docs[index].data()['namasiswa']);
-                            Get.dialog(AlertDialog(
-                              title: Text('Fitur dalam pengembangan'),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: const Text('Ok'),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                              ],
-                            ));
-                          },
-                        ),
-                        IconButton(
-                          tooltip: 'Daftar Nilai',
-                          icon: const Icon(Icons.book),
-                          onPressed: () {
-                            // String getNama = snapshot.data!.docs[index].data()['namasiswa'];
-                            // Get.toNamed(Routes.DAFTAR_NILAI, arguments: getNama);
-                            Get.dialog(AlertDialog(
-                              title: Text('Fitur dalam pengembangan'),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: const Text('Ok'),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                              ],
-                            ));
-                          },
-                        ),
-                      ],
-                    ),
+                    title: Text(snapshot.data!.docs[index].data()['namaMapel']),
+                    subtitle: Text(snapshot.data!.docs[index].data()['idKelas']),
+
+                    // leading: CircleAvatar(
+                    //   child: Text(
+                    //       snapshot.data!.docs[index].data()['namasiswa'][0]),
+                    // ),
+                    // trailing: Row(
+                    //   mainAxisSize: MainAxisSize.min,
+                    //   children: <Widget>[
+                    //     IconButton(
+                    //       tooltip: 'Info siswa',
+                    //       icon: const Icon(Icons.info_outlined),
+                    //       onPressed: () {
+                    //         String getNama =
+                    //             snapshot.data!.docs[index].data()['nisn'];
+                    //         Get.toNamed(Routes.DETAIL_SISWA,
+                    //             arguments: getNama);
+                    //       },
+                    //     ),
+                    //     IconButton(
+                    //       tooltip: 'Pemberian Nilai',
+                    //       icon: const Icon(Icons.add_box_rounded),
+                    //       onPressed: () {
+                    //         // Get.toNamed(Routes.CONTOH, arguments: snapshot.data!.docs[index].data()['namasiswa']);
+                    //         Get.dialog(AlertDialog(
+                    //           title: Text('Fitur dalam pengembangan'),
+                    //           actions: <Widget>[
+                    //             TextButton(
+                    //               child: const Text('Ok'),
+                    //               onPressed: () {
+                    //                 Navigator.of(context).pop();
+                    //               },
+                    //             ),
+                    //           ],
+                    //         ));
+                    //       },
+                    //     ),
+                    //     IconButton(
+                    //       tooltip: 'Daftar Nilai',
+                    //       icon: const Icon(Icons.book),
+                    //       onPressed: () {
+                    //         // String getNama = snapshot.data!.docs[index].data()['namasiswa'];
+                    //         // Get.toNamed(Routes.DAFTAR_NILAI, arguments: getNama);
+                    //         Get.dialog(AlertDialog(
+                    //           title: Text('Fitur dalam pengembangan'),
+                    //           actions: <Widget>[
+                    //             TextButton(
+                    //               child: const Text('Ok'),
+                    //               onPressed: () {
+                    //                 Navigator.of(context).pop();
+                    //               },
+                    //             ),
+                    //           ],
+                    //         ));
+                    //       },
+                    //     ),
+                    //   ],
+                    // ),
+                  
                   );
                 },
               );

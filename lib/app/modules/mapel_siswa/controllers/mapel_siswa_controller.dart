@@ -1,15 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+// import 'package:flutter/material.dart';
 
-class DaftarHalaqohPerfaseController extends GetxController {
-  var dataFase = Get.arguments;
-
+class MapelSiswaController extends GetxController {
   FirebaseAuth auth = FirebaseAuth.instance;
   FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   String idUser = FirebaseAuth.instance.currentUser!.uid;
-  String idSekolah = '20404148';
+  String idSekolah = "20404148";
 
   Future<String> getTahunAjaranTerakhir() async {
     CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
@@ -25,21 +24,5 @@ class DaftarHalaqohPerfaseController extends GetxController {
     return tahunAjaranTerakhir;
   }
 
-  Future<QuerySnapshot<Map<String, dynamic>>> getFaseHalaqoh() async {
-
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    return await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        // .collection('semester')
-        // .doc('Semester I')
-        .collection('kelompokmengaji')
-        .doc(dataFase) // ini nanti diganti otomatis
-        .collection('pengampu')
-        .get();
-  }
+  
 }

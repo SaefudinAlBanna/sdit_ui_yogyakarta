@@ -3,28 +3,26 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/pemberian_nilai_halaqoh_controller.dart';
 
 class PemberianNilaiHalaqohView
     extends GetView<PemberianNilaiHalaqohController> {
-   PemberianNilaiHalaqohView({super.key});
+  PemberianNilaiHalaqohView({super.key});
 
   final dataxx = Get.arguments;
 
   @override
   Widget build(BuildContext context) {
+    // print("dataxx = $dataxx");
     return Scaffold(
       appBar: _buildAppBar(),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(15),
           children: [
-            Column(
-              children: [
-                _buildHeaderSection(),
-              ],
-            ),
+            Column(children: [_buildHeaderSection()]),
             Divider(height: 3, color: Colors.black),
             SizedBox(height: 20),
             SingleChildScrollView(
@@ -57,9 +55,29 @@ class PemberianNilaiHalaqohView
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('nanti tanya mas dayat'),
-                            Text(dataxx['namapengampu']),
-                            Text(dataxx['tempatmengaji']),
+                            FutureBuilder<Object>(
+                              future: controller.ambilDataUmi(),
+                              builder: (context, snapumi) {
+                                if (snapumi.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (snapumi.data == null ||
+                                    snapumi.data == "0") {
+                                  return Text("Belum di input");
+                                }
+                                if (snapumi.hasData) {
+                                  String dataUmi = snapumi.data as String;
+                                  return Text("UMI : $dataUmi");
+                                } else {
+                                  return Text("Belum di input");
+                                }
+                              },
+                            ),
+                            Text("Ustadz/ah : ${dataxx['namapengampu']}"),
+                            Text("Tempat : ${dataxx['tempatmengaji']}"),
                           ],
                         ),
                       ),
@@ -74,14 +92,13 @@ class PemberianNilaiHalaqohView
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Text('Tatap muka ke :'),
-                Text('Tanggal :   ${DateFormat.yMd().format(DateTime.now()).replaceAll("/", "-")}'),
+                Text(
+                  'Tanggal :   ${DateFormat.yMd().format(DateTime.now()).replaceAll("/", "-")}',
+                ),
                 SizedBox(height: 10),
                 Text(
                   'HAFALAN',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Divider(height: 2, color: Colors.black),
                 DropdownSearch<String>(
@@ -93,22 +110,24 @@ class PemberianNilaiHalaqohView
                     ),
                   ),
                   selectedItem: controller.suratC.text,
-                  items: (f, cs) => [
-                    "Annas",
-                    'Al-Falaq',
-                    'Al Ikhlas',
-                    'Al Lahab',
-                    'An Nasr',
-                    'dll'
-                  ],
+                  items:
+                      (f, cs) => [
+                        "Annas",
+                        'Al-Falaq',
+                        'Al Ikhlas',
+                        'Al Lahab',
+                        'An Nasr',
+                        'dll',
+                      ],
                   onChanged: (String? value) {
                     if (value != null) {
                       controller.suratC.text = value;
                     }
                   },
                   popupProps: PopupProps.menu(
-                      // disabledItemFn: (item) => item == '1A',
-                      fit: FlexFit.tight),
+                    // disabledItemFn: (item) => item == '1A',
+                    fit: FlexFit.tight,
+                  ),
                 ),
                 TextField(
                   controller: controller.ayatHafalC,
@@ -120,36 +139,9 @@ class PemberianNilaiHalaqohView
                 SizedBox(height: 10),
                 Text(
                   'UMMI/ALQURAN',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Divider(height: 2, color: Colors.black),
-                DropdownSearch<String>(
-                  decoratorProps: DropDownDecoratorProps(
-                    decoration: InputDecoration(
-                      border: UnderlineInputBorder(),
-                      filled: true,
-                      prefixText: 'Jld/Surat: ',
-                    ),
-                  ),
-                  selectedItem: controller.jldSuratC.text,
-                  items: (f, cs) => [
-                    "Annas",
-                    'Al-Falaq',
-                    'Al Ikhlas',
-                    'Al Lahab',
-                    'An Nasr',
-                    'dll'
-                  ],
-                  onChanged: (String? value) {
-                    controller.jldSuratC.text = value!;
-                  },
-                  popupProps: PopupProps.menu(
-                      // disabledItemFn: (item) => item == '1A',
-                      fit: FlexFit.tight),
-                ),
                 TextField(
                   controller: controller.halAyatC,
                   decoration: InputDecoration(
@@ -165,79 +157,145 @@ class PemberianNilaiHalaqohView
                   ),
                 ),
                 TextField(
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   controller: controller.nilaiC,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(),
-                    hintText: 'Nilai',
+                    hintText: 'Nilai (Hanya angka)',
                   ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      int nilai = int.parse(value);
+                      if (nilai > 100) {
+                        controller.nilaiC.text = '100';
+                        //Batasi nilai menjadi 100
+                        controller
+                            .nilaiC
+                            .selection = TextSelection.fromPosition(
+                          TextPosition(offset: controller.nilaiC.text.length),
+                        );
+                        // Pindahkan kursor ke akhir
+                      } else if (nilai.toString().length > 3) {
+                        controller.nilaiC.text = '100';
+                        //Batasi nilai menjadi 100
+                        controller
+                            .nilaiC
+                            .selection = TextSelection.fromPosition(
+                          TextPosition(offset: controller.nilaiC.text.length),
+                        );
+                        // Pindahkan kursor ke akhir
+                      }
+                    }
+                  },
                 ),
                 SizedBox(height: 10),
-                // Text(
-                //   'DISIMAK',
-                //   style: TextStyle(
-                //     fontSize: 16,
-                //     fontWeight: FontWeight.bold,
-                //   ),
-                // ),
-                // Divider(height: 2, color: Colors.black),
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                //   children: [
-                //     Text('Guru : Sudah'),
-                //     SizedBox(width: 15),
-                //     Text('Orang tua : Sudah'),
-                //   ],
-                // ),
 
                 Text(
                   'KETERANGAN / CATATAN PENGAMPU',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Divider(height: 2, color: Colors.black),
                 SizedBox(height: 3),
-                TextField(
-                  controller: controller.keteranganGuruC,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Keterangan / Catatan Pengampu',
-                  ),
+                // TextField(
+                //   controller: controller.keteranganGuruC,
+                //   decoration: InputDecoration(
+                //     border: OutlineInputBorder(),
+                //     hintText: 'Keterangan / Catatan Pengampu',
+                //   ),
+                // ),
+                Row(
+                  children: [
+                    Obx(
+                      () => Radio(
+                        value:
+                            "Alhamdulillah, ananda hari sangat bagus dan lancar, dalam memahami materi hari ini, InsyaAlloh, besok lanjut ke materi selanjutnta.. Barokallohu fiik.",
+                        groupValue: controller.keteranganHalaqoh.value,
+                        activeColor: Colors.black,
+                        fillColor: WidgetStateProperty.all(Colors.grey[700]),
+                        onChanged: (value) {
+                          // Handle the change here
+                          controller.keteranganHalaqoh.value = value.toString();
+                          // print(value);
+                        },
+                      ),
+                    ),
+                    Text("Lanjut"),
+                    SizedBox(width: 20),
+                    Obx(
+                      () => Radio(
+                        value:
+                            "Alhamdulillah, ananda hari sangat bagus dan lancar, tetap semangat ya sholih.. Barokallohu fiik..",
+                        groupValue: controller.keteranganHalaqoh.value,
+                        activeColor: Colors.black,
+                        fillColor: WidgetStateProperty.all(Colors.grey[700]),
+                        onChanged: (value) {
+                          // Handle the change here
+                          controller.keteranganHalaqoh.value = value.toString();
+                          // print(value);
+                        },
+                      ),
+                    ),
+                    Text("Lancar"),
+                    SizedBox(width: 20),
+                    Obx(
+                      () => Radio(
+                        value:
+                            "Alhamdulillah Ananda hari ini sudah ada peningkatan, akan tetapi mohon nanti dirumah dipelajari lagi, dan nanti akan kita ulangi lagi untuk materi ini",
+                        groupValue: controller.keteranganHalaqoh.value,
+                        activeColor: Colors.black,
+                        fillColor: WidgetStateProperty.all(Colors.grey[700]),
+                        onChanged: (value) {
+                          // Handle the change here
+                          controller.keteranganHalaqoh.value = value.toString();
+                          // print(value);
+                        },
+                      ),
+                    ),
+                    Text("Ulang"),
+                  ],
                 ),
                 Center(
-                    child: FloatingActionButton(
-                  onPressed: () {
-                    if (controller.suratC.text.isEmpty) {
-                      Get.snackbar('Peringatan', 'Hafalan surat masih kosong');
-                    } else if (controller.ayatHafalC.text.isEmpty) {
-                      Get.snackbar(
-                          'Peringatan', 'Ayat hafalan surat masih kosong');
-                    } else if (controller.jldSuratC.text.isEmpty) {
-                      Get.snackbar(
-                          'Peringatan', 'Jilid / AlQuran ummi masih kosong');
-                    } else if (controller.halAyatC.text.isEmpty) {
-                      Get.snackbar(
-                          'Peringatan', 'Halaman atau Ayat masih kosong');
-                    } else if (controller.materiC.text.isEmpty) {
-                      Get.snackbar('Peringatan', 'Materi masih kosong');
-                    } else if (controller.nilaiC.text.isEmpty) {
-                      Get.snackbar('Peringatan', 'Nilai masih kosong');
-                    } else if (controller.keteranganGuruC.text.isEmpty) {
-                      Get.snackbar('Peringatan', 'Keterangan masih kosong');
-                    } else if (controller.suratC.text.isNotEmpty &&
-                        controller.ayatHafalC.text.isNotEmpty &&
-                        controller.jldSuratC.text.isNotEmpty &&
-                        controller.halAyatC.text.isNotEmpty &&
-                        controller.materiC.text.isNotEmpty &&
-                        controller.nilaiC.text.isNotEmpty &&
-                        controller.keteranganGuruC.text.isNotEmpty) {
-                      controller.simpanNilai();
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: Text('Simpan'),
-                )),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      if (controller.suratC.text.isEmpty) {
+                        Get.snackbar(
+                          'Peringatan',
+                          'Hafalan surat masih kosong',
+                        );
+                      } else if (controller.ayatHafalC.text.isEmpty) {
+                        Get.snackbar(
+                          'Peringatan',
+                          'Ayat hafalan surat masih kosong',
+                        );
+                      }
+                      // else if (controller.jldSuratC.text.isEmpty) {
+                      //   Get.snackbar(
+                      //     'Peringatan',
+                      //     'Jilid / AlQuran ummi masih kosong',
+                      //   );
+                      // }
+                      else if (controller.halAyatC.text.isEmpty) {
+                        Get.snackbar(
+                          'Peringatan',
+                          'Halaman atau Ayat masih kosong',
+                        );
+                      } else if (controller.materiC.text.isEmpty) {
+                        Get.snackbar('Peringatan', 'Materi masih kosong');
+                      } else if (controller.nilaiC.text.isEmpty) {
+                        Get.snackbar('Peringatan', 'Nilai masih kosong');
+                      } else if (controller.keteranganHalaqoh.value.isEmpty) {
+                        Get.snackbar('Peringatan', 'Keterangan masih kosong');
+                      } else {
+                        controller.simpanNilai();
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: Text('Simpan'),
+                  ),
+                ),
               ],
             ),
           ],
@@ -255,12 +313,7 @@ class PemberianNilaiHalaqohView
   }
 
   Widget _buildHeaderSection() {
-    return Column(
-      children: [
-        _buildHeader(),
-        const SizedBox(height: 5),
-      ],
-    );
+    return Column(children: [_buildHeader(), const SizedBox(height: 5)]);
   }
 
   Widget _buildHeader() {
@@ -268,19 +321,13 @@ class PemberianNilaiHalaqohView
       children: const [
         Text(
           "KARTU PRESTASI PEMBELAJARAN ALQUR'AN METODE UMMI",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: 5),
         Text(
           "SD IT UKHUWAH ISLAMIYYAH",
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
         ),
       ],

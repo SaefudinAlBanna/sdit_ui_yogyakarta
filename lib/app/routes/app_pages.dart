@@ -12,6 +12,8 @@ import '../modules/daftar_nilai/bindings/daftar_nilai_binding.dart';
 import '../modules/daftar_nilai/views/daftar_nilai_view.dart';
 import '../modules/daftar_siswa_pindah_halaqoh/bindings/daftar_siswa_pindah_halaqoh_binding.dart';
 import '../modules/daftar_siswa_pindah_halaqoh/views/daftar_siswa_pindah_halaqoh_view.dart';
+import '../modules/detail_nilai_halaqoh/bindings/detail_nilai_halaqoh_binding.dart';
+import '../modules/detail_nilai_halaqoh/views/detail_nilai_halaqoh_view.dart';
 import '../modules/detail_siswa/bindings/detail_siswa_binding.dart';
 import '../modules/detail_siswa/views/detail_siswa_view.dart';
 import '../modules/forgot_password/bindings/forgot_password_binding.dart';
@@ -22,8 +24,12 @@ import '../modules/kelompok_halaqoh/bindings/kelompok_halaqoh_binding.dart';
 import '../modules/kelompok_halaqoh/views/kelompok_halaqoh_view.dart';
 import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
+import '../modules/mapel_siswa/bindings/mapel_siswa_binding.dart';
+import '../modules/mapel_siswa/views/mapel_siswa_view.dart';
 import '../modules/new_password/bindings/new_password_binding.dart';
 import '../modules/new_password/views/new_password_view.dart';
+import '../modules/pemberian_guru_mapel/bindings/pemberian_guru_mapel_binding.dart';
+import '../modules/pemberian_guru_mapel/views/pemberian_guru_mapel_view.dart';
 import '../modules/pemberian_kelas_siswa/bindings/pemberian_kelas_siswa_binding.dart';
 import '../modules/pemberian_kelas_siswa/views/pemberian_kelas_siswa_view.dart';
 import '../modules/pemberian_nilai_halaqoh/bindings/pemberian_nilai_halaqoh_binding.dart';
@@ -127,6 +133,21 @@ class AppPages {
       name: _Paths.DETAIL_SISWA,
       page: () => DetailSiswaView(),
       binding: DetailSiswaBinding(),
+    ),
+    GetPage(
+      name: _Paths.DETAIL_NILAI_HALAQOH,
+      page: () => DetailNilaiHalaqohView(),
+      binding: DetailNilaiHalaqohBinding(),
+    ),
+    GetPage(
+      name: _Paths.PEMBERIAN_GURU_MAPEL,
+      page: () => PemberianGuruMapelView(),
+      binding: PemberianGuruMapelBinding(),
+    ),
+    GetPage(
+      name: _Paths.MAPEL_SISWA,
+      page: () => MapelSiswaView(),
+      binding: MapelSiswaBinding(),
     ),
   ];
 }
