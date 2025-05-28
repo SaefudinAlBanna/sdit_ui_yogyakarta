@@ -143,7 +143,7 @@ class ProfilePage extends GetView<HomeController> {
                                           ),
                                           leading: Icon(Icons.email_outlined),
                                           title: Text("email"),
-                                          subtitle: Text(data['email']),
+                                          subtitle: Text(data['email'] ?? '-'),
                                         ),
                                         ListTile(
                                           contentPadding: EdgeInsets.symmetric(
@@ -152,7 +152,7 @@ class ProfilePage extends GetView<HomeController> {
                                           ),
                                           leading: Icon(Icons.local_hospital),
                                           title: Text("Tempat, Tgl Lahir"),
-                                          subtitle: Text("${data['tempatLahir']}, - $formattedDateTglLahir",)
+                                          subtitle: Text("${data['tempatLahir'] ?? '-'}, - $formattedDateTglLahir",)
                                         ),
                                         ListTile(
                                           contentPadding: EdgeInsets.symmetric(
@@ -162,7 +162,7 @@ class ProfilePage extends GetView<HomeController> {
                                           leading: Icon(Icons.male_outlined),
                                           title: Text("Jenis Kelamin"),
                                           subtitle: Text(
-                                            data['jeniskelamin']
+                                            data['jeniskelamin'] ?? '-',
                                           ),
                                         ),
                                         ListTile(
@@ -174,7 +174,7 @@ class ProfilePage extends GetView<HomeController> {
                                             Icons.ac_unit_outlined,
                                           ),
                                           title: Text("Jumlah Hafalan"),
-                                          subtitle: Text(data['jumlahhafalan']),
+                                          subtitle: Text(data['jumlahhafalan'] ?? '-'),
                                         ),
                                         ListTile(
                                           contentPadding: EdgeInsets.symmetric(
@@ -183,7 +183,7 @@ class ProfilePage extends GetView<HomeController> {
                                           ),
                                           leading: Icon(Icons.my_location),
                                           title: Text("Alamat"),
-                                          subtitle: Text(data['alamat']),
+                                          subtitle: Text(data['alamat'] ?? '-'),
                                         ),
                                         ListTile(
                                           contentPadding: EdgeInsets.symmetric(
@@ -195,7 +195,7 @@ class ProfilePage extends GetView<HomeController> {
                                           ),
                                           title: Text("No Hp"),
                                           subtitle: Text(
-                                            data['nohp'],
+                                            data['nohp'] ?? '-',
                                           ),
                                         ),
                                         ListTile(
@@ -206,7 +206,7 @@ class ProfilePage extends GetView<HomeController> {
                                           leading: Icon(Icons.menu_book_outlined),
                                           title: Text("bersertifikat"),
                                           subtitle: Text(
-                                            data['bersertifikat'],
+                                            data['bersertifikat'] ?? '-',
                                           ),
                                         ),
                                         ListTile(
@@ -217,7 +217,7 @@ class ProfilePage extends GetView<HomeController> {
                                           leading: Icon(Icons.yard_outlined),
                                           title: Text("No. Sertifikat"),
                                           subtitle: Text(
-                                            data['nosertifiat'],
+                                            data['nosertifiat'] ?? '-',
                                           ),
                                         ),
                                       ],

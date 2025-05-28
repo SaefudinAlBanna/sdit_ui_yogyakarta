@@ -23,6 +23,7 @@ abstract class Routes {
   static const DETAIL_NILAI_HALAQOH = _Paths.DETAIL_NILAI_HALAQOH;
   static const PEMBERIAN_GURU_MAPEL = _Paths.PEMBERIAN_GURU_MAPEL;
   static const MAPEL_SISWA = _Paths.MAPEL_SISWA;
+  static const JURNAL_AJAR_HARIAN = _Paths.JURNAL_AJAR_HARIAN;
 }
 
 abstract class _Paths {
@@ -47,4 +48,5 @@ abstract class _Paths {
   static const DETAIL_NILAI_HALAQOH = '/detail-nilai-halaqoh';
   static const PEMBERIAN_GURU_MAPEL = '/pemberian-guru-mapel';
   static const MAPEL_SISWA = '/mapel-siswa';
+  static const JURNAL_AJAR_HARIAN = '/jurnal-ajar-harian';
 }

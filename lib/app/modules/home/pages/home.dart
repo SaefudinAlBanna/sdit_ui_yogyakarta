@@ -6,6 +6,9 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'dart:async';
+import 'package:intl/intl.dart';
+
 import '../../../routes/app_pages.dart';
 import '../controllers/home_controller.dart';
 
@@ -278,7 +281,11 @@ class HomePage extends GetView<HomeController> {
                                                             child: GestureDetector(
                                                               onTap: () {
                                                                 Get.back();
-                                                                Get.toNamed(Routes.DAFTAR_KELAS,arguments: k);
+                                                                Get.toNamed(
+                                                                  Routes
+                                                                      .DAFTAR_KELAS,
+                                                                  arguments: k,
+                                                                );
 
                                                                 // Get.defaultDialog(
                                                                 //   onCancel:
@@ -567,8 +574,20 @@ class HomePage extends GetView<HomeController> {
                                           Routes.TAMBAH_KELOMPOK_MENGAJI,
                                         ),
                                   ),
-                                // else
-                                //   SizedBox(),
+                                // JURNAL KELAS GURU
+                                MenuAtas(
+                                  title: 'jurnal harian ',
+                                  icon: Icon(
+                                    Icons
+                                        .book_outlined, // Use a suitable built-in icon
+                                  ),
+                                  onTap: () {
+                                    Get.toNamed(
+                                      Routes.JURNAL_AJAR_HARIAN,
+                                      arguments: data,
+                                    );
+                                  },
+                                ),
 
                                 // //KESISWAAN
                                 // if (snapshot.connectionState ==
@@ -586,6 +605,13 @@ class HomePage extends GetView<HomeController> {
                             ),
                           ),
                         ],
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          // controller.getJamPelajaranSaatIni();
+                          controller.test();
+                        },
+                        child: Text("test"),
                       ),
                       Expanded(
                         child: ListView(
@@ -696,17 +722,184 @@ class HomePage extends GetView<HomeController> {
                                 //     ],
                                 //   ),
                                 // ),
-                                CarouselSlider(
-                                  options: CarouselOptions(
-                                    height: 150,
-                                    viewportFraction: 1.0,
-                                    aspectRatio: 2 / 1,
-                                    autoPlay: true,
-                                    autoPlayInterval: Duration(seconds: 5),
-                                    // autoPlayAnimationDuration: Duration(milliseconds: 800),
-                                    enlargeCenterPage: true,
-                                  ),
-                                  items: myItem,
+
+                                // CarouselSlider(
+                                //   options: CarouselOptions(
+                                //     height: 150,
+                                //     viewportFraction: 1.0,
+                                //     aspectRatio: 2 / 1,
+                                //     autoPlay: true,
+                                //     autoPlayInterval: Duration(seconds: 5),
+                                //     // autoPlayAnimationDuration: Duration(milliseconds: 800),
+                                //     enlargeCenterPage: true,
+                                //   ),
+                                //   items: myItem,
+                                // ),
+                                GetBuilder<HomeController>(
+                                  builder: (controller) {
+                                    // ignore: unnecessary_null_comparison
+                                    if (controller.idTahunAjaran == null) {
+                                      return Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                    return StreamBuilder<
+                                      QuerySnapshot<Map<String, dynamic>>
+                                    >(
+                                      stream: controller.getDataJurnalKelas(),
+                                      builder: (context, snapJurnal) {
+                                        if (snapJurnal.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        }
+                                        if (snapJurnal.data == null ||
+                                            snapJurnal.data!.docs.isEmpty) {
+                                          return Center(
+                                            child: Text("Tidak ada data"),
+                                          );
+                                        }
+                                        var dataJurnal = snapJurnal.data!.docs;
+                                        return CarouselSlider(
+                                          options: CarouselOptions(
+                                            height: 150,
+                                            viewportFraction: 1.0,
+                                            aspectRatio: 2 / 1,
+                                            autoPlay: true,
+                                            autoPlayInterval: Duration(
+                                              seconds: 5,
+                                            ),
+                                            enlargeCenterPage: true,
+                                          ),
+                                          items: [
+                                            ...dataJurnal.map(
+                                              (doc) => Container(
+                                                width: Get.width * 0.7,
+                                                height: 150,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Column(
+                                                  children: [
+                                                    Text(
+                                                      doc['namakelas'],
+                                                      style: TextStyle(
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                    Obx(
+                                                      () => 
+                                                      StreamBuilder<
+                                                        QuerySnapshot<
+                                                          Map<String, dynamic>
+                                                        >
+                                                      >(
+                                                        key: ValueKey(controller.jamPelajaranRx.value),
+                                                        stream: controller
+                                                            .getDataJurnalPerKelas(
+                                                              doc.id,
+                                                              controller
+                                                                  .jamPelajaranRx
+                                                                  .value,
+                                                              // controller.getJamPelajaranSaatIni()
+                                                            ),
+                                                        builder: (
+                                                          context,
+                                                          snapshotJurnalBawah,
+                                                        ) {
+                                                          if (snapshotJurnalBawah
+                                                                  .connectionState ==
+                                                              ConnectionState
+                                                                  .waiting) {
+                                                            return CircularProgressIndicator();
+                                                          }
+                                                          if (snapshotJurnalBawah
+                                                                      .data ==
+                                                                  null ||
+                                                              snapshotJurnalBawah
+                                                                  .data!
+                                                                  .docs
+                                                                  .isEmpty) {
+                                                                    // controller.test();
+                                                            print(
+                                                              "snapshotJurnalBawah.data = ${snapshotJurnalBawah.data?.docs}",
+                                                              
+                                                                    
+                                                            );
+                                                            controller.getDataJurnalPerKelas(doc.id, controller
+                                                                  .jamPelajaranRx
+                                                                  .value,);
+                                                            // print("Tidak ada data");
+                                                            return Center(
+                                                              child: Text(
+                                                                "Tidak ada data nyaa..",
+                                                              ),
+                                                            );
+                                                          }
+                                                          if (snapshotJurnalBawah
+                                                              .hasData) {
+                                                            var dataJurnalBawah =
+                                                                snapshotJurnalBawah
+                                                                    .data!
+                                                                    .docs;
+                                                                    // controller.test();
+                                                                    controller.getDataJurnalPerKelas(doc.id, controller
+                                                                  .jamPelajaranRx
+                                                                  .value,);
+                                                            // print("dataJurnalBawah = ");
+                                                            if (dataJurnalBawah
+                                                                .isEmpty) {
+                                                              return Text(
+                                                                "Tidak ada data jurnal pada jam ini",
+                                                                style:
+                                                                    TextStyle(
+                                                                      fontSize:
+                                                                          14,
+                                                                    ),
+                                                              );
+                                                            }
+                                                            // Aman mengakses index 0
+                                                            // print("dataJurnalBawah = ${dataJurnalBawah[0]['namanya']}");
+                                                            return Column(
+                                                              children: [
+                                                                Text(
+                                                                  dataJurnalBawah[0]['jampelajaran']
+                                                                      .toString(),
+                                                                  style:
+                                                                      TextStyle(
+                                                                        fontSize:
+                                                                            14,
+                                                                      ),
+                                                                ),
+                                                                Text(
+                                                                  dataJurnalBawah[0]['namanya']
+                                                                      .toString(),
+                                                                  style:
+                                                                      TextStyle(
+                                                                        fontSize:
+                                                                            14,
+                                                                      ),
+                                                                ),
+                                                              ],
+                                                            );
+                                                          }
+                                                          return Text(
+                                                            "dataSSS",
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
                                 ),
 
                                 SizedBox(height: 15),
@@ -877,7 +1070,10 @@ class HomePage extends GetView<HomeController> {
                                     MenuBawah(
                                       title: 'Sekolah',
                                       icon: Icon(Icons.info_outline),
-                                      onTap: () {},
+                                      onTap: () {
+                                        // controller.tampilkanSesuaiWaktu(); // 1
+                                        // controller.tampilkanSesuaiWaktuDenganDateTime(); // 2
+                                      },
                                     ),
                                   ],
                                 ),
