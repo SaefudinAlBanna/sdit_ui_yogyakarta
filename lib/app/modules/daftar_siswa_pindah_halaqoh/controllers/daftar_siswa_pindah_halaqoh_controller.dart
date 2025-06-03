@@ -44,16 +44,16 @@ class DaftarSiswaPindahHalaqohController extends GetxController {
  Future<QuerySnapshot<Map<String, dynamic>>> dataSiswaPindah() async {
     String tahunajaranya = await getTahunAjaranTerakhir();
     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String semesternya = await getSemesterTerakhir();
+    // String semesternya = await getSemesterTerakhir();
 
     return await firestore
         .collection('Sekolah')
          .doc(idSekolah)
         .collection('tahunajaran')
         .doc(idTahunAjaran)
-        .collection('semester')
-        .doc(semesternya)
-        .collection('pindahan')
+        // .collection('semester')
+        // .doc(semesternya)
+        .collection('riwayatpindahan')
         .orderBy('tanggalpindah', descending: true)
         .get();
 

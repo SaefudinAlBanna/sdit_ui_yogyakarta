@@ -8,21 +8,8 @@ class JurnalAjarHarianController extends GetxController {
   // RxString jenisKelamin = "".obs;
   RxBool isLoading = false.obs;
   RxBool isLoadingTambahSiswa = false.obs;
-
-  // TextEditingController ke1C = TextEditingController();
-  // TextEditingController ke2C = TextEditingController();
-  // TextEditingController ke3C = TextEditingController();
-  // TextEditingController ke4C = TextEditingController();
-  // TextEditingController ke5C = TextEditingController();
-  // TextEditingController ke6C = TextEditingController();
-  // TextEditingController ke7C = TextEditingController();
-  // TextEditingController ke8C = TextEditingController();
-  // TextEditingController ke9C = TextEditingController();
-  // TextEditingController ke10C = TextEditingController();
-  // TextEditingController ke11C = TextEditingController();
-  // TextEditingController ke12C = TextEditingController();
-  // TextEditingController ke13C = TextEditingController();
-  // TextEditingController ke14C = TextEditingController();
+   RxString selectedKelasObs = "".obs;
+    RxString selectedMapelObs = "".obs; // Bisa juga untuk mapel jika 
 
   TextEditingController istirahatsholatC = TextEditingController();
   TextEditingController materimapelC = TextEditingController();
@@ -36,6 +23,30 @@ class JurnalAjarHarianController extends GetxController {
   String idUser = FirebaseAuth.instance.currentUser!.uid;
   String idSekolah = '20404148';
   String emailAdmin = FirebaseAuth.instance.currentUser!.email!;
+
+  // Saat kelasSiswaC berubah, update juga selectedKelasObs
+  void onKelasChanged(String? value) {
+    if (value != null) {
+      kelasSiswaC.text = value;
+      selectedKelasObs.value = value; // Update observable
+      mapelC.clear(); // Kosongkan mapel
+      selectedMapelObs.value = ""; // Kosongkan observable mapel jika ada
+      // print("Kelas dipilih: ${selectedKelasObs.value}");
+    } else {
+      kelasSiswaC.clear();
+      selectedKelasObs.value = "";
+    }
+  }
+
+  void onMapelChanged(String? value) {
+    if (value != null) {
+      mapelC.text = value;
+      selectedMapelObs.value = value;
+    } else {
+      mapelC.clear();
+      selectedMapelObs.value = "";
+    }
+  }
 
   Future<String> getTahunAjaranTerakhir() async {
     CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
@@ -86,34 +97,104 @@ class JurnalAjarHarianController extends GetxController {
     return kelasList;
   }
 
+  // Future<List<String>> getDataMapel() async {
+  //   // ignore: unnecessary_null_comparison
+  //   if (kelasSiswaC.text == null || kelasSiswaC.text.isEmpty) {
+  //     // Tampilkan pesan jika data kosong
+  //     Get.snackbar("Data Kosong", "Silahkan pilih kelas terlebih dahulu");
+  //     return [];
+  //   } else {
+  //     String tahunajaranya = await getTahunAjaranTerakhir();
+  //     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+  //     List<String> mapelkelasList = [];
+  //     await firestore
+  //         .collection('Sekolah')
+  //         .doc(idSekolah)
+  //         .collection('pegawai')
+  //         .doc(idUser)
+  //         .collection('tahunajaran')
+  //         .doc(idTahunAjaran)
+  //         .collection('kelasnya')
+  //         .doc(kelasSiswaC.text)
+  //         .collection('matapelajaran')
+  //         .get()
+  //         .then((querySnapshot) {
+  //           for (var docSnapshot in querySnapshot.docs) {
+  //             mapelkelasList.add(docSnapshot.id);
+  //           }
+  //         });
+  //     return mapelkelasList;
+  //   }
+  // }
+
   Future<List<String>> getDataMapel() async {
-    if (kelasSiswaC.text == null || kelasSiswaC.text.isEmpty) {
-      // Tampilkan pesan jika data kosong
-      Get.snackbar("Data Kosong", "Silahkan pilih kelas terlebih dahulu");
-      return [];
-    } else {
-      String tahunajaranya = await getTahunAjaranTerakhir();
-      String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-      List<String> mapelkelasList = [];
-      await firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('pegawai')
-          .doc(idUser)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelasnya')
-          .doc(kelasSiswaC.text)
-          .collection('matapelajaran')
-          .get()
-          .then((querySnapshot) {
-            for (var docSnapshot in querySnapshot.docs) {
-              mapelkelasList.add(docSnapshot.id);
-            }
-          });
-      return mapelkelasList;
-    }
+  // 1. Validasi apakah kelas sudah dipilih
+  if (kelasSiswaC.text.trim().isEmpty) {
+    // Jika kelas belum dipilih, kembalikan list kosong.
+    // DropdownSearch akan menampilkan "Tidak ada data" atau state kosongnya.
+    // Get.snackbar bisa mengganggu jika ini dipanggil berkali-kali oleh DropdownSearch.
+    // print("getDataMapel: Kelas belum dipilih, mengembalikan list kosong.");
+    return [];
   }
+
+  if (selectedKelasObs.value.trim().isEmpty) {
+      return [];
+    }
+
+  // Opsional: Set state loading untuk dropdown mapel jika Anda punya
+  // isLoadingMapel.value = true;
+  // print("getDataMapel: Mengambil mapel untuk kelas: ${kelasSiswaC.text}");
+
+  try {
+    // 2. Dapatkan tahun ajaran terakhir (fungsi ini sudah ada dan di-await)
+    final String tahunAjaranRaw = await getTahunAjaranTerakhir();
+    final String idTahunAjaranFormatted = tahunAjaranRaw.replaceAll("/", "-");
+
+    // 3. Bangun path query ke Firestore
+    // Pastikan semua ID (idSekolah, idUser, idTahunAjaranFormatted, kelasSiswaC.text) valid
+    final QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore
+        .collection('Sekolah')
+        .doc(idSekolah)
+        .collection('pegawai')
+        .doc(idUser) // Mengambil mapel yang diajar oleh guru ini
+        .collection('tahunajaran')
+        .doc(idTahunAjaranFormatted)
+        .collection('kelasnya')
+        .doc(kelasSiswaC.text) // Kelas yang dipilih
+        .collection('matapelajaran') // Koleksi matapelajaran yang diajar guru di kelas tsb
+        .get();
+
+    // 4. Proses hasil query
+    final List<String> mapelList = [];
+    if (querySnapshot.docs.isNotEmpty) {
+      for (var docSnapshot in querySnapshot.docs) {
+        // Asumsi ID dokumen adalah nama mata pelajaran
+        mapelList.add(docSnapshot.id);
+      }
+      // print("getDataMapel: Mapel ditemukan: $mapelList");
+    } else {
+      // print("getDataMapel: Tidak ada mapel ditemukan untuk kelas ${kelasSiswaC.text} atau path tidak valid.");
+      // Jika tidak ada dokumen, berarti tidak ada mapel yang terdaftar untuk guru/kelas tersebut.
+      // Tidak perlu Get.snackbar di sini, biarkan DropdownSearch menampilkan "Tidak ada data".
+    }
+    return mapelList;
+
+  } catch (e) {
+    // 5. Tangani error jika terjadi
+    // print("getDataMapel: Error saat mengambil data mapel - $e");
+    Get.snackbar(
+      "Error",
+      "Gagal mengambil data mata pelajaran. Silakan coba lagi.",
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red.shade600,
+      colorText: Colors.white,
+    );
+    return []; // Kembalikan list kosong jika terjadi error
+  } finally {
+    // Opsional: Set state loading false setelah selesai
+    // isLoadingMapel.value = false;
+  }
+}
 
   Future<void> simpanDataJurnal(String jampelajaran) async {
     String tahunAjaran = await getTahunAjaranTerakhir();
@@ -248,26 +329,6 @@ class JurnalAjarHarianController extends GetxController {
             'uidtanggal': docIdJurnal,
           });
 
-      // await firestore
-      //     .collection('Sekolah')
-      //     .doc(idSekolah)
-      //     .collection('pegawai')
-      //     .doc(idUser)
-      //     .collection('tahunajaran')
-      //     .doc(idTahunAjaran)
-      //     .collection('kelasnya')
-      //     .doc(idKelas)
-      //     .collection('tanggaljurnal')
-      //     .doc(docIdJurnal)
-      //     .set({
-      //       'namamapel': namamapel,
-      //       'tanggalinput':DateTime.now().toIso8601String(),
-      //       'idpenginput': idUser,
-      //       'emailpenginput' : emailAdmin,
-      //       'namapenginput': namaGuru,
-      //       'uidtanggal': docIdJurnal,
-      //     });
-
       //ini untuk catatn jurnal guru
       await firestore
           .collection('Sekolah')
@@ -315,6 +376,7 @@ class JurnalAjarHarianController extends GetxController {
         .collection('tanggaljurnal')
         .doc(docIdJurnal)
         .collection('jurnalkelas')
+        .where('uidtanggal', isEqualTo: docIdJurnal)
         .snapshots();
   }
 }

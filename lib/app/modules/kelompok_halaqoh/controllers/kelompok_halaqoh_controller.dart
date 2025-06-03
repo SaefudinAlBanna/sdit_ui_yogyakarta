@@ -141,6 +141,7 @@ class KelompokHalaqohController extends GetxController {
           .collection('daftarsiswa')
           .doc(nisnSiswa)
           .set({
+        'ummi' : "0",
         'namasiswa': namaSiswa,
         'nisn': nisnSiswa,
         'kelas': kelasSiswaC.text,

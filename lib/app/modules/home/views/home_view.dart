@@ -15,6 +15,7 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
       // body: Obx(() => controller.myWidgets.elementAt(controller.indexWidget.value),
       // ),
       // bottomNavigationBar: ConvexAppBar(
@@ -28,6 +29,7 @@ class HomeView extends GetView<HomeController> {
       //     TabItem(icon: Icons.shopping_cart_outlined, title: "Marketplace"),
       //     TabItem(icon: Icons.person_2_rounded, title: "Profile"),
       //   ] ),
+      
       body: PersistentTabView(
         context,
         // controller: _controller,

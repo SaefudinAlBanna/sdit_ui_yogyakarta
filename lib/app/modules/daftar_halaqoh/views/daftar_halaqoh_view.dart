@@ -14,6 +14,7 @@ class DaftarHalaqohView extends GetView<DaftarHalaqohController> {
 
   @override
   Widget build(BuildContext context) {
+    print("data dari argumen = ${data['idpenginput']}");
     return Scaffold(
       drawer: Drawer(
         shadowColor: Colors.red,
@@ -233,6 +234,151 @@ class DaftarHalaqohView extends GetView<DaftarHalaqohController> {
               leading: Icon(Icons.person_add_sharp),
               title: Text('Tambah Siswa'),
             ),
+            ListTile(
+              onTap: ()=> Get.offAllNamed(Routes.HOME),
+              title: Text("kembali"),
+              // subtitle: t,
+            ),
+
+            ListTile(
+              onTap: () {
+                Get.defaultDialog(
+                  onCancel: () {},
+                  title: "Pilih kategori",
+                  content: Column(
+                    children: [
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          DropdownSearch<String>(
+                            decoratorProps: DropDownDecoratorProps(
+                              decoration: InputDecoration(
+                                labelText: "Kategori umi",
+                                border: OutlineInputBorder(),
+                                filled: true,
+                              ),
+                            ),
+                            items:
+                                (f, cs) =>
+                                    Future.value(controller.getDataUmi()),
+                            onChanged: (String? value) {
+                              if (value != null) {
+                                controller.umidrawerC.text = value;
+                              }
+                            },
+                            popupProps: PopupProps.menu(
+                              showSearchBox: true,
+                              fit: FlexFit.loose, // Coba loose atau tight
+                              constraints: BoxConstraints(
+                                maxHeight: 300,
+                              ), // Batasi tinggi popup
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          Center(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // ignore: unnecessary_null_comparison
+                                if (controller.umidrawerC.text == null ||
+                                    // ignore: unnecessary_null_comparison
+                                    controller.umidrawerC.text.isEmpty) {
+                                  Get.snackbar(
+                                    'Peringatan',
+                                    'Kategori umi belum dipilih',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                } else {
+                                  Get.back();
+
+                                  Get.bottomSheet(
+                                    Container(
+                                      color: Colors.white,
+                                      // Bungkus dengan Container untuk memberi batasan tinggi
+                                      constraints: BoxConstraints(
+                                        maxHeight:
+                                            Get.height *
+                                            0.8, // Maks 80% tinggi layar
+                                      ),
+                                      child: StreamBuilder<
+                                        QuerySnapshot<Map<String, dynamic>>
+                                      >(
+                                        stream: controller.getDaftarHalaqohDrawer(),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            );
+                                          }
+                                          if (snapshot.data == null ||
+                                              snapshot.data!.docs.isEmpty) {
+                                            return Center(
+                                              child: Text('Belum ada siswa atau semua siswa pada kategori ${controller.umidrawerC.text}'),
+                                            );
+                                          }
+                                          if (snapshot.hasData) {
+                                            return ListView.builder(
+                                              itemCount: snapshot.data!.docs.length,
+                                              // itemCount: 5,
+                                              itemBuilder: (context, index) {
+                                                var doc = (snapshot.data as QuerySnapshot).docs[index];
+                                                return InkWell(
+                                                  onTap: (){
+                                                    controller.updateUmiDrawer(doc.id);
+                                                  },
+                                                  child: Container(
+                                                    height: 50,
+                                                    margin: EdgeInsets.fromLTRB(10, 5, 10, 7),
+                                                    padding: EdgeInsets.all(5),
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(15),
+                                                      // color: Colors.green[200]
+                                                      color: Colors.amber
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Text(doc['namasiswa'] ?? 'No Data'),
+                                                        Text(doc['kelas'] ?? 'No Data'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          } else {
+                                            return Center(
+                                              child: Text('No data available'),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Text("Pilih Siswa"),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+              leading: Icon(Icons.list_alt_outlined),
+              title: Text("Tentukan Kategori"),
+            ),
+
+            ListTile(
+              onTap: () => 
+              // controller.test(),
+              Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE),
+              leading: Icon(Icons.arrow_back_outlined),
+              title: Text("Kembali"),
+            ),
           ],
         ),
       ),
@@ -246,13 +392,18 @@ class DaftarHalaqohView extends GetView<DaftarHalaqohController> {
             return Center(child: CircularProgressIndicator());
           }
           if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+            print("ini lenght : ${snapshot.data!.docs.length}");
             return Center(child: Text('Belum ada siswa..'));
+
           }
           if (snapshot.hasData) {
             return ListView.builder(
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-                var doc = (snapshot.data as QuerySnapshot).docs[index];
+                // var doc = (snapshot.data as QuerySnapshot).docs[index];
+                // var snapsiswa = snapsiswahalaqoh.data!.docs[index];
+                var doc = snapshot.data!.docs[index];
+                print("doc = $doc");
                 return ListTile(
                   onTap: () => Get.toNamed(Routes.DAFTAR_NILAI, arguments: doc),
                   leading: Container(
@@ -288,7 +439,9 @@ class DaftarHalaqohView extends GetView<DaftarHalaqohController> {
                           Get.defaultDialog(
                             onCancel: () => Get.back(),
                             onConfirm: () {
+
                               controller.updateUmi(doc.id);
+                              
                               // Get.snackbar("Print", doc.id);
                             },
                             title: "Umi / Al-Qur'an",
@@ -298,14 +451,14 @@ class DaftarHalaqohView extends GetView<DaftarHalaqohController> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      "Masukan Umi / Al-Qur'an",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 10),
+                                    // Text(
+                                    //   "Masukan Umi / Al-Qur'an",
+                                    //   style: TextStyle(
+                                    //     fontSize: 18,
+                                    //     fontWeight: FontWeight.bold,
+                                    //   ),
+                                    // ),
+                                    // SizedBox(height: 10),
                                     DropdownSearch<String>(
                                       decoratorProps: DropDownDecoratorProps(
                                         decoration: InputDecoration(

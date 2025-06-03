@@ -35,6 +35,12 @@ class TambahPegawaiController extends GetxController {
       'Pengampu',
       'Guru Kelas',
       'Guru Pelajaran',
+      'Guru BK',
+      'TU',
+      'Kurikulum',
+      'Operator',
+      'Admin',
+      
     ];
     return jabatanList;
   }

@@ -30,12 +30,23 @@ class LoginView extends GetView<LoginController> {
                       hint: "Enter your Email",
                       icon: Icons.email,
                       obsecure: false,
+                      suffix: null,
                     ),
-                    _textInput(
-                      controller: controller.passC,
-                      hint: "Password", 
-                      icon: Icons.vpn_key,
-                      obsecure: true,
+                   Obx(
+                      () => _textInput(
+                        controller: controller.passC,
+                        hint: "Password",
+                        icon: Icons.vpn_key,
+                        obsecure: controller.isLogin.value,
+                        suffix: InkWell(
+                          child: Icon(controller.isLogin.value ? Icons.visibility_outlined : 
+                          Icons.visibility_off_outlined, ),
+                          onTap: () {
+                            controller.isLogin.value =
+                                !controller.isLogin.value;
+                          },
+                        ),
+                      ),
                     ),
                     Obx(
                       () => ElevatedButton(
@@ -77,6 +88,7 @@ class LoginView extends GetView<LoginController> {
     required String hint,
     required IconData icon,
     required bool obsecure,
+    Widget? suffix,
   }) {
     return Container(
       margin: const EdgeInsets.only(top: 10),
@@ -93,6 +105,7 @@ class LoginView extends GetView<LoginController> {
           border: InputBorder.none,
           hintText: hint,
           prefixIcon: Icon(icon),
+          suffix: suffix,
         ),
       ),
     );

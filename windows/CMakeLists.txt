@@ -1,5 +1,6 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.30.5)
+# cmake_minimum_required(VERSION 4.0.2)
 project(sdit_ui_yogyakarta LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change

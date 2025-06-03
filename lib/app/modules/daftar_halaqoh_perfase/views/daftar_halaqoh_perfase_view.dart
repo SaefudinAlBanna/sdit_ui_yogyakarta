@@ -33,9 +33,15 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
                     child: ListView.builder(
                   itemCount: snapshotfase.data!.docs.length,
                   itemBuilder: (context, index) {
+                    // var doc = snapshotfase.data!.docs[index];
+                    // var snapsiswa = snapsiswahalaqoh.data!.docs[index];
                     var doc = snapshotfase.data!.docs[index];
+                    print("doc halaqoh perfase =$doc");
                     return ListTile(
-                      onTap: () => Get.toNamed(Routes.DAFTAR_HALAQOH, arguments: doc),
+                      onTap: () { 
+                        // Get.toNamed(Routes.DAFTAR_HALAQOH, arguments: doc);
+                        Get.toNamed(Routes.DAFTAR_HALAQOHNYA, arguments: doc);
+                        },
                       leading: Container(
                         height: 50,
                         width: 50,
@@ -56,7 +62,8 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
                             tooltip: 'Lihat',
                             icon: const Icon(Icons.arrow_circle_right_outlined),
                             onPressed: () {
-                              Get.toNamed(Routes.DAFTAR_HALAQOH, arguments: doc);
+                              // Get.toNamed(Routes.DAFTAR_HALAQOH, arguments: doc);
+                              Get.toNamed(Routes.DAFTAR_HALAQOHNYA, arguments: doc);
                             },
                           ),
                         ],

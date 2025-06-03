@@ -24,6 +24,21 @@ abstract class Routes {
   static const PEMBERIAN_GURU_MAPEL = _Paths.PEMBERIAN_GURU_MAPEL;
   static const MAPEL_SISWA = _Paths.MAPEL_SISWA;
   static const JURNAL_AJAR_HARIAN = _Paths.JURNAL_AJAR_HARIAN;
+  static const INPUT_INFO_SEKOLAH = _Paths.INPUT_INFO_SEKOLAH;
+  static const TAMPILKAN_INFO_SEKOLAH = _Paths.TAMPILKAN_INFO_SEKOLAH;
+  static const DAFTAR_SISWA_PERKELAS = _Paths.DAFTAR_SISWA_PERKELAS;
+  static const INPUT_CATATAN_KHUSUS_SISWA = _Paths.INPUT_CATATAN_KHUSUS_SISWA;
+  static const TANGGAPAN_CATATAN_KHUSUS_SISWA =
+      _Paths.TANGGAPAN_CATATAN_KHUSUS_SISWA;
+  static const TANGGAPAN_CATATAN_KHUSUS_SISWA_WALIKELAS =
+      _Paths.TANGGAPAN_CATATAN_KHUSUS_SISWA_WALIKELAS;
+  static const DAFTAR_SISWA_PERMAPEL = _Paths.DAFTAR_SISWA_PERMAPEL;
+  static const PEMBAYARAN_SPP = _Paths.PEMBAYARAN_SPP;
+  static const DAFTAR_HALAQOHNYA = _Paths.DAFTAR_HALAQOHNYA;
+  static const JADWAL_PELAJARAN = _Paths.JADWAL_PELAJARAN;
+  static const BUAT_JADWAL_PELAJARAN = _Paths.BUAT_JADWAL_PELAJARAN;
+  static const BUAT_SARPRAS = _Paths.BUAT_SARPRAS;
+  static const DATA_SARPRAS = _Paths.DATA_SARPRAS;
 }
 
 abstract class _Paths {
@@ -49,4 +64,19 @@ abstract class _Paths {
   static const PEMBERIAN_GURU_MAPEL = '/pemberian-guru-mapel';
   static const MAPEL_SISWA = '/mapel-siswa';
   static const JURNAL_AJAR_HARIAN = '/jurnal-ajar-harian';
+  static const INPUT_INFO_SEKOLAH = '/input-info-sekolah';
+  static const TAMPILKAN_INFO_SEKOLAH = '/tampilkan-info-sekolah';
+  static const DAFTAR_SISWA_PERKELAS = '/daftar-siswa-perkelas';
+  static const INPUT_CATATAN_KHUSUS_SISWA = '/input-catatan-khusus-siswa';
+  static const TANGGAPAN_CATATAN_KHUSUS_SISWA =
+      '/tanggapan-catatan-khusus-siswa';
+  static const TANGGAPAN_CATATAN_KHUSUS_SISWA_WALIKELAS =
+      '/tanggapan-catatan-khusus-siswa-walikelas';
+  static const DAFTAR_SISWA_PERMAPEL = '/daftar-siswa-permapel';
+  static const PEMBAYARAN_SPP = '/pembayaran-spp';
+  static const DAFTAR_HALAQOHNYA = '/daftar-halaqohnya';
+  static const JADWAL_PELAJARAN = '/jadwal-pelajaran';
+  static const BUAT_JADWAL_PELAJARAN = '/buat-jadwal-pelajaran';
+  static const BUAT_SARPRAS = '/buat-sarpras';
+  static const DATA_SARPRAS = '/data-sarpras';
 }

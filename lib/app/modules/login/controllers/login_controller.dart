@@ -6,6 +6,8 @@ import '../../../routes/app_pages.dart';
 
 class LoginController extends GetxController {
   RxBool isLoading = false.obs;
+  RxBool isLogin = false.obs;
+  
   TextEditingController emailC = TextEditingController();
   TextEditingController passC = TextEditingController();
 

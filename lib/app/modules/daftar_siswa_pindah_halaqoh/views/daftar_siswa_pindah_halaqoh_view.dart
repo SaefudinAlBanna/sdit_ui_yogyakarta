@@ -61,16 +61,16 @@ class DaftarSiswaPindahHalaqohView
                             : '-'}"),
                         SizedBox(height: 3),
                         Text("Fase : ${datanya.isNotEmpty
-                            ? (datanya['fase'] ?? 'No Data')
+                            ? (datanya['fase_baru'] ?? 'No Data')
                             : '-'}"),
                         
                         SizedBox(height: 3),
                         Text("Halaqoh lama : ${datanya.isNotEmpty
-                            ? (datanya['tempathalaqohlama'] ?? 'No Data')
+                            ? (datanya['pengampu_lama'] ?? 'No Data')
                             : '-'}"),
                         SizedBox(height: 3),
                         Text("Halaqoh baru : ${datanya.isNotEmpty
-                            ? (datanya['tempathalaqohbaru'] ?? 'No Data')
+                            ? (datanya['pengampu_baru'] ?? 'No Data')
                             : '-'}"),
                         SizedBox(height: 3),
                         Text("alasan pindah : ${datanya.isNotEmpty

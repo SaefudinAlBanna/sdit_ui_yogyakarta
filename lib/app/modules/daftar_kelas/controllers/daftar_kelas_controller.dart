@@ -28,23 +28,7 @@ class DaftarKelasController extends GetxController {
     return tahunAjaranTerakhir;
   }
 
-  Future<QuerySnapshot<Map<String, dynamic>>> getDataKelas() async {
-
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String kelasnya = data.toString();
-    return await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelastahunajaran')
-        .doc(kelasnya)
-        .collection('semester')
-        .doc('Semester I') // ini nanti diganti otomatis
-        .collection('daftarsiswa')
-        .get();
-  }
+  
 
   Future<QuerySnapshot<Map<String, dynamic>>> getDataMapel() async {
     String tahunajaranya = await getTahunAjaranTerakhir();

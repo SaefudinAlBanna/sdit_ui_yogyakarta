@@ -157,8 +157,7 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
                   itemCount: snapshotTampil.data!.docs.length,
                   itemBuilder: (context, index) {
                     Map<String, dynamic> data =
-                        snapshotTampil.data!.docs[index].data()
-                            as Map<String, dynamic>;
+                        snapshotTampil.data!.docs[index].data() as Map<String, dynamic>;
                     return ListTile(
                       title: Text(data['namamatapelajaran']),
                       subtitle: Text("subtitle mapel"),
