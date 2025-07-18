@@ -1,99 +1,74 @@
-import 'package:get/get.dart';
+// lib/app/modules/daftar_siswa_permapel/controllers/daftar_siswa_permapel_controller.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../modules/home/controllers/home_controller.dart'; // Import HomeController
 
 class DaftarSiswaPermapelController extends GetxController {
-  var dataArgumen = Get.arguments;
 
-  FirebaseAuth auth = FirebaseAuth.instance;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  // --- DEPENDENSI ---
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final HomeController homeC = Get.find<HomeController>();
 
-  String idUser = FirebaseAuth.instance.currentUser!.uid;
-  String idSekolah = "20404148";
-  String emailAdmin = FirebaseAuth.instance.currentUser!.email!;
-
-  String? _idTahunAjaranCache;
-  String? idTahunAjaran;
+  // --- ARGUMEN (diambil sekali saat inisialisasi) ---
+  late String idKelas;
+  late String namaMapel;
+  
+  // --- STATE MANAGEMENT ---
+  final RxBool isLoading = true.obs;
+  final RxList<Map<String, dynamic>> daftarSiswa = <Map<String, dynamic>>[].obs;
+  final RxString appBarTitle = "Memuat...".obs;
 
   @override
-  void onInit() async {
+  void onInit() {
     super.onInit();
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    update();
+    // Ambil argumen yang dikirim dari halaman sebelumnya
+    final Map<String, dynamic> args = Get.arguments;
+    idKelas = args['idKelas'];
+    namaMapel = args['namaMapel'];
+
+    // Set judul AppBar secara dinamis
+    appBarTitle.value = '$namaMapel - Kelas ${idKelas.split('-').first}';
+
+    // Mulai ambil data siswa
+    fetchDataSiswa();
   }
 
-  void clearForm() {
-    // tanggapankepalasekolahC.clear();
-    // selectedDropdownItem.value = null; // Reset dropdown
-    // Tambahkan pembersihan untuk widget lain di sini jika ada
-    // print("Form dibersihkan!");
-  }
+  /// Mengambil daftar siswa dari Firestore
+  Future<void> fetchDataSiswa() async {
+    try {
+      isLoading.value = true;
+      daftarSiswa.clear();
 
-  @override
-  void onClose() {
-    // Penting untuk dispose controller ketika GetX controller ditutup
-    // tanggapankepalasekolahC.dispose();
-    super.onClose();
-  }
+      String idTahunAjaran = homeC.idTahunAjaran.value!;
+      String idSekolah = homeC.idSekolah;
+      
+      // Path di firestore harus benar. Berdasarkan controller lama:
+      // Sekolah -> idSekolah -> tahunajaran -> idTahunAjaran -> kelastahunajaran -> idKelas -> daftarsiswa
+      final snapshot = await firestore
+          .collection('Sekolah')
+          .doc(idSekolah)
+          .collection('tahunajaran')
+          .doc(idTahunAjaran)
+          .collection('kelastahunajaran')
+          .doc(idKelas)
+          .collection('daftarsiswa')
+          .get();
 
-  // Helper untuk mendapatkan idTahunAjaran yang sudah diformat
-  Future<String> getFormattedIdTahunAjaran() async {
-    if (_idTahunAjaranCache != null) return _idTahunAjaranCache!;
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    _idTahunAjaranCache = tahunajaranya.replaceAll("/", "-");
-    return _idTahunAjaranCache!;
-  }
-
-  Future<String> getTahunAjaranTerakhir() async {
-    CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran');
-    QuerySnapshot<Map<String, dynamic>> snapshotTahunAjaran =
-        await colTahunAjaran.get();
-    List<Map<String, dynamic>> listTahunAjaran =
-        snapshotTahunAjaran.docs.map((e) => e.data()).toList();
-    String tahunAjaranTerakhir =
-        listTahunAjaran.map((e) => e['namatahunajaran']).toList().last;
-    return tahunAjaranTerakhir;
-  }
-
-
-  Future<String> getSemesterTerakhir() async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    CollectionReference<Map<String, dynamic>> colSemester = firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('semester');
-    QuerySnapshot<Map<String, dynamic>> snapshotSemester =
-        await colSemester.get();
-    List<Map<String, dynamic>> listSemester =
-        snapshotSemester.docs.map((e) => e.data()).toList();
-    String semesterTerakhir =
-        listSemester.map((e) => e['namasemester']).toList().last;
-    return semesterTerakhir;
-  }
- 
-
- Future<QuerySnapshot<Map<String, dynamic>>> getDataSiswa() async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-       
-          return await firestore
-              .collection('Sekolah')
-              .doc(idSekolah)
-              .collection('tahunajaran')
-              .doc(idTahunAjaran)
-              .collection('kelastahunajaran')
-              .doc(dataArgumen)
-              .collection('daftarsiswa')
-              .get();
-    
+      if (snapshot.docs.isNotEmpty) {
+        // Simpan data dan ID dokumennya
+        final listSiswa = snapshot.docs.map((doc) {
+          var data = doc.data();
+          data['idSiswa'] = doc.id; // <-- Simpan ID siswa untuk navigasi
+          return data;
+        }).toList();
+        daftarSiswa.assignAll(listSiswa);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Gagal mengambil data siswa: $e");
+    } finally {
+      isLoading.value = false;
+    }
   }
 }

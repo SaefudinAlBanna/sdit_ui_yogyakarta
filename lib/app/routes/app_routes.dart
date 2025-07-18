@@ -39,6 +39,29 @@ abstract class Routes {
   static const BUAT_JADWAL_PELAJARAN = _Paths.BUAT_JADWAL_PELAJARAN;
   static const BUAT_SARPRAS = _Paths.BUAT_SARPRAS;
   static const DATA_SARPRAS = _Paths.DATA_SARPRAS;
+  static const DAFTAR_EKSKUL = _Paths.DAFTAR_EKSKUL;
+  static const TANGGAPAN_CATATAN = _Paths.TANGGAPAN_CATATAN;
+  static const REKAPITULASI_PEMBAYARAN = _Paths.REKAPITULASI_PEMBAYARAN;
+  static const REKAPITULASI_PEMBAYARAN_RINCI =
+      _Paths.REKAPITULASI_PEMBAYARAN_RINCI;
+  static const IMPORT_SISWA_EXCEL = _Paths.IMPORT_SISWA_EXCEL;
+  static const CATATAN_SISWA = _Paths.CATATAN_SISWA;
+  static const KALENDER_AKADEMIK = _Paths.KALENDER_AKADEMIK;
+  static const INPUT_EKSKUL = _Paths.INPUT_EKSKUL;
+  static const DAFTAR_JURNAL_AJAR = _Paths.DAFTAR_JURNAL_AJAR;
+  static const ABSENSI = _Paths.ABSENSI;
+  static const PRANGKAT_AJAR = _Paths.PRANGKAT_AJAR;
+  static const PERANGKAT_AJAR = _Paths.PERANGKAT_AJAR;
+  static const ATP_FORM = _Paths.ATP_FORM;
+  static const MODUL_AJAR_FORM = _Paths.MODUL_AJAR_FORM;
+  static const PROTA_PROSEM = _Paths.PROTA_PROSEM;
+  static const IMPORT_PEGAWAI = _Paths.IMPORT_PEGAWAI;
+  static const INPUT_NILAI_SISWA = _Paths.INPUT_NILAI_SISWA;
+  static const RAPOR_SISWA = _Paths.RAPOR_SISWA;
+  static const KELAS_TAHFIDZ = _Paths.KELAS_TAHFIDZ;
+  static const REKAP_JURNAL_GURU = _Paths.REKAP_JURNAL_GURU;
+  static const REKAP_JURNAL_ADMIN = _Paths.REKAP_JURNAL_ADMIN;
+  static const LAKSANAKAN_UJIAN = _Paths.LAKSANAKAN_UJIAN;
 }
 
 abstract class _Paths {
@@ -79,4 +102,26 @@ abstract class _Paths {
   static const BUAT_JADWAL_PELAJARAN = '/buat-jadwal-pelajaran';
   static const BUAT_SARPRAS = '/buat-sarpras';
   static const DATA_SARPRAS = '/data-sarpras';
+  static const DAFTAR_EKSKUL = '/daftar-ekskul';
+  static const TANGGAPAN_CATATAN = '/tanggapan-catatan';
+  static const REKAPITULASI_PEMBAYARAN = '/rekapitulasi-pembayaran';
+  static const REKAPITULASI_PEMBAYARAN_RINCI = '/rekapitulasi-pembayaran-rinci';
+  static const IMPORT_SISWA_EXCEL = '/import-siswa-excel';
+  static const CATATAN_SISWA = '/catatan-siswa';
+  static const KALENDER_AKADEMIK = '/kalender-akademik';
+  static const INPUT_EKSKUL = '/input-ekskul';
+  static const DAFTAR_JURNAL_AJAR = '/daftar-jurnal-ajar';
+  static const ABSENSI = '/absensi';
+  static const PRANGKAT_AJAR = '/prangkat-ajar';
+  static const PERANGKAT_AJAR = '/perangkat-ajar';
+  static const ATP_FORM = '/atp-form';
+  static const MODUL_AJAR_FORM = '/modul-ajar-form';
+  static const PROTA_PROSEM = '/prota-prosem';
+  static const IMPORT_PEGAWAI = '/import-pegawai';
+  static const INPUT_NILAI_SISWA = '/input-nilai-siswa';
+  static const RAPOR_SISWA = '/rapor-siswa';
+  static const KELAS_TAHFIDZ = '/kelas-tahfidz';
+  static const REKAP_JURNAL_GURU = '/rekap-jurnal-guru';
+  static const REKAP_JURNAL_ADMIN = '/rekap-jurnal-admin';
+  static const LAKSANAKAN_UJIAN = '/laksanakan-ujian';
 }

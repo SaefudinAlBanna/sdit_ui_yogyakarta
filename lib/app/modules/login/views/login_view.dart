@@ -32,7 +32,7 @@ class LoginView extends GetView<LoginController> {
                       obsecure: false,
                       suffix: null,
                     ),
-                   Obx(
+                    Obx(
                       () => _textInput(
                         controller: controller.passC,
                         hint: "Password",
@@ -48,19 +48,24 @@ class LoginView extends GetView<LoginController> {
                         ),
                       ),
                     ),
+                    SizedBox(height: 15),
                     Obx(
-                      () => ElevatedButton(
-                        onPressed: () async {
-                          if (controller.isLoading.isFalse) {
-                            await controller.login();
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text(
-                          controller.isLoading.isFalse ? "Login" : "LOADING..."
+                      () => SizedBox(
+                        width: 150,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (controller.isLoading.isFalse) {
+                              await controller.login();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo[300],
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(
+                            controller.isLoading.isFalse ? "Login" : "LOADING...", style: TextStyle(fontSize: 17),
+                          ),
                         ),
                       ),
                     ),
@@ -105,7 +110,7 @@ class LoginView extends GetView<LoginController> {
           border: InputBorder.none,
           hintText: hint,
           prefixIcon: Icon(icon),
-          suffix: suffix,
+          suffixIcon: suffix,
         ),
       ),
     );
@@ -120,26 +125,30 @@ class HeaderContainer extends StatelessWidget {
     return Container(
       height: MediaQuery.of(context).size.height * 0.4,
       decoration: BoxDecoration(
+        // image: DecorationImage(image: AssetImage("assets/images/profile.png")),
         gradient: LinearGradient(
-          colors: [Colors.indigo.shade400, Colors.indigo.shade300],
+          colors: [Colors.green.shade700, Colors.indigo.shade400, Colors.blue.shade400],
           end: Alignment.bottomCenter,
           begin: Alignment.topCenter,
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(100),
-        ),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(100)),
       ),
       child: const Stack(
         children: <Widget>[
+          Positioned(
+            top: 45,
+            left: 20,
+            child: SizedBox(
+              height: 65,
+              width: 65,
+              child: Image(image: AssetImage("assets/png/logo.png"))),
+          ),
           Positioned(
             bottom: 20,
             right: 20,
             child: Text(
               "Login",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 20),
             ),
           ),
         ],

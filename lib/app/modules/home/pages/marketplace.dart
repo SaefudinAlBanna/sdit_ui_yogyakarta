@@ -1,195 +1,48 @@
-import 'dart:math';
+// lib/app/modules/home/pages/marketplace_page.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'dart:math';
 
-import '../controllers/home_controller.dart';
+import 'package:intl/intl.dart';
 
-class MarketplacePage extends GetView<HomeController> {
+class MarketplacePage extends StatelessWidget {
   MarketplacePage({super.key});
 
-  final myItem = [
-    ImageSlider(image: "assets/pictures/sekolah.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/1.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/2.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/3.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/4.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/5.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/6.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/7.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/8.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/9.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/10.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/11.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/12.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/13.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/14.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-    ImageSlider(image: "assets/pictures/15.jpg", ontap: () => Get.snackbar("Informasi", ""),),
-  ];
+  final List<Widget> _carouselItems = [
+    "assets/pictures/1.webp", "assets/pictures/2.webp", "assets/pictures/3.webp", "assets/pictures/4.webp", "assets/pictures/5.webp", "assets/pictures/6.webp",
+  ].map((imgPath) => _CarouselImageSlider(imagePath: imgPath, onTap: () {})).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CarouselSlider(
-              options: CarouselOptions(
-                height: 200,
-                // viewportFraction: 1.0,
-                aspectRatio: 2 / 1,
-                autoPlay: true,
-                autoPlayInterval: Duration(seconds: 5),
-                // autoPlayAnimationDuration: Duration(milliseconds: 800),
-                enlargeCenterPage: true,
-              ),
-              items: myItem,
-            ),
-            Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    MarketCategory(
-                      title: 'Makanan Sehat',
-                      icon: Icon(Icons.fastfood_sharp),
-                      onTap: () {
-                        Get.snackbar("Category", "Makanan Sehat");
-                      },
-                    ),
-                    MarketCategory(
-                      title: 'Rumah Property',
-                      icon: Icon(Icons.warehouse_outlined),
-                      onTap: () {
-                        Get.snackbar("Category", "Rumah Property");
-                      },
-                    ),
-                    MarketCategory(
-                      title: 'Elektronik Gedget',
-                      icon: Icon(Icons.tv),
-                      onTap: () {
-                        Get.snackbar("Category", "Elektronik Gedget");
-                      },
-                    ),
-                    MarketCategory(
-                      title: 'Kendaraan Halal',
-                      icon: Icon(Icons.car_repair),
-                      onTap: () {
-                        Get.snackbar("Category", "Kendaraan Halal");
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            // SizedBox(height: 15),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("DAFTAR PRODUK ANDALAN"),
-                  TextButton(
-                    onPressed: () {
-                      Get.snackbar("produk", "semua produk");
-                    },
-                    child: Text("semua"),
-                  ),
-                ],
-              ),
-            ),
-            // Divider(height: 2),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  mainAxisSpacing: 5,
-                  crossAxisSpacing: 5,
-                  crossAxisCount: 3),
-                  itemCount: 50, 
-                  itemBuilder: (context, index) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Get.snackbar("produk", "produk ${index+1}");
-                          },
-                          child: Container(
-                            height: 85,
-                            width: 150,
-                            decoration: BoxDecoration(
-                              // color: Color.fromARGB(255, Random().nextInt(255), Random().nextInt(255), Random().nextInt(255)),
-                              color: Colors.grey,
-                              borderRadius: BorderRadius.circular(10),
-                              image: DecorationImage(image: NetworkImage("https://picsum.photos/id/${index + 256}/500/500"), fit: BoxFit.cover)
-                            ),
-                          ),
-                        ),
-                        Text("Produk ke ${index+1}"),
-                        Text("Rp. ${Random().nextInt(10000)}")
-                      ],
-                    );
-                  },))
-          ],
-        ),
+      appBar: AppBar(
+        title: const Text("Marketplace"),
+        backgroundColor: Colors.white,
+        elevation: 1,
       ),
-    );
-  }
-}
-
-class MarketCategory extends StatelessWidget {
-  const MarketCategory({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String title;
-  final Icon icon;
-  final Function() onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: onTap,
-            child: Container(
-              height: 55,
-              width: 55,
-              decoration: BoxDecoration(
-                color: Colors.grey,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  Icon(icon.icon, size: 30),
-                ],
-              ),
+          CarouselSlider(
+            items: _carouselItems,
+            options: CarouselOptions(
+              height: 180, autoPlay: true, enlargeCenterPage: true, viewportFraction: 0.9
             ),
           ),
-          SizedBox(height: 5),
-          SizedBox(
-            width: 60,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black, fontSize: 12),
+          const _CategoryRow(),
+          const _SectionHeader(),
+          Expanded( // Kunci performa untuk GridView
+            child: GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: 50,
+              itemBuilder: (context, index) => _ProductCard(index: index),
             ),
           ),
         ],
@@ -198,21 +51,125 @@ class MarketCategory extends StatelessWidget {
   }
 }
 
-class ImageSlider extends StatelessWidget {
-  const ImageSlider({super.key, required this.image, required this.ontap});
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow();
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _MarketCategory(title: 'Makanan', icon: Icons.fastfood, onTap: () {}),
+          _MarketCategory(title: 'Properti', icon: Icons.warehouse_outlined, onTap: () {}),
+          _MarketCategory(title: 'Elektronik', icon: Icons.tv, onTap: () {}),
+          _MarketCategory(title: 'Lainnya', icon: Icons.category, onTap: () {}),
+        ],
+      ),
+    );
+  }
+}
 
-  final String image;
-  final Function() ontap;
+class _MarketCategory extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _MarketCategory({required this.title, required this.icon, required this.onTap});
+  
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.green.withOpacity(0.1),
+            child: Icon(icon, color: Colors.green.shade700, size: 28),
+          ),
+          const SizedBox(height: 6),
+          Text(title, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader();
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("Produk Terlaris", style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          TextButton(onPressed: () {}, child: const Text("Lihat Semua")),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  final int index;
+  const _ProductCard({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {},
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: CachedNetworkImage(
+                imageUrl: "https://picsum.photos/id/${index + 256}/300/300",
+                fit: BoxFit.cover,
+                placeholder: (c, u) => Container(color: Colors.grey.shade200),
+                errorWidget: (c, u, e) => const Icon(Icons.broken_image, color: Colors.grey),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Produk ke ${index + 1}", style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis,),
+                  const SizedBox(height: 4),
+                  Text("Rp ${NumberFormat.decimalPattern('id').format(Random().nextInt(100000))}", style: theme.textTheme.bodyMedium?.copyWith(color: theme.primaryColor, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CarouselImageSlider extends StatelessWidget {
+  final String imagePath;
+  final VoidCallback onTap;
+  const _CarouselImageSlider({required this.imagePath, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: ontap,
+      onTap: onTap,
       child: Container(
-        width: Get.width,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          image: DecorationImage(image: AssetImage(image), fit: BoxFit.fill),
+        margin: const EdgeInsets.all(5.0),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+          child: Image.asset(imagePath, fit: BoxFit.cover, width: 1000.0),
         ),
       ),
     );

@@ -1,433 +1,284 @@
+// lib/app/modules/jurnal_ajar_harian/views/jurnal_ajar_harian_view.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
 
 import '../controllers/jurnal_ajar_harian_controller.dart';
 
 class JurnalAjarHarianView extends GetView<JurnalAjarHarianController> {
-  JurnalAjarHarianView({super.key});
-
-  // final dataArgument = Get.arguments; // Tidak terpakai di view ini, bisa dihapus jika memang tidak
+  const JurnalAjarHarianView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    initializeDateFormatting('id_ID', null);
     final ThemeData theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Input Jurnal Ajar Harian'),
-        centerTitle: true,
+        title: const Text('Input Jurnal Harian'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
-        elevation: 2,
       ),
-      body: Expanded(
-        child: SingleChildScrollView(
-          child: Column(
-            // padding: const EdgeInsets.all(16.0),
-            children: [
-              _buildTanggalHariIni(theme),
-              const SizedBox(height: 20),
-              Text(
-                "Pilih Jam Pelajaran untuk Mengisi Jurnal:",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              _buildDaftarJamPelajaran(context, theme),
-              const SizedBox(height: 24),
-              const Divider(thickness: 1),
-              const SizedBox(height: 16),
-              Text(
-                "Jurnal yang Sudah Diinput Hari Ini:",
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              _buildRiwayatJurnalHariIni(theme),
-            ],
-          ),
+      // Gunakan floatingActionButton untuk tombol simpan agar selalu terlihat
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _buildSimpanButton(theme),
+      
+      // Body utama sekarang adalah satu form besar yang bisa di-scroll
+      body: SingleChildScrollView(
+        // Padding bawah agar tidak tertutup floating action button
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTanggalHariIni(theme),
+            const SizedBox(height: 24),
+
+            // --- BAGIAN BARU: PEMILIHAN KELAS ---
+            _buildSectionHeader(theme, "1. Pilih Kelas yang Diajar"),
+            _buildKelasSelector(),
+            const SizedBox(height: 24),
+
+            // --- BAGIAN BARU: PEMILIHAN JAM PELAJARAN ---
+            _buildSectionHeader(theme, "2. Pilih Jam Pelajaran"),
+            _buildJamPelajaranSelector(),
+            const SizedBox(height: 24),
+
+            // --- BAGIAN BARU: FORM INPUT ---
+            _buildSectionHeader(theme, "3. Isi Detail Jurnal"),
+            _buildJurnalForm(theme),
+            const SizedBox(height: 32),
+
+            // --- BAGIAN RIWAYAT (TETAP SAMA) ---
+            const Divider(thickness: 1),
+            const SizedBox(height: 16),
+            Text(
+              "Jurnal Tercatat Hari Ini",
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildRiwayatJurnalHariIni(theme),
+          ],
         ),
       ),
     );
   }
 
+  //========================================================================
+  // --- WIDGET-WIDGET BARU UNTUK UI DINAMIS ---
+  //========================================================================
+
+  /// Widget untuk menampilkan daftar kelas yang bisa dipilih.
+  Widget _buildKelasSelector() {
+    return FutureBuilder<List<String>>(
+      future: controller.getDataKelasYangDiajar(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _buildErrorWidget(Get.theme, "Gagal memuat data kelas.");
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return _buildEmptyStateWidget(Get.theme, "Anda tidak terdaftar mengajar di kelas manapun.");
+        }
+        
+        // Obx akan "mendengarkan" perubahan pada `selectedKelasList`
+        return Obx(() => Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: snapshot.data!.map((namaKelas) {
+            final bool isSelected = controller.selectedKelasList.contains(namaKelas);
+            return ChoiceChip(
+              label: Text(namaKelas),
+              selected: isSelected,
+              onSelected: (selected) {
+                // Panggil fungsi di controller untuk mengelola state
+                controller.toggleKelasSelection(namaKelas);
+              },
+              selectedColor: Get.theme.colorScheme.primary,
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+              ),
+            );
+          }).toList(),
+        ));
+      },
+    );
+  }
+
+  /// Widget untuk menampilkan daftar jam pelajaran yang bisa dipilih.
+  Widget _buildJamPelajaranSelector() {
+    return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      future: controller.getJamPelajaran(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return _buildErrorWidget(Get.theme, "Gagal memuat jam pelajaran.");
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildEmptyStateWidget(Get.theme, "Jam pelajaran belum diatur admin.");
+        }
+        
+        // Obx akan "mendengarkan" perubahan pada `selectedJamList`
+        return Obx(() => Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: snapshot.data!.docs.map((doc) {
+            String jamPelajaran = doc.data()['jampelajaran'] ?? doc.id;
+            final bool isSelected = controller.selectedJamList.contains(jamPelajaran);
+            return ChoiceChip(
+              label: Text(jamPelajaran),
+              selected: isSelected,
+              onSelected: (selected) {
+                controller.toggleJamSelection(jamPelajaran);
+              },
+              selectedColor: Get.theme.colorScheme.primary,
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+              ),
+            );
+          }).toList(),
+        ));
+      },
+    );
+  }
+
+  /// Widget untuk form input (mapel, materi, catatan).
+  Widget _buildJurnalForm(ThemeData theme) {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        
+        // GetBuilder ini penting! Ia akan memaksa dropdown untuk
+        // membangun ulang item-nya setiap kali pilihan kelas berubah.
+        GetBuilder<JurnalAjarHarianController>(
+          id: 'mapel-dropdown', // ID harus cocok dengan yang di controller
+          builder: (_) {
+            return Obx(() => DropdownSearch<String>(
+              onChanged: controller.onMapelChanged,
+              items: (f, cs) => controller.getDataMapel(),
+              popupProps: _popupProps(theme, "Cari Mata Pelajaran"),
+              decoratorProps: _dropdownDecorator(theme, 'Pilih Mata Pelajaran', Icons.book_outlined),
+              enabled: controller.selectedKelasList.isNotEmpty,
+              selectedItem: controller.selectedMapel.value,
+            ));
+          }
+        ),
+
+        const SizedBox(height: 16),
+        TextField(
+          controller: controller.materimapelC,
+          decoration: _inputDecorator(theme, 'Materi yang Diajarkan', Icons.subject_outlined),
+          textCapitalization: TextCapitalization.sentences,
+          minLines: 2, maxLines: 4,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: controller.catatanjurnalC,
+          decoration: _inputDecorator(theme, 'Catatan (Opsional)', Icons.notes_outlined),
+          textCapitalization: TextCapitalization.sentences,
+          minLines: 3, maxLines: 5,
+        ),
+      ],
+    );
+  }
+
+  /// Widget untuk tombol simpan yang reaktif.
+  Widget _buildSimpanButton(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Obx(() => ElevatedButton.icon(
+        icon: controller.isSaving.value
+            ? Container(width: 24, height: 24, padding: const EdgeInsets.all(2.0), child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+            : const Icon(Icons.save_as_outlined),
+        label: Text(controller.isSaving.value ? "Menyimpan..." : "Simpan Jurnal"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+          minimumSize: const Size(double.infinity, 50), // Tombol lebar penuh
+          textStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        onPressed: controller.isSaving.value ? null : controller.simpanJurnal,
+      )),
+    );
+  }
+
+  //========================================================================
+  // --- WIDGET-WIDGET LAMA YANG MASIH DIGUNAKAN (HELPER) ---
+  //========================================================================
+  
+  // Widget _buildDaftarJamPelajaran dan _showInputJurnalBottomSheet sudah tidak diperlukan lagi.
+
   Widget _buildTanggalHariIni(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(10),
-        // boxShadow: [
-        //   BoxShadow(
-        //     color: Colors.grey.withOpacity(0.3),
-        //     spreadRadius: 1,
-        //     blurRadius: 3,
-        //     offset: const Offset(0, 2),
-        //   )
-        // ]
-      ),
+      decoration: BoxDecoration(color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.calendar_today_outlined, size: 22, color: theme.colorScheme.onPrimaryContainer),
           const SizedBox(width: 10),
-          Text(
-            DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()),
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-          ),
+          Text(DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
         ],
       ),
     );
   }
 
-  Widget _buildDaftarJamPelajaran(BuildContext context, ThemeData theme) {
-    return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      future: controller.tampilkanJamPelajaran(),
-      builder: (context, snapPilihJurnal) {
-        if (snapPilihJurnal.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapPilihJurnal.hasError) {
-          return Center(child: Text("Error: ${snapPilihJurnal.error}", style: TextStyle(color: theme.colorScheme.error)));
-        }
-        if (!snapPilihJurnal.hasData || snapPilihJurnal.data!.docs.isEmpty) {
-          return const Center(child: Text("Belum ada data jam pelajaran."));
-        }
-
-        // GridView lebih menarik untuk pilihan seperti ini
-        return GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // 2 atau 3 kolom, sesuaikan
-            crossAxisSpacing: 12.0,
-            mainAxisSpacing: 12.0,
-            childAspectRatio: 2.5, // Sesuaikan rasio aspek
-          ),
-          itemCount: snapPilihJurnal.data!.docs.length,
-          itemBuilder: (context, index) {
-            var dataJam = snapPilihJurnal.data!.docs[index].data();
-            String jamPelajaran = dataJam['jampelajaran'] ?? 'Jam Ke-${index + 1}';
-
-            return Card(
-              elevation: 2.5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              color: theme.colorScheme.surfaceVariant, // Warna card yang berbeda
-              child: InkWell(
-                onTap: () {
-                  // Reset field controller sebelum bottom sheet dibuka
-                  controller.kelasSiswaC.clear();
-                  controller.mapelC.clear();
-                  controller.materimapelC.clear();
-                  controller.catatanjurnalC.clear();
-                  _showInputJurnalBottomSheet(context, theme, jamPelajaran);
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0), // Padding di dalam card
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(Icons.access_time_filled_rounded, size: 28, color: theme.colorScheme.primary),
-                      const SizedBox(height: 8),
-                      Text(
-                        jamPelajaran,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurfaceVariant
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+      child: Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
     );
   }
-
-  InputDecoration _inputDecorator(ThemeData theme, String label, {IconData? prefixIcon}) {
-     return InputDecoration(
-      labelText: label,
-      labelStyle: theme.textTheme.bodyMedium,
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20, color: theme.colorScheme.onSurfaceVariant) : null,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.0),
-        borderSide: BorderSide(color: theme.dividerColor)
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.0),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.7))
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10.0),
-        borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)
-      ),
-      filled: true,
-      fillColor: theme.colorScheme.surface.withOpacity(0.5), // Warna fill yang lebih lembut
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    );
-  }
-
-  void _showInputJurnalBottomSheet(BuildContext context, ThemeData theme, String jamPelajaranDipilih) {
-    Get.bottomSheet(
-      isScrollControlled: true, // Penting agar bisa scroll jika konten panjang
-      backgroundColor: Colors.transparent, // Buat transparan agar bisa pakai Container dengan border radius
-      Container(
-        // height: MediaQuery.of(context).size.height * 0.75, // Tinggi maksimal
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85, // Batas tinggi maksimal
-        ),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor, // Warna background sheet
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: SingleChildScrollView( // Bungkus dengan SingleChildScrollView
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // Agar tinggi sesuai konten
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Handle sheet (garis di atas)
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 15),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Text(
-                  'Input Jurnal untuk: $jamPelajaranDipilih',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-
-                // Dropdown Kelas
-                DropdownSearch<String>(
-                  decoratorProps: DropDownDecoratorProps(
-                    decoration: _inputDecorator(theme, 'Pilih Kelas', prefixIcon: Icons.class_outlined),
-                  ),
-                  selectedItem: controller.kelasSiswaC.text.isEmpty ? null : controller.kelasSiswaC.text,
-                  items: (f, cs) => controller.getDataKelas(),
-                  onChanged: controller.onKelasChanged, // Panggil method controller
-                  // onChanged: (String? value) {
-                  //   if (value != null) {
-                  //     controller.kelasSiswaC.text = value;
-                  //     controller.mapelC.clear(); // Kosongkan mapel jika kelas berubah
-                  //     // Anda mungkin perlu cara untuk me-refresh DropdownSearch Mapel
-                  //   }
-                  // },
-                  popupProps: PopupProps.menu(
-                    showSearchBox: true,
-                    searchFieldProps: TextFieldProps(
-                      decoration: _inputDecorator(theme, "Cari Kelas").copyWith(hintText: "Ketik nama kelas..."),
-                    ),
-                    menuProps: MenuProps(borderRadius: BorderRadius.circular(12)),
-                    fit: FlexFit.loose,
-                  ),
-                  // validator: (value) => value == null || value.isEmpty ? "Kelas wajib diisi" : null, // Tambahkan validasi jika perlu
-                ),
-                const SizedBox(height: 16),
-
-                // Dropdown Mata Pelajaran (perlu direbuild jika kelasSiswaC berubah)
-                // Kita bisa bungkus dengan Obx atau GetBuilder untuk ini
-                Obx(() => DropdownSearch<String>(
-                      // key: ValueKey(controller.kelasSiswaC.text), // Ganti key saat kelas berubah untuk rebuild
-                      key: ValueKey(controller.selectedKelasObs.value),
-                      decoratorProps: DropDownDecoratorProps(
-                        decoration: _inputDecorator(theme, 'Pilih Mata Pelajaran', prefixIcon: Icons.book_outlined)
-                            .copyWith(
-                              enabled: controller.selectedKelasObs.value.isNotEmpty, // Disable jika kelas belum dipilih
-                            ),
-                      ),
-                      selectedItem: controller.mapelC.text.isEmpty ? null : controller.mapelC.text,
-                      items: (f, cs) => controller.getDataMapel(),
-                      // enabled: controller.kelasSiswaC.text.isNotEmpty, // Disable jika kelas belum dipilih
-                      enabled: controller.selectedKelasObs.value.isNotEmpty,
-                      onChanged: controller.onMapelChanged, // Panggil method controller
-                      // onChanged: (String? value) {
-                      //   if (value != null) {
-                      //     controller.mapelC.text = value;
-                      //   }
-                      // },
-                      popupProps: PopupProps.menu(
-                        showSearchBox: true,
-                         searchFieldProps: TextFieldProps(
-                          decoration: _inputDecorator(theme, "Cari Mata Pelajaran").copyWith(hintText: "Ketik nama mapel..."),
-                        ),
-                        menuProps: MenuProps(borderRadius: BorderRadius.circular(12)),
-                        fit: FlexFit.loose,
-                      ),
-                      // validator: (value) => value == null || value.isEmpty ? "Mapel wajib diisi" : null,
-                    )),
-                const SizedBox(height: 16),
-
-                TextField(
-                  controller: controller.materimapelC,
-                  decoration: _inputDecorator(theme, 'Materi Pelajaran', prefixIcon: Icons.subject_outlined),
-                  textCapitalization: TextCapitalization.sentences,
-                  minLines: 1,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-
-                TextField(
-                  controller: controller.catatanjurnalC,
-                  decoration: _inputDecorator(theme, 'Catatan Jurnal (Opsional)', prefixIcon: Icons.notes_outlined),
-                  textCapitalization: TextCapitalization.sentences,
-                  minLines: 2,
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 24),
-
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.save_alt_outlined),
-                  label: const Text("Simpan Jurnal"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    if (controller.kelasSiswaC.text.isEmpty) {
-                      Get.snackbar("Peringatan", "Kelas wajib dipilih.", backgroundColor: Colors.orange[700], colorText: Colors.white);
-                    } else if (controller.mapelC.text.isEmpty) {
-                      Get.snackbar("Peringatan", "Mata pelajaran wajib dipilih.", backgroundColor: Colors.orange[700], colorText: Colors.white);
-                    } else if (controller.materimapelC.text.trim().isEmpty) {
-                      Get.snackbar("Peringatan", "Materi pelajaran wajib diisi.", backgroundColor: Colors.orange[700], colorText: Colors.white);
-                    } else {
-                      // Tampilkan dialog konfirmasi sebelum menyimpan
-                      Get.defaultDialog(
-                        title: "Konfirmasi Simpan",
-                        middleText: "Apakah Anda yakin ingin menyimpan jurnal ini?",
-                        titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        confirm: ElevatedButton(
-                          onPressed: () {
-                            Get.back(); // Tutup dialog konfirmasi
-                            controller.simpanDataJurnal(jamPelajaranDipilih);
-                            // Get.back() akan menutup bottom sheet setelah simpanDataJurnal selesai (karena ada Get.back() di sana)
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary),
-                          child: Text("Ya, Simpan", style: TextStyle(color: theme.colorScheme.onPrimary)),
-                        ),
-                        cancel: TextButton(
-                          onPressed: () => Get.back(), // Tutup dialog konfirmasi
-                          child: Text("Batal", style: TextStyle(color: theme.colorScheme.secondary)),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 10), // Spasi di bawah tombol
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  
   Widget _buildRiwayatJurnalHariIni(ThemeData theme) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: controller.tampilkanjurnal(),
-      builder: (context, snapshotTampil) {
-        if (snapshotTampil.connectionState == ConnectionState.waiting) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(),
-          ));
-        }
-        if (snapshotTampil.hasError) {
-          return Center(child: Text("Error: ${snapshotTampil.error}", style: TextStyle(color: theme.colorScheme.error)));
-        }
-        if (!snapshotTampil.hasData || snapshotTampil.data!.docs.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20.0),
-              child: Column(
-                children: [
-                  Icon(Icons.inbox_outlined, size: 50, color: Colors.grey[400]),
-                  const SizedBox(height: 8),
-                  Text("Belum ada jurnal yang diinput hari ini.", style: theme.textTheme.bodyMedium),
-                ],
-              ),
-            ),
-          );
-        }
+      stream: controller.getJurnalHariIni(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) { return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator())); }
+        if (snapshot.hasError) { return _buildErrorWidget(theme, "Gagal memuat riwayat jurnal. ${snapshot.error}"); }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) { return _buildEmptyStateWidget(theme, "Belum ada jurnal yang Anda input hari ini."); }
 
         return ListView.separated(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: snapshotTampil.data!.docs.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemCount: snapshot.data!.docs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            Map<String, dynamic> data = snapshotTampil.data!.docs[index].data();
-            Timestamp? ts = data['tanggalinput'] is Timestamp ? data['tanggalinput'] as Timestamp : null;
-            DateTime tanggalInput = ts?.toDate() ?? DateTime.now();
+            Map<String, dynamic> data = snapshot.data!.docs[index].data();
+            DateTime tanggalInput = (data['tanggalinput'] as String?) != null ? DateTime.parse(data['tanggalinput'] as String) : DateTime.now();
 
             return Card(
               elevation: 1.5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          data['jampelajaran'] ?? 'Jam Pelajaran',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                        ),
-                         Text(
-                          DateFormat('HH:mm', 'id_ID').format(tanggalInput), // Hanya jam & menit
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
+                        Text(data['jampelajaran'] ?? 'Jam Pelajaran', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        Text(DateFormat('HH:mm', 'id_ID').format(tanggalInput), style: theme.textTheme.bodySmall),
                       ],
                     ),
-                    const Divider(height: 12),
-                    Text.rich(TextSpan(children: [
-                      TextSpan(text: "Kelas: ", style: TextStyle(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant)),
-                      TextSpan(text: "${data['kelas'] ?? '-'}", style: TextStyle(color: theme.colorScheme.onSurface)),
-                    ]), style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: 4),
-                    Text.rich(TextSpan(children: [
-                      TextSpan(text: "Mapel: ", style: TextStyle(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant)),
-                      TextSpan(text: "${data['namamapel'] ?? '-'}", style: TextStyle(color: theme.colorScheme.onSurface)),
-                    ]), style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: 4),
-                    Text.rich(TextSpan(children: [
-                      TextSpan(text: "Materi: ", style: TextStyle(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant)),
-                      TextSpan(text: "${data['materipelajaran'] ?? '-'}", style: TextStyle(color: theme.colorScheme.onSurface)),
-                    ]), style: theme.textTheme.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis,),
+                    const Divider(height: 16),
+                    _buildRichTextInfo("Kelas", data['kelas'] ?? '-'),
+                    const SizedBox(height: 6),
+                    _buildRichTextInfo("Mapel", data['namamapel'] ?? '-'),
+                    const SizedBox(height: 6),
+                    _buildRichTextInfo("Materi", data['materipelajaran'] ?? '-'),
                     if (data['catatanjurnal'] != null && (data['catatanjurnal'] as String).isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text.rich(TextSpan(children: [
-                        TextSpan(text: "Catatan: ", style: TextStyle(fontWeight: FontWeight.w500, fontStyle: FontStyle.italic, color: theme.colorScheme.onSurfaceVariant)),
-                        TextSpan(text: "${data['catatanjurnal']}", style: TextStyle(fontStyle: FontStyle.italic, color: theme.colorScheme.onSurface)),
-                      ]), style: theme.textTheme.bodySmall, maxLines: 3, overflow: TextOverflow.ellipsis,),
+                      _buildRichTextInfo("Catatan", data['catatanjurnal'], isItalic: true),
                     ]
                   ],
                 ),
@@ -438,327 +289,72 @@ class JurnalAjarHarianView extends GetView<JurnalAjarHarianController> {
       },
     );
   }
+
+  Widget _buildRichTextInfo(String label, String value, {bool isItalic = false}) {
+    final theme = Get.theme;
+    return Text.rich(TextSpan(children: [
+      TextSpan(text: "$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
+      TextSpan(text: value, style: TextStyle(fontStyle: isItalic ? FontStyle.italic : FontStyle.normal, color: theme.textTheme.bodySmall?.color)),
+    ]), style: theme.textTheme.bodyMedium);
+  }
+
+  Widget _buildEmptyStateWidget(ThemeData theme, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+        child: Column(
+          children: [
+            Icon(Icons.inbox_outlined, size: 60, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(message, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(ThemeData theme, String message) {
+     return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 60, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text("Terjadi Kesalahan", style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.error)),
+            const SizedBox(height: 8),
+            Text(message, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecorator(ThemeData theme, String label, IconData icon) {
+     return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, size: 22),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      filled: true,
+      fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+    );
+  }
+
+  DropDownDecoratorProps _dropdownDecorator(ThemeData theme, String label, IconData icon) {
+    return DropDownDecoratorProps(
+      decoration: _inputDecorator(theme, label, icon).copyWith(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+      ),
+    );
+  }
+
+  PopupProps<String> _popupProps(ThemeData theme, String searchHint) {
+    return PopupProps.menu(
+      showSearchBox: true,
+      searchFieldProps: TextFieldProps(decoration: _inputDecorator(theme, searchHint, Icons.search), style: theme.textTheme.bodyLarge),
+      menuProps: MenuProps(borderRadius: BorderRadius.circular(12)),
+      fit: FlexFit.loose,
+      containerBuilder: (ctx, popupWidget) { return Material(elevation: 8, borderRadius: BorderRadius.circular(12), child: popupWidget); },
+    );
+  }
 }
-
-// ====================== KODE LAMA ====================
-
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:dropdown_search/dropdown_search.dart';
-// import 'package:flutter/material.dart';
-
-// import 'package:get/get.dart';
-
-// import '../controllers/jurnal_ajar_harian_controller.dart';
-
-// class JurnalAjarHarianView extends GetView<JurnalAjarHarianController> {
-//   JurnalAjarHarianView({super.key});
-
-//   final dataArgument = Get.arguments;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     // print("dataArgument = $dataArgument");
-//     return Scaffold(
-//       appBar: AppBar(
-//         // title: const Text('JurnalAjarHarianView'),
-//         centerTitle: true,
-//       ),
-//       body: ListView(
-//         children: [
-//           Column(
-//             children: [
-//               FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-//                 future: controller.tampilkanJamPelajaran(),
-//                 builder: (context, snapPilihJurnal) {
-//                   return ListView.builder(
-//                     physics: NeverScrollableScrollPhysics(),
-//                     shrinkWrap: true,
-//                     itemCount: snapPilihJurnal.data?.docs.length ?? 0,
-//                     itemBuilder: (context, index) {
-//                       if (snapPilihJurnal.connectionState ==
-//                           ConnectionState.waiting) {
-//                         return Center(child: CircularProgressIndicator());
-//                       }
-//                       if (snapPilihJurnal.hasData) {
-//                         var data = snapPilihJurnal.data!.docs[index].data();
-//                         // return ListTile(
-//                         //   onTap: () {
-//                         //     print("yang ke ${index + 1}");
-//                         //   },
-//                         //   title: Text(data['namamatapelajaran']),
-//                         //   subtitle: Text(dataKelas),
-//                         // );
-
-//                         return Padding(
-//                           padding: const EdgeInsets.only(top: 10),
-//                           child: Material(
-//                             color: Colors.grey[200],
-//                             borderRadius: BorderRadius.circular(15),
-//                             child: InkWell(
-//                               onTap: () {
-//                                 print(
-//                                   "data['jampelajaran'] = ${data['jampelajaran']}",
-//                                 );
-//                                 Get.bottomSheet(
-//                                   Container(
-//                                     height: 400,
-//                                     color: Colors.white,
-//                                     child: Padding(
-//                                       padding: const EdgeInsets.symmetric(
-//                                         vertical: 10,
-//                                         horizontal: 10,
-//                                       ),
-//                                       child: Column(
-//                                         children: [
-//                                           Container(
-//                                             height: 50,
-//                                             decoration: BoxDecoration(
-//                                               color: Colors.grey[50],
-//                                               borderRadius:
-//                                                   BorderRadius.circular(10),
-//                                             ),
-//                                             child: Text(
-//                                               data['jampelajaran'],
-//                                               style: TextStyle(
-//                                                 fontWeight: FontWeight.bold,
-//                                               ),
-//                                             ),
-//                                           ),
-
-//                                           DropdownSearch<String>(
-//                                             decoratorProps:
-//                                                 DropDownDecoratorProps(
-//                                                   decoration: InputDecoration(
-//                                                     border:
-//                                                         OutlineInputBorder(),
-//                                                     filled: true,
-//                                                     prefixText: 'kelas : ',
-//                                                   ),
-//                                                 ),
-//                                             selectedItem:
-//                                                 controller.kelasSiswaC.text,
-//                                             items:
-//                                                 (f, cs) =>
-//                                                     controller.getDataKelas(),
-//                                             onChanged: (String? value) {
-//                                               controller.kelasSiswaC.text =
-//                                                   value!;
-//                                             },
-//                                             popupProps: PopupProps.menu(
-//                                               // disabledItemFn: (item) => item == '1A',
-//                                               fit: FlexFit.tight,
-//                                             ),
-//                                           ),
-//                                           SizedBox(height: 15),
-
-//                                           DropdownSearch<String>(
-//                                             decoratorProps:
-//                                                 DropDownDecoratorProps(
-//                                                   decoration: InputDecoration(
-//                                                     border:
-//                                                         OutlineInputBorder(),
-//                                                     filled: true,
-//                                                     prefixText: 'mapel : ',
-//                                                   ),
-//                                                 ),
-//                                             selectedItem:
-//                                                 controller.mapelC.text,
-//                                             items:
-//                                                 (f, cs) =>
-//                                                     controller.getDataMapel(),
-//                                             onChanged: (String? value) {
-//                                               controller.mapelC.text = value!;
-//                                             },
-//                                             popupProps: PopupProps.menu(
-//                                               // disabledItemFn: (item) => item == '1A',
-//                                               fit: FlexFit.tight,
-//                                             ),
-//                                           ),
-//                                           SizedBox(height: 15),
-
-//                                           TextField(
-//                                             controller: controller.materimapelC,
-//                                             decoration: InputDecoration(
-//                                               labelText: 'Materi Pelajaran',
-//                                               labelStyle: TextStyle(
-//                                                 fontSize: 12,
-//                                               ),
-//                                               border: OutlineInputBorder(),
-//                                               enabledBorder: OutlineInputBorder(
-//                                                 borderSide: BorderSide(
-//                                                   color: Colors.grey,
-//                                                 ),
-//                                               ),
-//                                             ),
-//                                           ),
-//                                           SizedBox(height: 15),
-
-//                                           TextField(
-//                                             controller:
-//                                                 controller.catatanjurnalC,
-//                                             decoration: InputDecoration(
-//                                               labelText: 'Catatan',
-//                                               labelStyle: TextStyle(
-//                                                 fontSize: 12,
-//                                               ),
-//                                               border: OutlineInputBorder(),
-//                                               enabledBorder: OutlineInputBorder(
-//                                                 borderSide: BorderSide(
-//                                                   color: Colors.grey,
-//                                                 ),
-//                                               ),
-//                                             ),
-//                                           ),
-//                                           SizedBox(height: 15),
-
-//                                           ElevatedButton(
-//                                             onPressed: () {
-//                                               // ignore: unnecessary_null_comparison
-//                                               if (controller.kelasSiswaC.text ==
-//                                                       null ||
-//                                                   controller
-//                                                       .kelasSiswaC
-//                                                       .text
-//                                                       .isEmpty) {
-//                                                 Get.snackbar(
-//                                                   "Error",
-//                                                   "Kelas masih kosong",
-//                                                 );
-//                                               } else if (controller
-//                                                           .mapelC
-//                                                           // ignore: unnecessary_null_comparison
-//                                                           .text ==
-//                                                       null ||
-//                                                   controller
-//                                                       .mapelC
-//                                                       .text
-//                                                       .isEmpty) {
-//                                                 Get.snackbar(
-//                                                   "Error",
-//                                                   "Mapel masih kosong",
-//                                                 );
-//                                               } else if (controller
-//                                                           .materimapelC
-//                                                           // ignore: unnecessary_null_comparison
-//                                                           .text ==
-//                                                       null ||
-//                                                   controller
-//                                                       .materimapelC
-//                                                       .text
-//                                                       .isEmpty) {
-//                                                 Get.snackbar(
-//                                                   "Error",
-//                                                   "Materi Mapel masih kosong",
-//                                                 );
-//                                               } else {
-//                                                 controller.simpanDataJurnal(
-//                                                   data['jampelajaran'],
-//                                                 );
-//                                               }
-//                                             },
-//                                             child: Text("Simpan"),
-//                                           ),
-//                                         ],
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 );
-//                               },
-//                               child: Container(
-//                                 margin: EdgeInsets.fromLTRB(20, 10, 10, 0),
-//                                 decoration: BoxDecoration(
-//                                   borderRadius: BorderRadius.circular(15),
-//                                 ),
-//                                 child: Text(data['jampelajaran']),
-//                               ),
-//                             ),
-//                           ),
-//                         );
-//                       }
-//                       // Add a default return for other cases
-//                       return Text(
-//                         "Tidak bisa memuat data, silahkan ulangi lagi",
-//                       );
-//                     },
-//                   );
-//                 },
-//               ),
-//               SizedBox(height: 3),
-//               Divider(height: 3),
-//               // Container(height: 2, color: Colors.grey),
-
-//               // ElevatedButton(onPressed: ()=>controller.refreshTampilan(), child: Text("test")),
-//               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-//                 stream: controller.tampilkanjurnal(),
-//                 // stream: null,
-//                 builder: (context, snapshotTampil) {
-//                   if (snapshotTampil.connectionState ==
-//                       ConnectionState.waiting) {
-//                     return Center(child: CircularProgressIndicator());
-//                   }
-//                   // ignore: prefer_is_empty
-//                   if (snapshotTampil.data == null ||
-//                       snapshotTampil.data?.docs.length == 0) {
-//                     return Center(child: Text('belum ada data'));
-//                   }
-//                   if (snapshotTampil.hasData) {
-//                     return ListView.builder(
-//                       shrinkWrap: true,
-//                       itemCount: snapshotTampil.data!.docs.length,
-//                       itemBuilder: (context, index) {
-//                         Map<String, dynamic> data =
-//                             snapshotTampil.data!.docs[index].data() as Map<String, dynamic>;
-
-//                         // Format tanggal Jurnal
-//                         String formattedTglJurnal = '';
-//                         if (data['tanggalinput'] != null) {
-//                           // ignore: non_constant_identifier_names
-//                           DateTime? TglJurnal;
-//                           if (data['tanggalinput'] is Timestamp) {
-//                             TglJurnal =
-//                                 (data['tanggalinput'] as Timestamp).toDate();
-//                           } else if (data['tanggalinput'] is String) {
-//                             TglJurnal = DateTime.tryParse(data['tanggalinput']);
-//                           }
-//                           if (TglJurnal != null) {
-//                             formattedTglJurnal =
-//                                 "${TglJurnal.day.toString().padLeft(2, '0')}-${TglJurnal.month.toString().padLeft(2, '0')}-${TglJurnal.year}";
-//                           }
-//                         }
-
-//                         // return ListTile(
-//                         //   title: Text(data['namamapel']),
-//                         //   subtitle: Text(data['jampelajaran']),
-//                         // );
-//                         return Container(
-//                           margin: EdgeInsets.fromLTRB(20, 10, 10, 0),
-//                           decoration: BoxDecoration(
-//                             borderRadius: BorderRadius.circular(15),
-//                           ),
-//                           child: Column(
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               // Text("Tanggal Jurnal : ${data['uidtanggal']}"),
-//                               Text("Tanggal : $formattedTglJurnal"),
-//                               Text("Jam Pelajaran : ${data['jampelajaran']}"),
-//                               Text("Mapel : ${data['namamapel']}"),
-//                               Text("Materi : ${data['materipelajaran']}"),
-//                               Text("Catatan : ${data['catatanjurnal']}"),
-//                             ],
-//                           ),
-//                         );
-//                       },
-//                     );
-//                   }
-//                   // Default return to satisfy non-nullable return type
-//                   return SizedBox.shrink();
-//                 },
-//               ),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-

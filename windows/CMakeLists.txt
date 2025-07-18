@@ -1,6 +1,5 @@
 # Project-level configuration.
-cmake_minimum_required(VERSION 3.30.5)
-# cmake_minimum_required(VERSION 4.0.2)
+cmake_minimum_required(VERSION 3.14)
 project(sdit_ui_yogyakarta LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -48,6 +47,7 @@ endfunction()
 
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
+# set(CMAKE_POLICY_VERSION 3.10)
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # Application build; see runner/CMakeLists.txt.

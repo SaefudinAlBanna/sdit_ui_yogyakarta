@@ -1,88 +1,139 @@
+// views/input_info_sekolah_view.dart
+
+import 'dart:io';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
-
 import '../controllers/input_info_sekolah_controller.dart';
 
 class InputInfoSekolahView extends GetView<InputInfoSekolahController> {
   const InputInfoSekolahView({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('InputInfoSekolahView'),
-        centerTitle: true,
+        title: const Text('Buat Informasi Baru'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.deepPurple, Colors.purpleAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ada Info apa hari ini?', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 10),
+            // --- Input Judul ---
             TextField(
               controller: controller.judulC,
-              decoration: InputDecoration(
-                hintText: 'Judul info',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                contentPadding: const EdgeInsets.all(16),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+              decoration: const InputDecoration(
+                hintText: 'Judul Informasi...',
+                border: InputBorder.none,
               ),
             ),
-            const SizedBox(height: 10),
+            const Divider(),
+            
+            // --- Area Upload Gambar ---
+            const SizedBox(height: 20),
+            Obx(() {
+              if (controller.imageFile.value == null) {
+                return GestureDetector(
+                    onTap: controller.pickImage,
+                    child: DottedBorder(
+                      // --- PERUBAHAN UTAMA DIMULAI DI SINI ---
+
+                      // 1. Semua pengaturan sekarang masuk ke dalam parameter 'options'
+                      // Karena Anda butuh border berbentuk Rounded Rectangle, kita pakai RoundedRectDottedBorderOptions
+                      options: RoundedRectDottedBorderOptions(
+                        // 2. Properti-properti lama dipindahkan ke dalam 'options'
+                        radius: const Radius.circular(12),
+                        dashPattern: const [8, 4],
+                        strokeWidth: 2,
+                        color: Colors.grey,
+                      ),
+
+                      // --- AKHIR DARI PERUBAHAN ---
+
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey),
+                            SizedBox(height: 8),
+                            Text('Tambahkan Gambar (Opsional)', style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+              } else {
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        controller.imageFile.value!,
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: controller.removeImage,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+            }),
+            
+            // --- Input Isi Informasi ---
+            const SizedBox(height: 20),
             TextField(
               controller: controller.inputC,
-              decoration: InputDecoration(
-                hintText: 'Tulis Info...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                contentPadding: const EdgeInsets.all(16),
+              maxLines: null, // Otomatis menyesuaikan tinggi
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+              decoration: const InputDecoration(
+                hintText: 'Tuliskan informasi selengkapnya di sini...',
+                border: InputBorder.none,
               ),
-              maxLines: 15, // Untuk membuat input multiline seperti status Facebook
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // ignore: unnecessary_null_comparison
-                if(controller.judulC.text == null || controller.judulC.text == '' || controller.judulC.text.isEmpty) {
-                  Get.snackbar(
-                    'Error',
-                    'Judul masih kosong',
-                    backgroundColor: Colors.red,
-                    colorText: Colors.white,
-                    );
-                }
-                // ignore: unnecessary_null_comparison
-                else if(controller.inputC.text == null || controller.inputC.text == '' || controller.inputC.text.isEmpty) {
-                  Get.snackbar(
-                    'Error',
-                    'Info masih kosong',
-                    backgroundColor: Colors.red,
-                    colorText: Colors.white,
-                    );
-                  // controller.simpanInfo();
-                  //  String input = controller.inputC.text;
-                  // print('Input Status: $input');
-                } else {
-                  // Get.snackbar(
-                  //   'Error',
-                  //   'Info masih kosong',
-                  //   backgroundColor: Colors.red,
-                  //   colorText: Colors.white,
-                  //   );
-                  controller.simpanInfo();
-                  // controller.test();
-                  //  String input = controller.inputC.text;
-                  // print('Input Status: $input');
-                }
-               
-              },
-              child: const Text('Post'),
             ),
           ],
         ),
+      ),
+      // Tombol Post
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Obx(() => ElevatedButton(
+              onPressed: controller.isLoading.value ? null : controller.simpanInfo,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: controller.isLoading.value
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white))
+                  : const Text('Publikasikan', style: TextStyle(fontSize: 16)),
+            )),
       ),
     );
   }

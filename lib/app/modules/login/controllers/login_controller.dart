@@ -6,8 +6,7 @@ import '../../../routes/app_pages.dart';
 
 class LoginController extends GetxController {
   RxBool isLoading = false.obs;
-  RxBool isLogin = false.obs;
-  
+  RxBool isLogin = true.obs;
   TextEditingController emailC = TextEditingController();
   TextEditingController passC = TextEditingController();
 
@@ -109,7 +108,7 @@ class LoginController extends GetxController {
         if (userCredential.user != null) {
           if (userCredential.user != null) {
             if (userCredential.user!.emailVerified == true) {
-              if (passC.text == "password" || passC.text == "Password") {
+              if (passC.text == "telagailmu" || passC.text == "Telagailmu") {
                 Get.offAllNamed(Routes.NEW_PASSWORD);
               } else {
                 res = "Succes";

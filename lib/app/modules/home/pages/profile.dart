@@ -1,267 +1,164 @@
+// lib/app/modules/home/pages/profile_page.dart
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../controllers/home_controller.dart';
+import 'package:intl/intl.dart';
 
 class ProfilePage extends GetView<HomeController> {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: controller.getProfileBaru(),
-      builder: (context, snapsprofile) {
-        if (snapsprofile.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-        if (snapsprofile.data?.data == null) {
-          return Center(child: Text('Data tidak ditemukan'));
-        }
-        if (snapsprofile.hasData) {
-          Map<String, dynamic> data = snapsprofile.data!.data()!;
-          // Format tanggal lahir
-          String formattedDateTglLahir = '';
-          if (data['tglLahir'] != null) {
-            DateTime? tglLahir;
-            if (data['tglLahir'] is Timestamp) {
-              tglLahir = (data['tglLahir'] as Timestamp).toDate();
-            } else if (data['tglLahir'] is String) {
-              tglLahir = DateTime.tryParse(data['tglLahir']);
-            }
-            if (tglLahir != null) {
-              formattedDateTglLahir = "${tglLahir.day.toString().padLeft(2, '0')}-${tglLahir.month.toString().padLeft(2, '0')}-${tglLahir.year}";
-            }
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        title: const Text("Profil Saya"),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => Get.defaultDialog(
+              title: "Logout",
+              middleText: "Apakah Anda yakin ingin keluar?",
+              textConfirm: "Ya",
+              textCancel: "Tidak",
+              onConfirm: controller.signOut, // Asumsi ada fungsi signOut
+            ),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: controller.userStream(), // Menggunakan stream yang sudah diperbaiki
+        builder: (context, snapProfile) {
+          if (snapProfile.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(
-                "Profile",
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              backgroundColor: Colors.indigo[400],
-              actions: [
-                IconButton(
-                  onPressed: () {
-                    Get.defaultDialog(
-                      onCancel: Get.back,
-                      title: 'Peringatan',
-                      middleText: 'Apakah anda yakin akan logout?',
-                      onConfirm: () => controller.signOut(),
-                    );
-                  },
-                  icon: Icon(
-                    Icons.power_settings_new_outlined,
-                    size: 25,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            body: Stack(
-              children: [
-                ClipPath(
-                  clipper: ClassClipPathTop(),
-                  child: Container(
-                    height: 250,
-                    width: Get.width,
-                    color: Colors.indigo[400],
-                  ),
-                ),
-
-                Container(
-                  margin: EdgeInsets.only(top: 20),
-                  child: Column(
-                    children: [
-                      Column(
-                        children: [
-                          Column(
-                            children: [
-                              Container(
-                                height: 100,
-                                width: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[400],
-                                  image: DecorationImage(
-                                    image: NetworkImage(
-                                      "https://picsum.photos/200",
-                                    ),
-                                    // "https://photos.google.com/photo/AF1QipO0EuuqmPsza1Ljrdy6roeFI9BbjQ043BrYtxpc"),
-                                    fit: BoxFit.cover,
-                                  ),
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                data['alias'],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                data['role'].toString(),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  // fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 50),
-                          // Container(height: 7, color: Colors.grey[400]),
-                        ],
-                      ),
-                      Expanded(
-                        child: ListView(
-                          padding: EdgeInsets.symmetric(horizontal: 25),
-                          children: [
-                            SizedBox(height: 20),
-                            Text("Menu", style: TextStyle(fontSize: 20)),
-                            SizedBox(height: 5),
-                            Card(
-                              color: Colors.grey[200],
-                              child: Container(
-                                alignment: Alignment.topLeft,
-                                padding: EdgeInsets.all(15),
-                                child: Column(
-                                  children: [
-                                    ...ListTile.divideTiles(
-                                      color: Colors.grey,
-                                      tiles: [
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.email_outlined),
-                                          title: Text("email"),
-                                          subtitle: Text(data['email'] ?? '-'),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.local_hospital),
-                                          title: Text("Tempat, Tgl Lahir"),
-                                          subtitle: Text("${data['tempatLahir'] ?? '-'}, - $formattedDateTglLahir",)
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.male_outlined),
-                                          title: Text("Jenis Kelamin"),
-                                          subtitle: Text(
-                                            data['jeniskelamin'] ?? '-',
-                                          ),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(
-                                            Icons.ac_unit_outlined,
-                                          ),
-                                          title: Text("Jumlah Hafalan"),
-                                          subtitle: Text(data['jumlahhafalan'] ?? '-'),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.my_location),
-                                          title: Text("Alamat"),
-                                          subtitle: Text(data['alamat'] ?? '-'),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(
-                                            Icons.phone_android_outlined,
-                                          ),
-                                          title: Text("No Hp"),
-                                          subtitle: Text(
-                                            data['nohp'] ?? '-',
-                                          ),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.menu_book_outlined),
-                                          title: Text("bersertifikat"),
-                                          subtitle: Text(
-                                            data['bersertifikat'] ?? '-',
-                                          ),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          leading: Icon(Icons.yard_outlined),
-                                          title: Text("No. Sertifikat"),
-                                          subtitle: Text(
-                                            data['nosertifiat'] ?? '-',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          if (!snapProfile.hasData || snapProfile.data?.data() == null) {
+            return const Center(child: Text('Data pengguna tidak ditemukan.'));
+          }
+          final data = snapProfile.data!.data()!;
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            children: [
+              _ProfileHeaderCard(data: data),
+              const SizedBox(height: 16),
+              _ProfileDetailsCard(data: data),
+            ],
           );
-        } else {
-          return Center(
-            child: Text("Terjadi kesalahan, silahkan coba login ulang"),
-          );
-        }
-      },
+        },
+      ),
     );
   }
 }
 
-class ClassClipPathTop extends CustomClipper<Path> {
-  @override
-  getClip(Size size) {
-    Path path = Path();
-    path.lineTo(0, size.height - 60);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height,
-      size.width,
-      size.height - 60,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
+class _ProfileHeaderCard extends GetView<HomeController> { // <-- Ubah menjadi GetView<HomeController>
+  final Map<String, dynamic> data;
+  const _ProfileHeaderCard({required this.data});
 
-    return path;
+  @override
+  Widget build(BuildContext context) {
+    // --- LOGIKA BARU UNTUK MENAMPILKAN GAMBAR ---
+    final String? imageUrl = data['profileImageUrl'];
+    final ImageProvider imageProvider;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      // Jika ada URL dari Firestore, gunakan NetworkImage
+      imageProvider = NetworkImage(imageUrl);
+    } else {
+      // Jika tidak ada, gunakan default (misal, dari ui-avatars atau aset lokal)
+      imageProvider = NetworkImage("https://ui-avatars.com/api/?name=${data['alias'] ?? 'User'}&background=random&color=fff");
+    }
+    // --- AKHIR LOGIKA BARU ---
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.green.shade700,
+        borderRadius: BorderRadius.circular(15),
+        image: const DecorationImage(
+          image: AssetImage("assets/png/latar2.png"), // Pastikan path aset ini benar
+          fit: BoxFit.cover,
+          opacity: 0.1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 52,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: imageProvider, // <-- Gunakan imageProvider
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: Icon(Icons.edit, size: 22, color: Colors.green.shade800),
+                    // Panggil fungsi upload dari controller
+                    onPressed: controller.pickAndUploadProfilePicture,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(data['alias'] ?? 'Nama Pengguna', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 4),
+          Text(data['role'] ?? 'Role', style: const TextStyle(fontSize: 14, color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileDetailsCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _ProfileDetailsCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    String formattedDateTglLahir = 'N/A';
+    if (data['tglLahir'] is Timestamp) {
+      final tglLahir = (data['tglLahir'] as Timestamp).toDate();
+      formattedDateTglLahir = DateFormat('dd MMMM yyyy', 'id_ID').format(tglLahir);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          children: [
+            _buildInfoTile(icon: Icons.email_outlined, title: "Email", subtitle: data['email'] ?? '-'),
+            _buildInfoTile(icon: Icons.cake_outlined, title: "Tempat, Tgl Lahir", subtitle: "${data['tempatLahir'] ?? '-'}, $formattedDateTglLahir"),
+            _buildInfoTile(icon: Icons.person_outline, title: "Jenis Kelamin", subtitle: data['jeniskelamin'] ?? '-'),
+            _buildInfoTile(icon: Icons.home_outlined, title: "Alamat", subtitle: data['alamat'] ?? '-'),
+            _buildInfoTile(icon: Icons.phone_android_outlined, title: "No HP", subtitle: data['nohp'] ?? '-'),
+            _buildInfoTile(icon: Icons.card_membership_outlined, title: "No. Sertifikat", subtitle: data['nosertifikat'] ?? '-'),
+          ],
+        ),
+      ),
+    );
   }
 
-  @override
-  bool shouldReclip(covariant CustomClipper oldClipper) => false;
+  Widget _buildInfoTile({required IconData icon, required String title, required String subtitle}) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.green.shade700),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 14)),
+    );
+  }
 }

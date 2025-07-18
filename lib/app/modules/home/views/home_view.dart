@@ -1,67 +1,113 @@
+// lib/app/modules/home/views/home_view.dart
+
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
-import '../controllers/home_controller.dart';
-
-// import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
-
-
-const NavBarStyle _navBarStyle = NavBarStyle.style6; // You can choose any available NavBarStyle
+import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-
-      // body: Obx(() => controller.myWidgets.elementAt(controller.indexWidget.value),
-      // ),
-      // bottomNavigationBar: ConvexAppBar(
-      //   style: TabStyle.react,
-      //   curveSize: 90,
-      //   initialActiveIndex: 0,
-      //   backgroundColor: Colors.indigo[400],
-      //   onTap: (index) => controller.changeIndex(index),
-      //   items:[
-      //     TabItem(icon: Icons.home, title: "Home"),
-      //     TabItem(icon: Icons.shopping_cart_outlined, title: "Marketplace"),
-      //     TabItem(icon: Icons.person_2_rounded, title: "Profile"),
-      //   ] ),
-      
-      body: PersistentTabView(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _showExitDialog(context);
+      },
+      child: PersistentTabView(
         context,
-        // controller: _controller,
-        screens: controller.myWidgets,
-        items: [
-          PersistentBottomNavBarItem(icon: Icon(Icons.home, color: Colors.black), title: "Home",),
-          PersistentBottomNavBarItem(icon: Icon(Icons.shopping_cart_outlined, color: Colors.black,), title: "Marketplace"),
-          PersistentBottomNavBarItem(icon: Icon(Icons.person_2_rounded, color: Colors.black), title: "Profile"),
-        ],
-        handleAndroidBackButtonPress: true, // Default is true.
-        resizeToAvoidBottomInset: true, // This needs to be true if you want to move up the screen on a non-scrollable screen when keyboard appears. Default is true.
-        stateManagement: true, // Default is true.
-        hideNavigationBarWhenKeyboardAppears: true,
-        popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
-        padding: const EdgeInsets.only(top: 8),
-        backgroundColor: Colors.grey.shade200,
-        isVisible: true,
-        animationSettings: const NavBarAnimationSettings(
-            navBarItemAnimation: ItemAnimationSettings( // Navigation Bar's items animation properties.
-                duration: Duration(milliseconds: 400),
-                curve: Curves.ease,
+        controller: controller.tabController,
+        screens: controller.navBarScreens,
+        items: _navBarItems(),
+        navBarStyle: NavBarStyle.style6,
+        backgroundColor: Colors.white,
+        decoration: NavBarDecoration(
+          borderRadius: BorderRadius.circular(10.0),
+          colorBehindNavBar: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 5,
             ),
-            screenTransitionAnimation: ScreenTransitionAnimationSettings( // Screen transition animation on change of selected tab.
-                animateTabTransition: true,
-                duration: Duration(milliseconds: 200),
-                screenTransitionAnimationType: ScreenTransitionAnimationType.fadeIn,
-            ),
+          ],
         ),
-        confineToSafeArea: true,
-        navBarHeight: kBottomNavigationBarHeight,
-        navBarStyle: _navBarStyle, // Choose the nav bar style with this property
+        handleAndroidBackButtonPress: true,
+        resizeToAvoidBottomInset: true,
+        stateManagement: true,
+        hideNavigationBarWhenKeyboardAppears: true,
+        popBehaviorOnSelectedNavBarItemPress: PopBehavior.once,
+        
+        // is基本的なスワイプを有効にする: true,
+
+        // --- PERUBAHAN DI SINI ---
+        // Parameter untuk animasi transisi halaman
+        animationSettings: const NavBarAnimationSettings(
+           navBarItemAnimation: ItemAnimationSettings(
+              // Navigation Bar's items animation properties.
+              duration: Duration(milliseconds: 400),
+              curve: Curves.ease,
+        ),
+        screenTransitionAnimation: ScreenTransitionAnimationSettings(
+              // Screen transition animation on change of selected tab.
+              animateTabTransition: true,
+              duration: Duration(milliseconds: 300),
+              screenTransitionAnimationType:
+                  ScreenTransitionAnimationType.fadeIn,
+            ),
+            onNavBarHideAnimation: OnHideAnimationSettings(
+              duration: Duration(milliseconds: 100),
+              curve: Curves.bounceInOut,
+            ),
+          ),
+
+        // Parameter untuk mengaktifkan swipe
+        // -------------------------
       ),
+    );
+  }
+
+  List<PersistentBottomNavBarItem> _navBarItems() {
+    return [
+      PersistentBottomNavBarItem(
+        icon: const Icon(Icons.home),
+        title: "Home",
+        activeColorPrimary: Colors.green.shade700,
+        inactiveColorPrimary: Colors.grey,
+      ),
+      PersistentBottomNavBarItem(
+        icon: const Icon(Icons.shopping_cart_outlined),
+        title: "Market",
+        activeColorPrimary: Colors.green.shade700,
+        inactiveColorPrimary: Colors.grey,
+      ),
+      PersistentBottomNavBarItem(
+        icon: const Icon(Icons.person_outline_rounded),
+        title: "Profile",
+        activeColorPrimary: Colors.green.shade700,
+        inactiveColorPrimary: Colors.grey,
+      ),
+    ];
+  }
+
+  void _showExitDialog(BuildContext context) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text('Keluar Aplikasi'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Tidak')),
+          TextButton(
+            onPressed: SystemNavigator.pop,
+            child: Text('Ya', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
     );
   }
 }

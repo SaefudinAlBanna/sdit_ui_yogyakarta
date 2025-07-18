@@ -1,367 +1,225 @@
+// lib/app/modules/pemberian_guru_mapel/controllers/pemberian_guru_mapel_controller.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:get/get.dart';
+import '../../../modules/home/controllers/home_controller.dart';
 
 class PemberianGuruMapelController extends GetxController {
-  var argumenKelas = Get.arguments;
+  // --- DEPENDENSI ---
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final HomeController homeC = Get.find<HomeController>();
+  final String idSekolah = '20404148';
+  late String idTahunAjaran;
+  
+  // --- STATE MANAGEMENT ---
+  final RxBool isLoading = true.obs;
+  final RxBool isLoadingMapel = false.obs;
+  
+  final RxList<String> daftarKelas = <String>[].obs;
+  final RxList<Map<String, String>> daftarGuru = <Map<String, String>>[].obs;
+  
+  // Ini akan menjadi "checklist" mata pelajaran wajib berdasarkan fase
+  final RxList<String> daftarMapelWajib = <String>[].obs;
+  
+  final Rxn<String> kelasTerpilih = Rxn<String>();
 
-  TextEditingController idPegawaiC = TextEditingController();
-  TextEditingController guruMapelC = TextEditingController();
-
-  FirebaseAuth auth = FirebaseAuth.instance;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-  String idUser = FirebaseAuth.instance.currentUser!.uid;
-  String idSekolah = '20404148';
-  String emailAdmin = FirebaseAuth.instance.currentUser!.email!;
-
-  Future<String> getTahunAjaranTerakhir() async {
-    CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran');
-    QuerySnapshot<Map<String, dynamic>> snapshotTahunAjaran =
-        await colTahunAjaran.get();
-    List<Map<String, dynamic>> listTahunAjaran =
-        snapshotTahunAjaran.docs.map((e) => e.data()).toList();
-    String tahunAjaranTerakhir =
-        listTahunAjaran.map((e) => e['namatahunajaran']).toList().last;
-    return tahunAjaranTerakhir;
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeData();
   }
 
-  Future<List<String>> getDataGuruMapel() async {
-    List<String> guruPengajar = [];
-
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    QuerySnapshot<Map<String, dynamic>> snapKelas =
-        await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran)
-            .collection('kelastahunajaran')
-            .get();
-
-    // String namaGuruMapel =
-    //     snapKelas.docs.isNotEmpty
-    //         ? snapKelas.docs.first.data()['walikelas']
-    //         : '';
-
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('pegawai')
-        // .where('alias', isNotEqualTo: namaGuruMapel)
-        .get()
-        .then((querySnapshot) {
-          for (var docSnapshot in querySnapshot.docs.where(
-            (doc) => doc['role'] == 'Pengampu' || doc['role'] == "Guru Kelas",
-          )) {
-            guruPengajar.add(docSnapshot.data()['alias']);
-          }
-        });
-    return guruPengajar;
-  }
-
-  Future<QuerySnapshot<Map<String, dynamic>>> tampilkanMapel() async {
+  /// Mengambil data awal yang tidak bergantung pada pilihan kelas,
+  /// yaitu daftar kelas dan daftar semua guru yang bisa mengajar.
+  Future<void> _initializeData() async {
     try {
-      return await firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('matapelajaran')
-          .get();
+      isLoading.value = true;
+      idTahunAjaran = homeC.idTahunAjaran.value!;
+      
+      // Jalankan pengambilan data secara bersamaan untuk efisiensi
+      await Future.wait([
+        _fetchDaftarKelas(),
+        _fetchDaftarGuru(),
+      ]);
     } catch (e) {
-      throw Exception(
-        'Data Matapelajaran tidak bisa diakses, silahkan ulangi lagi',
-      );
+      Get.snackbar('Error', 'Gagal memuat data awal: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  // final _streamController = StreamController<QuerySnapshot<Map<String, dynamic>>>();
-  // Stream<QuerySnapshot<Map<String, dynamic>>> get stream => _streamController.stream;
+  /// Aksi yang dijalankan saat pengguna memilih kelas.
+  /// Ini menjadi fungsi utama untuk mengambil kurikulum yang relevan.
+  Future<void> gantiKelasTerpilih(String namaKelas) async {
+    // Hindari reload jika kelas yang sama dipilih lagi
+    if (kelasTerpilih.value == namaKelas) return;
 
-  Future<void> simpanMapel(String namaMapel) async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    String kelasNya = argumenKelas.substring(0, 1);
-    String faseNya =
-        (kelasNya == '1' || kelasNya == '2')
-            ? "Fase A"
-            : (kelasNya == '3' || kelasNya == '4')
-            ? "Fase B"
-            : "Fase C";
+    kelasTerpilih.value = namaKelas;
+    isLoadingMapel.value = true;
+    daftarMapelWajib.clear(); // Kosongkan checklist lama
 
-    QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok =
-        await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('pegawai')
-            .where('alias', isEqualTo: guruMapelC.text)
-            .get();
-    if (querySnapshotKelompok.docs.isNotEmpty) {
-      Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
-      String idGuru = dataGuru['uid'];
-
-      CollectionReference<Map<String, dynamic>> colKelasAktif = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelasaktif');
-
-      // DocumentReference<Map<String, dynamic>> docKelasAktif = colKelasAktif.doc(argumenKelas);
-
-      QuerySnapshot<Map<String, dynamic>> snapKelasAktif =
-          await colKelasAktif.where('namakelas', isEqualTo: argumenKelas).get();
-      if (snapKelasAktif.docs.isEmpty) {
-        Get.snackbar(
-          "Error",
-          "Kelas tidak ditemukan. silahkan input kelas dulu",
-        );
-        // throw Exception('Kelas tidak ditemukan');
+    try {
+      // 1. Tentukan Fase berdasarkan nama kelas
+      final String kelasAngka = namaKelas.substring(0, 1);
+      final String idFase = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a"
+                          : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b"
+                          : "fase_c";
+      
+      // 2. Ambil kurikulum dari Firestore di level root
+      final kurikulumDoc = await firestore.collection('konfigurasi_kurikulum').doc(idFase).get();
+      if (!kurikulumDoc.exists || kurikulumDoc.data()?['matapelajaran'] == null) {
+        throw Exception("Konfigurasi kurikulum untuk $idFase tidak ditemukan.");
       }
+      
+      final List<String> mapelDariDB = List<String>.from(kurikulumDoc.data()!['matapelajaran']);
+      daftarMapelWajib.assignAll(mapelDariDB);
 
-      CollectionReference<Map<String, dynamic>> colMapelKelas = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelasmapel')
-          .doc(argumenKelas)
-          .collection('matapelajaran');
-
-      DocumentReference<Map<String, dynamic>> docMapel = colMapelKelas.doc(
-        namaMapel,
-      );
-
-      QuerySnapshot<Map<String, dynamic>> snapMapel =
-          await colMapelKelas
-              .where('namamatapelajaran', isEqualTo: namaMapel)
-              .get();
-      if (snapMapel.docs.isNotEmpty) {
-        // Jika ada dokumen dengan namaMapel yang sama, tampilkan pesan error
-        Get.snackbar("Error", "Mata pelajaran dengan nama ini sudah ada.");
-        return;
-      } else {
-        // Jika tidak ada dokumen dengan namaMapel yang sama, simpan data
-
-        DocumentReference<Map<String, dynamic>> docTahunAjaranGuru = firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('pegawai')
-            .doc(idGuru)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran);
-
-        DocumentSnapshot<Map<String, dynamic>> snapTahunAjaranGuru =
-            await docTahunAjaranGuru.get();
-        if (snapTahunAjaranGuru.exists) {
-          // Map<String , dynamic> dataTahunAjaranGuru = snapTahunAjaranGuru.data();
-          // dataTahunAjaranGuru['mapel'] = FieldValue.arrayUnion([nama Mapel]);
-          await docTahunAjaranGuru.update({
-            'tahunajaran': tahunajaranya,
-            'emailpenginputMapel': emailAdmin,
-            'idpenginputMapel': idUser,
-          });
-        } else {
-          // Map<String , dynamic> dataTahunAjaranGuru = {
-          //   'mapel' : [namaMapel]
-          await docTahunAjaranGuru.set({
-            'tahunajaran': tahunajaranya,
-            'emailpenginputMapel': emailAdmin,
-            'idpenginputMapel': idUser,
-          });
-        }
-        // Simpan data disini
-        // await firestore
-        //     .collection('Sekolah')
-        //     .doc(idSekolah)
-        //     .collection('pegawai')
-        //     .doc(idGuru)
-        //     .collection('tahunajaran')
-        //     .doc(idTahunAjaran)
-        //     .update({
-        //       'tahunajaran': tahunajaranya,
-        //       'emailpenginputMapel': emailAdmin,
-        //       'idpenginputMapel': idUser,
-        //     });
-
-
-
-        DocumentReference<Map<String, dynamic>> docGuruKelas = firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('pegawai')
-            .doc(idGuru)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran)
-            .collection('kelasnya')
-            .doc(argumenKelas);
-
-            DocumentSnapshot<Map<String, dynamic>> snapGuruKelas = await docGuruKelas.get();
-        if (snapGuruKelas.exists) {
-          // Map<String , dynamic> dataTahunAjaranGuru = snapTahunAjaranGuru.data();
-          // dataTahunAjaranGuru['mapel'] = FieldValue.arrayUnion([nama Mapel]);
-          await docGuruKelas.update({
-            'tahunajaran': tahunajaranya,
-          'emailpenginputMapel': emailAdmin,
-          'idpenginputMapel': idUser,
-          'fase': faseNya,
-          });
-        } else {
-          // Map<String , dynamic> dataTahunAjaranGuru = {
-          //   'mapel' : [namaMapel]
-          await docGuruKelas.set({
-            'tahunajaran': tahunajaranya,
-          'emailpenginputMapel': emailAdmin,
-          'idpenginputMapel': idUser,
-          'fase': faseNya,
-          });
-        }
-
-        // colGuru.doc(argumenKelas).update({
-        //   'tahunajaran': tahunajaranya,
-        //   'emailpenginputMapel': emailAdmin,
-        //   'idpenginputMapel': idUser,
-        //   'fase': faseNya,
-        // });
-
-        DocumentReference<Map<String, dynamic>> docGuruKelasMapel = docGuruKelas.collection('matapelajaran').doc(namaMapel);
-
-        DocumentSnapshot<Map<String, dynamic>> snapGuruKelasMapel = await docGuruKelasMapel.get();
-
-        if (snapGuruKelasMapel.exists) {
-          // Map<String , dynamic> dataTahunAjaranGuru = snapTahunAjaranGuru.data();
-          // dataTahunAjaranGuru['mapel'] = FieldValue.arrayUnion([nama Mapel]);
-          await docGuruKelas.update({
-              'tahunajaran': tahunajaranya,
-              'emailpenginputMapel': emailAdmin,
-              'idpenginputMapel': idUser,
-              'namaMapel': namaMapel,
-              'idKelas': argumenKelas,
-              'idSekolah': idSekolah,
-              'idGuru': idGuru,
-              'idTahunAjaran': idTahunAjaran,
-              'fase': faseNya,
-          });
-        } else {
-          // Map<String , dynamic> dataTahunAjaranGuru = {
-          //   'mapel' : [namaMapel]
-          await docGuruKelas.set({
-              'tahunajaran': tahunajaranya,
-              'emailpenginputMapel': emailAdmin,
-              'idpenginputMapel': idUser,
-              // 'namaMapel': namaMapel,
-              'idKelas': argumenKelas,
-              'idSekolah': idSekolah,
-              'idGuru': idGuru,
-              'idTahunAjaran': idTahunAjaran,
-              'fase': faseNya,
-          });
-        }
-
-        docGuruKelasMapel.set({
-          'tahunajaran': tahunajaranya,
-              'emailpenginputMapel': emailAdmin,
-              'idpenginputMapel': idUser,
-              'namaMapel': namaMapel,
-              'idKelas': argumenKelas,
-              'idSekolah': idSekolah,
-              'idGuru': idGuru,
-              'idTahunAjaran': idTahunAjaran,
-              'fase': faseNya,
-        });
-
-        // colGuruk
-        //     .doc(argumenKelas)
-        //     .collection('matapelajaran')
-        //     .doc(namaMapel)
-        //     .update({
-        //       'tahunajaran': tahunajaranya,
-        //       'emailpenginputMapel': emailAdmin,
-        //       'idpenginputMapel': idUser,
-        //       'namaMapel': namaMapel,
-        //       'idKelas': argumenKelas,
-        //       'idSekolah': idSekolah,
-        //       'idGuru': idGuru,
-        //       'idTahunAjaran': idTahunAjaran,
-        //       'fase': faseNya,
-        //     });
-
-        docMapel.set({
-          'fase': faseNya,
-          'namamatapelajaran': namaMapel,
-          'guru': guruMapelC.text,
-          'idGuru': idGuru,
-          'idSekolah': idSekolah,
-          'idTahunAjaran': idTahunAjaran,
-          'idKelas': argumenKelas,
-          'idMapel': namaMapel,
-          // 'idSiswa': '',
-          // 'idGuruMapel': '',
-          'status': 'aktif',
-          'idPenginputMapel': idUser,
-          'tanggalinputMapel': DateTime.now().toIso8601String(),
-          // 'updateinput': DateTime.now().toIso8601String(),
-        });
-
-        firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran)
-            .collection('kelasmapel')
-            .doc(argumenKelas)
-            .set({
-              'tahunajaran': tahunajaranya,
-              'emailpenginputMapel': emailAdmin,
-              'idpenginputMapel': idUser,
-              'fase': faseNya,
-              'tanggalinputMapel': DateTime.now().toIso8601String(),
-              'namakelas': argumenKelas,
-            });
-
-        colMapelKelas.doc(namaMapel).set({
-          'fase': faseNya,
-          'namamatapelajaran': namaMapel,
-          'guru': guruMapelC.text,
-          'idGuru': idGuru,
-          'idSekolah': idSekolah,
-          'idTahunAjaran': idTahunAjaran,
-          'idKelas': argumenKelas,
-          'idMapel': namaMapel,
-          'status': 'aktif',
-          'idPenginputMapel': idUser,
-          'tanggalinputMapel': DateTime.now().toIso8601String(),
-          // 'updateinput': DateTime.now().toIso8601String(),
-        });
-
-        Get.snackbar("Berhasil", "Mata pelajaran berhasil disimpan.");
-        // tampilkan();
-      }
+    } catch (e) {
+      Get.snackbar("Gagal Memuat Kurikulum", e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      isLoadingMapel.value = false;
     }
   }
 
-  Future<void> refreshTampilan() async {
-    tampilkan();
+  /// Mengambil daftar semua kelas aktif dari HomeController.
+  Future<void> _fetchDaftarKelas() async {
+    final kelas = await homeC.getDataKelasMapel();
+    daftarKelas.assignAll(kelas);
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> tampilkan() async* {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    yield* firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelasmapel')
-        .doc(argumenKelas)
+  /// Mengambil daftar semua pegawai yang bisa menjadi guru mapel.
+  Future<void> _fetchDaftarGuru() async {
+    final snapshot = await firestore
+        .collection('Sekolah').doc(idSekolah).collection('pegawai')
+        .where('role', whereIn: ['Pengampu', 'Guru Kelas']).get();
+    
+    final guruList = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return {
+        'uid': doc.id,
+        'nama': data['alias'] as String? ?? 'Tanpa Nama',
+        'role': data['role'] as String? ?? 'Tanpa Role',
+      };
+    }).toList();
+    daftarGuru.assignAll(guruList);
+  }
+  
+  /// Menyediakan stream data real-time untuk mapel yang sudah ditugaskan
+  /// di kelas yang sedang dipilih.
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAssignedMapelStream() {
+    if (kelasTerpilih.value == null) return const Stream.empty();
+    
+    return firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(idTahunAjaran)
+        .collection('kelasmapel').doc(kelasTerpilih.value!)
         .collection('matapelajaran')
         .snapshots();
+  }
+
+  /// Menugaskan seorang guru ke sebuah mata pelajaran.
+  /// Menggunakan WriteBatch untuk menjaga konsistensi data di dua lokasi.
+  Future<void> assignGuruToMapel(String idGuru, String namaGuru, String namaMapel) async {
+    if (kelasTerpilih.value == null) {
+      Get.snackbar("Gagal", "Kelas belum dipilih.");
+      return;
+    }
+    final String namaKelas = kelasTerpilih.value!;
+
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+    try {
+      WriteBatch batch = firestore.batch();
+      
+      final kelasMapelRef = firestore
+          .collection('Sekolah').doc(idSekolah)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelasmapel').doc(namaKelas)
+          .collection('matapelajaran').doc(namaMapel);
+
+      final docSnap = await kelasMapelRef.get();
+      if (docSnap.exists) {
+        throw Exception('Mata pelajaran ini sudah memiliki guru.');
+      }
+
+      final pegawaiMapelRef = firestore
+          .collection('Sekolah').doc(idSekolah)
+          .collection('pegawai').doc(idGuru)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelasnya').doc(namaKelas)
+          .collection('matapelajaran').doc(namaMapel);
+
+      final dataToSave = {
+        'namamatapelajaran': namaMapel,
+        'guru': namaGuru,
+        'idGuru': idGuru,
+        'idKelas': namaKelas,
+        'idTahunAjaran': idTahunAjaran,
+        'diinputPada': FieldValue.serverTimestamp(),
+      };
+      
+      batch.set(kelasMapelRef, dataToSave);
+      batch.set(pegawaiMapelRef, dataToSave);
+      
+      await batch.commit();
+      
+      Get.back();
+      Get.snackbar('Berhasil', '$namaMapel telah diberikan kepada $namaGuru');
+    } catch (e) {
+      Get.back();
+      Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  /// Menghapus penugasan seorang guru dari sebuah mata pelajaran.
+  /// Menggunakan WriteBatch untuk konsistensi data.
+  Future<void> removeGuruFromMapel(String namaMapel) async {
+    if (kelasTerpilih.value == null) {
+      Get.snackbar("Gagal", "Kelas belum dipilih.");
+      return;
+    }
+    final String namaKelas = kelasTerpilih.value!;
+
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+    try {
+      final kelasMapelRef = firestore
+          .collection('Sekolah').doc(idSekolah)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelasmapel').doc(namaKelas)
+          .collection('matapelajaran').doc(namaMapel);
+
+      final doc = await kelasMapelRef.get();
+      if (!doc.exists) {
+        Get.back();
+        Get.snackbar("Info", "Data sudah tidak ditemukan.");
+        return;
+      }
+      
+      final String? idGuru = doc.data()?['idGuru'] as String?;
+      if (idGuru == null) {
+        throw Exception('ID Guru tidak ditemukan, tidak bisa menghapus data terkait.');
+      }
+
+      final pegawaiMapelRef = firestore
+          .collection('Sekolah').doc(idSekolah)
+          .collection('pegawai').doc(idGuru)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelasnya').doc(namaKelas)
+          .collection('matapelajaran').doc(namaMapel);
+
+      WriteBatch batch = firestore.batch();
+      batch.delete(kelasMapelRef);
+      batch.delete(pegawaiMapelRef);
+
+      await batch.commit();
+
+      Get.back();
+      Get.snackbar('Berhasil', 'Guru untuk $namaMapel telah dihapus.');
+    } catch (e) {
+      Get.back();
+      Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
+    }
   }
 }

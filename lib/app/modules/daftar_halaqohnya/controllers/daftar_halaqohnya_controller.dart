@@ -1,841 +1,448 @@
+// lib/app/modules/daftar_halaqohnya/controllers/daftar_halaqohnya_controller.dart
+
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../models/siswa_halaqoh.dart';
+import '../../home/controllers/home_controller.dart';
 
 class DaftarHalaqohnyaController extends GetxController {
-  var dataMapArgumen = Get.arguments;
+  
+  // --- DEPENDENSI & INFO DASAR ---
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final HomeController homeController = Get.find<HomeController>();
+  final String idSekolah = '20404148';
+  
+  // --- STATE INFO HALAQOH ---
+  late final String fase;
+  late final String namaPengampu;
+  late final String idPengampu;
+  late final String namaTempat;
+  final Rxn<String> urlFotoPengampu = Rxn<String>();
 
-  RxBool isLoading = false.obs;
+  // --- STATE DAFTAR SISWA ---
+  final RxBool isLoading = true.obs;
+  final RxList<SiswaHalaqoh> daftarSiswa = <SiswaHalaqoh>[].obs;
+  StreamSubscription? _siswaSubscription;
+  
+  // --- STATE UNTUK DIALOG & AKSI ---
+  final RxBool isDialogLoading = false.obs;
+  final TextEditingController umiC = TextEditingController();
+  final TextEditingController bulkUpdateUmiC = TextEditingController();
+  final RxList<String> siswaTerpilihUntukUpdateMassal = <String>[].obs;
 
-  TextEditingController pengampuC = TextEditingController();
-  TextEditingController kelasSiswaC = TextEditingController();
-  TextEditingController alasanC = TextEditingController();
-  TextEditingController umiC = TextEditingController();
-  TextEditingController umidrawerC = TextEditingController();
+  //========================================================================
+  // --- STATE BARU UNTUK FITUR INPUT NILAI MASSAL ---
+  //========================================================================
+  final RxBool isSavingNilai = false.obs;
+  final TextEditingController suratC = TextEditingController();
+  final TextEditingController ayatHafalC = TextEditingController();
+  final TextEditingController capaianC = TextEditingController();
+  final TextEditingController materiC = TextEditingController();
+  final TextEditingController nilaiC = TextEditingController();
+  final TextEditingController kelasSiswaC = TextEditingController();
+  final RxString keteranganHalaqoh = "".obs;
+  final RxList<String> santriTerpilihUntukNilai = <String>[].obs;
+  final List<String> listLevelUmi = ['Jilid 1', 'Jilid 2', 'Jilid 3', 'Jilid 4', 'Jilid 5', 'Jilid 6', 'Al-Quran', 'Gharib', 'Tajwid', 'Turjuman', 'Juz 30', 'Juz 29', 'Juz 28', 'Juz 1', 'Juz 2', 'Juz 3', 'Juz 4', 'Juz 5'];
+  //========================================================================
 
-  FirebaseAuth auth = FirebaseAuth.instance;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  // --- STATE BARU UNTUK FITUR UJIAN ---
+  final TextEditingController capaianUjianC = TextEditingController();
+  final TextEditingController levelUjianC = TextEditingController(); // Untuk menentukan ujian apa
+  final RxList<String> santriTerpilihUntukUjian = <String>[].obs;
 
-  String idUser = FirebaseAuth.instance.currentUser!.uid;
-  String idSekolah = '20404148';
-  String emailAdmin = FirebaseAuth.instance.currentUser!.email!;
-
-  Future<String> getTahunAjaranTerakhir() async {
-    CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran');
-    QuerySnapshot<Map<String, dynamic>> snapshotTahunAjaran =
-        await colTahunAjaran.get();
-    List<Map<String, dynamic>> listTahunAjaran =
-        snapshotTahunAjaran.docs.map((e) => e.data()).toList();
-    String tahunAjaranTerakhir =
-        listTahunAjaran.map((e) => e['namatahunajaran']).toList().last;
-    return tahunAjaranTerakhir;
+  @override
+  void onInit() {
+    super.onInit();
+    final Map<String, dynamic>? args = Get.arguments;
+    if (args != null) {
+      fase = args['fase'];
+      namaPengampu = args['namapengampu'];
+      idPengampu = args['idpengampu'];
+      namaTempat = args['namatempat'];
+      _loadInitialData();
+    } else {
+      Get.snackbar("Error", "Informasi Halaqoh tidak lengkap.");
+      Get.offAllNamed('/home');
+    }
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> getDataSiswaHalaqoh() async* {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    yield* firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelompokmengaji')
-        .doc(dataMapArgumen['fase'])
-        .collection('pengampu')
-        .doc(dataMapArgumen['namapengampu'])
-        .collection('tempat')
-        .doc(dataMapArgumen['tempatmengaji'])
-        .collection('daftarsiswa')
-        .snapshots();
+  @override
+  void onClose() {
+    _siswaSubscription?.cancel();
+    umiC.dispose(); bulkUpdateUmiC.dispose();
+    suratC.dispose(); ayatHafalC.dispose(); capaianC.dispose();
+    materiC.dispose(); nilaiC.dispose();
+    kelasSiswaC.dispose();
+    super.onClose();
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> getDataSiswaStreamBaru() async* {
-    // ... (kode Anda sudah benar)
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    yield* firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelastahunajaran')
-        .doc(kelasSiswaC.text)
+  void _loadInitialData() {
+    _loadDataPengampu();
+    _listenToDaftarSiswa();
+  }
+
+  Future<void> _loadDataPengampu() async {
+    try {
+      final pegawaiDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').doc(idPengampu).get();
+      if (pegawaiDoc.exists) {
+        urlFotoPengampu.value = pegawaiDoc.data()?['profileImageUrl'];
+      }
+    } catch (e) {
+      if (kDebugMode) print("Gagal memuat foto pengampu: $e");
+    }
+  }
+
+   void toggleSantriSelectionForUjian(String nisn) {
+    if (santriTerpilihUntukUjian.contains(nisn)) {
+      santriTerpilihUntukUjian.remove(nisn);
+    } else {
+      santriTerpilihUntukUjian.add(nisn);
+    }
+  }
+
+  Future<void> tandaiSiapUjianMassal() async {
+    // Validasi
+    if (levelUjianC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Level Ujian wajib diisi."); return; }
+    if (capaianUjianC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Capaian Akhir wajib diisi."); return; }
+    if (santriTerpilihUntukUjian.isEmpty) { Get.snackbar("Peringatan", "Pilih minimal satu santri."); return; }
+
+    isDialogLoading.value = true;
+    try {
+      final batch = firestore.batch();
+      final refDaftarSiswa = await _getDaftarSiswaCollectionRef();
+      final now = DateTime.now();
+      final String uidPendaftar = homeController.auth.currentUser!.uid;
+
+      for (String nisn in santriTerpilihUntukUjian) {
+        final docSiswaIndukRef = refDaftarSiswa.doc(nisn);
+        final docUjianBaruRef = docSiswaIndukRef.collection('ujian').doc(); // ID Otomatis
+
+        // 1. Update status di dokumen induk
+        batch.update(docSiswaIndukRef, {
+          'status_ujian': 'siap_ujian',
+        });
+
+        // 2. Buat dokumen baru di subkoleksi 'ujian'
+        batch.set(docUjianBaruRef, {
+          'status_ujian': 'siap_ujian',
+          'level_ujian': levelUjianC.text.trim(),
+          'capaian_saat_didaftarkan': capaianUjianC.text.trim(),
+          'tanggal_didaftarkan': now,
+          'didaftarkan_oleh': uidPendaftar,
+          'semester': homeController.semesterAktifId.value,
+          // Field untuk Koordinator nanti
+          'tanggal_ujian': null,
+          'diuji_oleh': null,
+          'catatan_penguji': null,
+        });
+      }
+
+      await batch.commit();
+      Get.back(); // Tutup dialog
+      Get.snackbar("Berhasil", "${santriTerpilihUntukUjian.length} santri telah ditandai siap ujian.");
+      santriTerpilihUntukUjian.clear();
+      capaianUjianC.clear();
+      levelUjianC.clear();
+    } catch (e) {
+      Get.snackbar("Error", "Gagal menandai siswa: $e");
+    } finally {
+      isDialogLoading.value = false;
+    }
+  }
+
+  Future<void> _listenToDaftarSiswa() async {
+    isLoading.value = true;
+    try {
+      final ref = await _getDaftarSiswaCollectionRef();
+      _siswaSubscription?.cancel();
+      // snapshots() akan otomatis mengirim data baru setiap kali ada perubahan di dokumen daftarsiswa
+      _siswaSubscription = ref.orderBy('namasiswa').snapshots().listen((snapshot) {
+        // Model SiswaHalaqoh akan otomatis membaca 'capaian_terakhir'
+        final siswaList = snapshot.docs.map((doc) => SiswaHalaqoh.fromFirestore(doc)).toList();
+        daftarSiswa.assignAll(siswaList);
+        isLoading.value = false;
+      }, onError: (error) {
+        Get.snackbar("Error", "Gagal memuat data siswa: $error");
+        isLoading.value = false;
+      });
+    } catch (e) {
+      Get.snackbar("Error", "Gagal menyiapkan koneksi data: $e");
+      isLoading.value = false;
+    }
+  }
+
+  Future<String> _fetchCapaianTerakhir(DocumentReference siswaRef) async {
+    try {
+      final nilaiSnapshot = await siswaRef
+          .collection('nilai')
+          .orderBy('tanggalinput', descending: true)
+          .limit(1)
+          .get();
+      if (nilaiSnapshot.docs.isNotEmpty) {
+        return nilaiSnapshot.docs.first.data()['capaian'] ?? '';
+      }
+      return ''; // Kembalikan string kosong jika tidak ada nilai
+    } catch (e) {
+      return ''; // Kembalikan string kosong jika error
+    }
+  }
+  
+  //========================================================================
+  // --- LOGIKA BARU UNTUK FITUR INPUT NILAI MASSAL ---
+  //========================================================================
+
+  Future<void> updateUmi(String nisn) async {
+    if (umiC.text.isEmpty) { Get.snackbar("Peringatan", "Kategori Umi belum dipilih."); return; }
+    isDialogLoading.value = true;
+    try {
+      final refSiswa = (await _getDaftarSiswaCollectionRef()).doc(nisn);
+
+      await refSiswa.update({'ummi': umiC.text});
+      // final batch = firestore.batch();
+      // batch.update(refSiswa, {'ummi': umiC.text});
+
+      Get.back();
+      Get.snackbar("Berhasil", "Data Umi telah diperbarui.");
+      // _listenToDaftarSiswa();
+    } catch (e) {
+      Get.snackbar("Error", "Gagal memperbarui data: ${e.toString()}");
+    } finally {
+      isDialogLoading.value = false;
+      umiC.clear();
+    }
+  }
+
+  Future<void> updateUmiMassal() async {
+    final String targetLevel = bulkUpdateUmiC.text;
+    if (targetLevel.isEmpty) { Get.snackbar("Peringatan", "Pilih level UMI tujuan."); return; }
+    if (siswaTerpilihUntukUpdateMassal.isEmpty) { Get.snackbar("Peringatan", "Pilih minimal satu siswa."); return; }
+
+    isDialogLoading.value = true;
+    try {
+      final WriteBatch batch = firestore.batch();
+      final refDaftarSiswa = await _getDaftarSiswaCollectionRef();
+
+      // for (String nisn in siswaTerpilihUntukUpdateMassal) {
+      //   batch.update(refDaftarSiswa.doc(nisn), {'ummi': targetLevel});
+      // }
+      for (String nisn in siswaTerpilihUntukUpdateMassal) {
+        batch.update(refDaftarSiswa.doc(nisn), {'ummi': bulkUpdateUmiC.text});
+      }
+
+      await batch.commit();
+      Get.back();
+      Get.snackbar("Berhasil", "${siswaTerpilihUntukUpdateMassal.length} siswa telah diupdate.");
+      _listenToDaftarSiswa();
+    } catch (e) {
+      Get.snackbar("Error", "Gagal melakukan update massal: $e");
+    } finally {
+      isDialogLoading.value = false;
+      siswaTerpilihUntukUpdateMassal.clear();
+      bulkUpdateUmiC.clear();
+    }
+  }
+
+  Future<List<String>> getKelasTersedia() async {
+    try {
+      final ref = (await _getTahunAjaranRef()).collection('kelastahunajaran');
+
+      // --- PERBAIKAN DI SINI ---
+      // Gunakan variabel 'fase' secara langsung karena nilainya sudah benar
+      final snapshot = await ref.where('fase', isEqualTo: fase).get(); 
+
+      if (snapshot.docs.isEmpty) {
+        print("Tidak ada kelas ditemukan untuk Fase: $fase");
+        return [];
+      }
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      Get.snackbar("Error", "Gagal mengambil daftar kelas: ${e.toString()}");
+      return [];
+    }
+}
+
+ /// Mengambil daftar siswa yang belum punya kelompok dari kelas tertentu
+  Stream<QuerySnapshot<Map<String, dynamic>>> getSiswaBaruStream(String namaKelas) async* {
+    final ref = (await _getTahunAjaranRef()).collection('kelastahunajaran');
+    yield* ref
+        .doc(namaKelas)
         .collection('daftarsiswa')
         .where('statuskelompok', isEqualTo: 'baru')
         .snapshots();
   }
 
-  Future<List<String>> getDataKelasYangAda() async {
-    // ... (kode Anda sudah benar)
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    List<String> kelasList = [];
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelastahunajaran')
-        .where('fase', isEqualTo: dataMapArgumen['fase'])
-        .get()
-        .then((querySnapshot) {
-          for (var docSnapshot in querySnapshot.docs) {
-            kelasList.add(docSnapshot.id);
-          }
-        });
-    return kelasList;
+  /// Helper untuk mendapatkan referensi TAHUN AJARAN terakhir. Mencegah duplikasi kode.
+  Future<DocumentReference<Map<String, dynamic>>> _getTahunAjaranRef() async {
+    final snapshot = await firestore
+        .collection('Sekolah').doc(idSekolah).collection('tahunajaran')
+        .orderBy('namatahunajaran', descending: true).limit(1).get();
+    if (snapshot.docs.isEmpty) throw Exception("Tahun Ajaran tidak ditemukan");
+    return snapshot.docs.first.reference;
   }
 
-  Future<List<String>> getDataUmi() async {
-    // ... (kode Anda sudah benar)
-    List<String> umiList = [
-      'Umi',
-      'AlQuran',
-      'Jilid 1',
-      'Jilid 2',
-      'Jilid 3',
-      'Jilid 4',
-      'Jilid 5',
-      'Jilid 6',
-    ];
-    return umiList;
-  }
-
-  Future<void> updateUmi(String nisnSiswa) async {
-    // ... (kode Anda sepertinya OK, tapi pastikan 'dataMapArgumen' punya semua field yang dibutuhkan)
-    // Pastikan idTahunAjaran diambil dengan benar
+  /// Menambahkan siswa baru ke kelompok halaqoh (menggantikan `simpanSiswaKelompok`)
+  Future<void> tambahSiswaKeHalaqoh(Map<String, dynamic> dataSiswa) async {
+    isDialogLoading.value = true;
     try {
-      String tahunajaranya = await getTahunAjaranTerakhir();
-      String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-      if (umiC.text.isEmpty) {
-        Get.snackbar("Peringatan", "Kategori Umi belum dipilih.");
-        return;
-      }
+      final String nisn = dataSiswa['nisn'];
+      final refDaftarSiswaHalaqoh = (await _getDaftarSiswaCollectionRef()).doc(nisn);
+      final refSiswaDiKelasAsal = (await _getTahunAjaranRef())
+          .collection('kelastahunajaran').doc(dataSiswa['namakelas'])
+          .collection('daftarsiswa').doc(nisn);
 
       WriteBatch batch = firestore.batch();
+     
 
-      // Path 1
-      DocumentReference ref1 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('daftarsiswa')
-          .doc(nisnSiswa);
-      batch.update(ref1, {'ummi': umiC.text});
+      // 1. Tambahkan siswa ke daftar siswa halaqoh ini
+      batch.set(refDaftarSiswaHalaqoh, {
+        'namasiswa': dataSiswa['namasiswa'],
+        'nisn': nisn,
+        'kelas': dataSiswa['namakelas'],
+        'ummi': '0', // Nilai default UMI
+        'profileImageUrl': dataSiswa['profileImageUrl'],
+        'fase': fase,
+        'namapengampu': namaPengampu,
+        'tempatmengaji': namaTempat,
+        'tanggalinput': FieldValue.serverTimestamp(),
+      });
 
-      // Path 2
-      DocumentReference ref2 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('semester')
-          .doc(
-            'Semester I',
-          ); // Asumsi Semester I, pastikan ini dinamis jika perlu
-      batch.update(ref2, {'ummi': umiC.text});
+      // 2. Update status siswa di daftar kelas asal
+      batch.update(refSiswaDiKelasAsal, {'statuskelompok': 'aktif'});
 
-      // Path 3 (jika ada path nilai spesifik per semester di daftarsiswa)
-      DocumentReference ref3 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('daftarsiswa')
-          .doc(nisnSiswa)
-          .collection('semester')
-          .doc('Semester I'); // Asumsi Semester I
-      batch.update(ref3, {'ummi': umiC.text});
+      // (Opsional) Tambahkan juga rekam jejak di koleksi /Sekolah/{id}/siswa/{nisn}/...
+      // Logika ini bisa ditambahkan di sini jika diperlukan
 
       await batch.commit();
+      Get.snackbar("Berhasil", "${dataSiswa['namasiswa']} telah ditambahkan.");
+    } catch (e) {
+      Get.snackbar("Error", "Gagal menambahkan siswa: ${e.toString()}");
+    } finally {
+      isDialogLoading.value = false;
+    }
+  }
+
+  /// Mengelola checkbox santri. Dipanggil dari UI.
+  void toggleSantriSelection(String nisn) {
+    if (santriTerpilihUntukNilai.contains(nisn)) {
+      santriTerpilihUntukNilai.remove(nisn);
+    } else {
+      santriTerpilihUntukNilai.add(nisn);
+    }
+  }
+
+  Future<void> simpanNilaiMassal() async {
+    if (santriTerpilihUntukNilai.isEmpty) { Get.snackbar("Peringatan", "Pilih minimal satu santri."); return; }
+    if (materiC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Materi wajib diisi."); return; }
+    if (nilaiC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Nilai wajib diisi."); return; }
+
+    isSavingNilai.value = true;
+    try {
+      final now = DateTime.now();
+      final docIdNilaiHarian = DateFormat('yyyy-MM-dd').format(now);
+      
+      int nilaiNumerik = int.tryParse(nilaiC.text.trim()) ?? 0;
+      if (nilaiNumerik > 98) nilaiNumerik = 98;
+      String grade = _getGrade(nilaiNumerik);
+      
+      final batch = firestore.batch();
+      final refDaftarSiswa = await _getDaftarSiswaCollectionRef(); // Path semester sudah termasuk di sini
+
+      final dataNilaiTemplate = {
+        "tanggalinput": now.toIso8601String(),
+        "emailpenginput": homeController.emailAdmin,
+        "idpengampu": idPengampu,
+        "namapengampu": namaPengampu,
+        "hafalansurat": suratC.text.trim(),
+        "ayathafalansurat": ayatHafalC.text.trim(),
+        "capaian": capaianC.text.trim(),
+        "materi": materiC.text.trim(),
+        "nilai": nilaiNumerik,
+        "nilaihuruf": grade,
+        "keteranganpengampu": keteranganHalaqoh.value,
+        "uidnilai": docIdNilaiHarian,
+        "semester": homeController.semesterAktifId.value,
+      };
+
+      for (String nisn in santriTerpilihUntukNilai) {
+        final santriData = daftarSiswa.firstWhere((s) => s.nisn == nisn);
+        final docNilaiRef = refDaftarSiswa.doc(nisn).collection('nilai').doc(docIdNilaiHarian);
+        
+        final docSiswaIndukRef = refDaftarSiswa.doc(nisn);
+        final dataFinal = { ...dataNilaiTemplate, "idsiswa": nisn, "namasiswa": santriData.namaSiswa };
+        
+        batch.set(docNilaiRef, dataFinal, SetOptions(merge: true));
+
+        batch.update(docSiswaIndukRef, {
+          'capaian_terakhir': capaianC.text.trim(),
+          'tanggal_update_terakhir': now,
+        });
+      }
+
+      //  batch.update(docSiswaIndukRef, {
+      //     'ummi': umiC.text.trim().isNotEmpty ? umiC.text.trim() : santriData.ummi, // Update UMI jika diisi di template
+      //     'capaian_terakhir': capaianC.text.trim(),
+      //     'tanggal_update_terakhir': now,
+      //   });
+      // }
+
+      await batch.commit();
+
       Get.back();
-      Get.snackbar("Berhasil", "Umi Berhasil diperbarui");
-      umiC.clear();
+      Get.snackbar("Berhasil", "Nilai berhasil disimpan untuk ${santriTerpilihUntukNilai.length} santri.");
+      clearNilaiForm();
+
+      // _listenToDaftarSiswa();
+
     } catch (e) {
-      Get.snackbar("Error", "Gagal update Umi: ${e.toString()}");
-    }
-  }
-
-  Future<void> updateUmiDrawer(String nisnSiswa) async {
-    // ... (serupa dengan updateUmi, gunakan batch dan error handling)
-    try {
-      String tahunajaranya = await getTahunAjaranTerakhir();
-      String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-      if (umidrawerC.text.isEmpty) {
-        Get.snackbar("Peringatan", "Kategori Umi belum dipilih.");
-        return;
-      }
-      WriteBatch batch = firestore.batch();
-
-      DocumentReference ref1 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('daftarsiswa')
-          .doc(nisnSiswa);
-      batch.update(ref1, {'ummi': umidrawerC.text});
-
-      DocumentReference ref2 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('semester')
-          .doc('Semester I');
-      batch.update(ref2, {'ummi': umidrawerC.text});
-
-      DocumentReference ref3 = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('daftarsiswa')
-          .doc(nisnSiswa)
-          .collection('semester')
-          .doc('Semester I');
-      batch.update(ref3, {'ummi': umidrawerC.text});
-
-      await batch.commit();
-      // Get.back(); // Mungkin tidak perlu Get.back() jika ini dari bottomsheet yang auto close
-      Get.snackbar("Berhasil", "Umi Berhasil diperbarui untuk siswa terpilih.");
-      // umidrawerC.clear(); // Jangan clear jika mau dipakai lagi
-    } catch (e) {
-      Get.snackbar("Error", "Gagal update Umi: ${e.toString()}");
-    }
-  }
-
-  Future<void> simpanSiswaKelompok(String namaSiswa, String nisnSiswa) async {
-    // ... (kode Anda sepertinya OK, tapi sangat panjang. Pertimbangkan WriteBatch)
-    // Pastikan semua dataMapArgumen[...] dan kelasSiswaC.text tersedia dan benar.
-    // Gunakan try-catch dan WriteBatch untuk atomicity
-    isLoading.value = true;
-    try {
-      String tahunajaranya = await getTahunAjaranTerakhir();
-      String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-      QuerySnapshot<Map<String, dynamic>> querySnapshotKelompok =
-          await firestore
-              .collection('Sekolah')
-              .doc(idSekolah)
-              .collection('pegawai')
-              .where('alias', isEqualTo: dataMapArgumen['namapengampu'])
-              .get();
-
-      if (querySnapshotKelompok.docs.isEmpty) {
-        Get.snackbar("Error", "Data pengampu tidak ditemukan.");
-        isLoading.value = false;
-        return;
-      }
-      Map<String, dynamic> dataGuru = querySnapshotKelompok.docs.first.data();
-      String idPengampu = dataGuru['uid'];
-
-      WriteBatch batch = firestore.batch();
-      String tanggalInput = DateTime.now().toIso8601String();
-      String semesterSaatIni =
-          "Semester I"; // Asumsi, buat ini dinamis jika perlu
-
-      // 1. Simpan di daftarsiswa pengampu
-      DocumentReference refDaftarSiswaPengampu = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase'])
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu'])
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji'])
-          .collection('daftarsiswa')
-          .doc(nisnSiswa);
-      batch.set(refDaftarSiswaPengampu, {
-        'ummi': "0", // Default UMMI
-        'namasiswa': namaSiswa,
-        'nisn': nisnSiswa,
-        'kelas': kelasSiswaC.text,
-        'fase': dataMapArgumen['fase'],
-        'tempatmengaji': dataMapArgumen['tempatmengaji'],
-        'tahunajaran':
-            dataMapArgumen['tahunajaran'], // Seharusnya tahunajaranya dari getTahunAjaranTerakhir
-        'kelompokmengaji': dataMapArgumen['namapengampu'],
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu':
-            idPengampu, // Gunakan idPengampu yang didapat dari query pegawai
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-        'idsiswa': nisnSiswa,
-      });
-
-      // 1.1 Sub-koleksi semester di daftarsiswa pengampu
-      DocumentReference refSemesterDaftarSiswa = refDaftarSiswaPengampu
-          .collection('semester')
-          .doc(semesterSaatIni);
-      batch.set(refSemesterDaftarSiswa, {
-        'ummi': "0",
-        'namasiswa': namaSiswa,
-        'nisn': nisnSiswa,
-        'kelas': kelasSiswaC.text,
-        'fase': dataMapArgumen['fase'],
-        'tempatmengaji': dataMapArgumen['tempatmengaji'],
-        'tahunajaran': tahunajaranya,
-        'kelompokmengaji': dataMapArgumen['namapengampu'],
-        'namasemester': semesterSaatIni,
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu': idPengampu,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-        'idsiswa': nisnSiswa,
-      });
-
-      // 2. Update data di bawah collection siswa
-      DocumentReference refSiswaTahunAjaran = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran);
-      batch.set(refSiswaTahunAjaran, {
-        'fase': dataMapArgumen['fase'],
-        'nisn': nisnSiswa,
-        'namatahunajaran': tahunajaranya,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-      }, SetOptions(merge: true)); // Merge jika sudah ada data lain
-
-      DocumentReference refSiswaKelompokMengaji = refSiswaTahunAjaran
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase']);
-      batch.set(refSiswaKelompokMengaji, {
-        'fase': dataMapArgumen['fase'],
-        'tempatmengaji': dataMapArgumen['tempatmengaji'],
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu': idPengampu,
-        'tahunajaran': tahunajaranya,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-      }, SetOptions(merge: true));
-
-      DocumentReference refSiswaPengampu = refSiswaKelompokMengaji
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu']);
-      batch.set(refSiswaPengampu, {
-        'nisn': nisnSiswa,
-        'fase': dataMapArgumen['fase'],
-        'tahunajaran': idTahunAjaran, // atau tahunajaranya
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu': idPengampu,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-      }, SetOptions(merge: true));
-
-      DocumentReference refSiswaTempat = refSiswaPengampu
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji']);
-      batch.set(refSiswaTempat, {
-        'nisn': nisnSiswa,
-        'tempatmengaji': dataMapArgumen['tempatmengaji'],
-        'fase': dataMapArgumen['fase'],
-        'tahunajaran': idTahunAjaran, // atau tahunajaranya
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu': idPengampu,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-      }, SetOptions(merge: true));
-
-      DocumentReference refSiswaSemester = refSiswaTempat
-          .collection('semester')
-          .doc(semesterSaatIni);
-      batch.set(refSiswaSemester, {
-        'ummi': "0",
-        'nisn': nisnSiswa,
-        'tempatmengaji': dataMapArgumen['tempatmengaji'],
-        'fase': dataMapArgumen['fase'],
-        'tahunajaran': idTahunAjaran, // atau tahunajaranya
-        'namasemester': semesterSaatIni,
-        'namapengampu': dataMapArgumen['namapengampu'],
-        'idpengampu': idPengampu,
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': tanggalInput,
-      });
-
-      await batch.commit();
-      ubahStatusSiswa(nisnSiswa); // Panggil setelah batch commit
-      Get.snackbar("Berhasil", "$namaSiswa berhasil ditambahkan ke kelompok.");
-    } catch (e) {
-      Get.snackbar("Error", "Gagal menyimpan siswa: ${e.toString()}");
+      Get.snackbar("Error", "Gagal menyimpan nilai: ${e.toString()}");
     } finally {
-      isLoading.value = false;
+      isSavingNilai.value = false;
     }
   }
 
-  Future<void> ubahStatusSiswa(String nisnSiSwa) async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
+  Future<CollectionReference<Map<String, dynamic>>> _getDaftarSiswaCollectionRef() async {
+    final idTahunAjaran = homeController.idTahunAjaran.value!;
+    final semesterAktif = homeController.semesterAktifId.value;
 
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelastahunajaran')
-        .doc(kelasSiswaC.text) // Pastikan kelasSiswaC.text terisi dengan benar
-        .collection('daftarsiswa')
-        .doc(nisnSiSwa)
-        .update({'statuskelompok': 'aktif'});
+    return firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(idTahunAjaran)
+        .collection('kelompokmengaji').doc(fase)
+        .collection('pengampu').doc(namaPengampu)
+        .collection('tempat').doc(namaTempat)
+        .collection('semester').doc(semesterAktif) // <-- INTEGRASI SEMESTER
+        .collection('daftarsiswa');
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> getDaftarHalaqohDrawer() async* {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
 
-    yield* firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelompokmengaji')
-        .doc(dataMapArgumen['fase'])
-        .collection('pengampu')
-        .doc(dataMapArgumen['namapengampu'])
-        .collection('tempat')
-        .doc(dataMapArgumen['tempatmengaji'])
-        .collection('daftarsiswa')
-        .where(
-          'ummi',
-          isNotEqualTo: umidrawerC.text,
-        ) // Pastikan umidrawerC.text tidak kosong
-        .snapshots();
+  /// Membersihkan form template nilai.
+  void clearNilaiForm() {
+    suratC.clear();
+    ayatHafalC.clear();
+    capaianC.clear();
+    // halAyatC.clear();
+    materiC.clear();
+    nilaiC.clear();
+    keteranganHalaqoh.value = "";
+    santriTerpilihUntukNilai.clear();
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>> dataPengampuPindah() async {
-    // ... (kode Anda sudah benar)
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    DocumentSnapshot<Map<String, dynamic>> getPengampuNya =
-        await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran)
-            .collection('kelompokmengaji')
-            .doc(
-              dataMapArgumen['fase'],
-            ) // Asumsi fase tetap sama, jika bisa beda, ini perlu dipertimbangkan
-            .collection('pengampu')
-            .doc(pengampuC.text) // pengampuC.text adalah nama pengampu baru
-            .get();
-    return getPengampuNya;
+  /// Konversi nilai angka ke huruf.
+  String _getGrade(int score) {
+    if (score >= 90) return 'A';
+    if (score >= 85) return 'B+';
+    if (score >= 80) return 'B';
+    if (score >= 75) return 'B-';
+    if (score >= 70) return 'C+';
+    if (score >= 65) return 'C';
+    if (score >= 60) return 'C-';
+    return 'D';
   }
 
-  Future<List<String>> getDataPengampuFase() async {
-    // ... (kode Anda sudah benar)
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    List<String> pengampuList = [];
-    QuerySnapshot<Map<String, dynamic>> querySnapshot =
-        await firestore
-            .collection('Sekolah')
-            .doc(idSekolah)
-            .collection('tahunajaran')
-            .doc(idTahunAjaran)
-            .collection('kelompokmengaji')
-            .doc(dataMapArgumen['fase'])
-            .collection('pengampu')
-            // .where('namapengampu', isNotEqualTo: dataMapArgumen['namapengampu']) // Bisa difilter di client side jika jumlahnya tidak banyak
-            .get();
-
-    for (var docSnapshot in querySnapshot.docs) {
-      // Filter tambahan jika diperlukan (misal berdasarkan fase lagi, meskipun sudah di path)
-      if (docSnapshot.data()['namapengampu'] !=
-              dataMapArgumen['namapengampu'] &&
-          docSnapshot.data()['fase'] == dataMapArgumen['fase']) {
-        pengampuList.add(docSnapshot.data()['namapengampu']);
-      }
-    }
-    return pengampuList;
-  }
-
-  Future<void> pindahkan(String nisnSiswa) async {
-    if (pengampuC.text.isEmpty) {
-      Get.snackbar('Peringatan', 'Pengampu baru belum dipilih.');
-      return;
-    }
-    if (alasanC.text.isEmpty) {
-      Get.snackbar(
-        'Peringatan',
-        'Alasan pindah kosong, silahkan diisi dahulu.',
-      );
-      return;
-    }
-
-    isLoading.value = true;
-    try {
-      String tahunAjaranAktif = await getTahunAjaranTerakhir();
-      String idTahunAjaran = tahunAjaranAktif.replaceAll('/', '-');
-      String semesterAktif = "Semester I"; // Asumsi, buat dinamis jika perlu
-
-      WriteBatch batch = firestore.batch();
-
-      // 1. Dapatkan data pengampu tujuan (baru)
-      DocumentSnapshot<Map<String, dynamic>> snapPengampuBaru =
-          await dataPengampuPindah();
-      if (!snapPengampuBaru.exists) {
-        throw Exception("Data pengampu tujuan tidak ditemukan.");
-      }
-      Map<String, dynamic> dataPengampuBaru = snapPengampuBaru.data()!;
-      // Pastikan dataPengampuBaru memiliki field: 'fase', 'namapengampu', 'tempatmengaji', 'idpengampu', 'ummi' (jika ada default)
-
-      // 2. Dapatkan data siswa dari pengampu lama
-      DocumentReference refSiswaDiPengampuLama = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase']) // FASE LAMA
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu']) // NAMA PENGAMPU LAMA
-          .collection('tempat')
-          .doc(dataMapArgumen['tempatmengaji']) // TEMPAT LAMA
-          .collection('daftarsiswa')
-          .doc(nisnSiswa);
-
-      DocumentSnapshot<Map<String, dynamic>> snapSiswaLama =
-          await refSiswaDiPengampuLama.get()
-              as DocumentSnapshot<Map<String, dynamic>>;
-      if (!snapSiswaLama.exists) {
-        throw Exception("Data siswa di pengampu lama tidak ditemukan.");
-      }
-      Map<String, dynamic> dataSiswaYangDipindah = snapSiswaLama.data()!;
-      String namaSiswa = dataSiswaYangDipindah['namasiswa'];
-      String kelasSiswa = dataSiswaYangDipindah['kelas'];
-      // String ummiSiswaLama = dataSiswaYangDipindah['ummi'] ?? "0"; // Ambil ummi lama
-
-      // 3. Dapatkan nilai-nilai siswa dari semester di pengampu lama
-      //    Path: /Sekolah/{idSekolah}/tahunajaran/{idTahunAjaran}/kelompokmengaji/{dataMapArgumen['fase']}/pengampu/{dataMapArgumen['namapengampu']}/tempat/{dataMapArgumen['tempatmengaji']}/daftarsiswa/{nisnSiswa}/semester/{semesterAktif}/nilai
-      QuerySnapshot<Map<String, dynamic>> snapNilaiLama =
-          await refSiswaDiPengampuLama
-              .collection('semester')
-              .doc(semesterAktif) // SEMESTER LAMA
-              .collection('nilai')
-              .get();
-
-      List<Map<String, dynamic>> daftarNilaiLama = [];
-      for (var docNilai in snapNilaiLama.docs) {
-        daftarNilaiLama.add({...docNilai.data(), 'idNilai': docNilai.id});
-      }
-
-      // === OPERASI PADA PENGAMPU BARU ===
-      // 4. Tambahkan siswa ke daftarsiswa pengampu baru
-      DocumentReference refSiswaDiPengampuBaru = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataPengampuBaru['fase']) // FASE BARU
-          .collection('pengampu')
-          .doc(dataPengampuBaru['namapengampu']) // NAMA PENGAMPU BARU
-          .collection('tempat')
-          .doc(dataPengampuBaru['tempatmengaji']) // TEMPAT BARU
-          .collection('daftarsiswa')
-          .doc(nisnSiswa);
-
-      batch.set(refSiswaDiPengampuBaru, {
-        ...dataSiswaYangDipindah, // Salin semua data siswa lama
-        'fase': dataPengampuBaru['fase'], // Update dengan info pengampu baru
-        'tempatmengaji': dataPengampuBaru['tempatmengaji'],
-        'kelompokmengaji': dataPengampuBaru['namapengampu'],
-        'namapengampu': dataPengampuBaru['namapengampu'],
-        'idpengampu': dataPengampuBaru['idpengampu'],
-        // 'ummi': ummiSiswaLama, // Pertahankan Ummi dari data siswa lama atau default baru?
-        'tanggalinput': DateTime.now().toIso8601String(), // Update tanggal
-        // Hapus field yang spesifik pengampu lama jika ada (misal 'catatan_pengampu_lama')
-      });
-
-      // 5. Tambahkan nilai ke semester di pengampu baru
-      DocumentReference refSemesterDiPengampuBaru = refSiswaDiPengampuBaru
-          .collection('semester')
-          .doc(semesterAktif); // Atau dataPengampuBaru['namasemester'] jika ada
-
-      batch.set(refSemesterDiPengampuBaru, {
-        // Buat dokumen semester jika belum ada
-        // 'ummi': ummiSiswaLama, // sesuaikan dengan data siswa
-        'namasiswa': namaSiswa,
-        'nisn': nisnSiswa,
-        'kelas': kelasSiswa,
-        'fase': dataPengampuBaru['fase'],
-        'tempatmengaji': dataPengampuBaru['tempatmengaji'],
-        'tahunajaran': tahunAjaranAktif,
-        'kelompokmengaji': dataPengampuBaru['namapengampu'],
-        'namasemester': semesterAktif,
-        'namapengampu': dataPengampuBaru['namapengampu'],
-        'idpengampu': dataPengampuBaru['idpengampu'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-        'idsiswa': nisnSiswa,
-      });
-
-      for (var nilai in daftarNilaiLama) {
-        String idNilaiLama = nilai.remove(
-          'idNilai',
-        ); // Ambil dan hapus id dari map
-        DocumentReference refNilaiBaru = refSemesterDiPengampuBaru
-            .collection('nilai')
-            .doc(idNilaiLama); // Gunakan ID lama agar tidak duplikat
-        batch.set(refNilaiBaru, {
-          ...nilai, // Salin semua data nilai lama
-          // Update field yang relevan dengan pengampu baru jika perlu
-          'fase': dataPengampuBaru['fase'],
-          'tempatmengaji': dataPengampuBaru['tempatmengaji'],
-          'kelompokmengaji': dataPengampuBaru['namapengampu'],
-          'namapengampu': dataPengampuBaru['namapengampu'],
-          'idpengampu': dataPengampuBaru['idpengampu'],
-          'tanggalinput':
-              nilai['tanggalinput'], // Pertahankan tanggal input nilai asli
-        });
-      }
-
-      // === CATAT RIWAYAT PINDAH ===
-      // 6. Buat catatan pindahan
-      String idPindahan =
-          firestore.collection('_placeholder_').doc().id; // Generate unique ID
-      DocumentReference refRiwayatPindah = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('tahunajaran')
-          .doc(idTahunAjaran)
-          // .collection('semester').doc(semesterAktif) // Struktur riwayat pindah bisa disesuaikan
-          .collection('riwayatpindahan')
-          .doc(idPindahan); // Atau langsung di root 'pindahan'
-
-      batch.set(refRiwayatPindah, {
-        // 'ummi': ummiSiswaLama,
-        'namasiswa': namaSiswa,
-        'nisn': nisnSiswa,
-        'kelas': kelasSiswa,
-        'fase_lama': dataMapArgumen['fase'],
-        'fase_baru': dataPengampuBaru['fase'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalpindah': DateTime.now().toIso8601String(),
-        'pengampu_lama': dataMapArgumen['namapengampu'],
-        'tempat_lama': dataMapArgumen['tempatmengaji'],
-        'pengampu_baru': dataPengampuBaru['namapengampu'],
-        'tempat_baru': dataPengampuBaru['tempatmengaji'],
-        'alasanpindah': alasanC.text,
-        'idsiswa': nisnSiswa,
-        'tahunajaran': tahunAjaranAktif,
-        'semester': semesterAktif,
-      });
-
-      // === OPERASI PADA PADMINDUK SISWA (KOLEKSI /Sekolah/{id}/siswa/{nisn}) ===
-      // 7. Update data kelompok di dokumen utama siswa
-      DocumentReference refKelompokDiSiswa = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataPengampuBaru['fase']); // FASE BARU (jika fase bisa berubah)
-      // Jika fase selalu sama, gunakan dataMapArgumen['fase']
-
-      batch.update(refKelompokDiSiswa, {
-        // Asumsi dokumen ini sudah ada dari proses simpanSiswaKelompok
-        "idpengampu": dataPengampuBaru['idpengampu'],
-        "kelompokmengaji":
-            dataPengampuBaru['namapengampu'], // alias nama pengampu
-        "namapengampu": dataPengampuBaru['namapengampu'],
-        "tempatmengaji": dataPengampuBaru['tempatmengaji'],
-        "pernahpindah": "iya",
-        // "fase": dataPengampuBaru['fase'], // jika fase di path atas adalah dataPengampuBaru['fase']
-      });
-
-      // Hapus struktur pengampu lama di bawah dokumen siswa
-      DocumentReference refPengampuLamaDiSiswa = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataMapArgumen['fase']) // FASE LAMA
-          .collection('pengampu')
-          .doc(dataMapArgumen['namapengampu']); // NAMA PENGAMPU LAMA
-
-      // Untuk menghapus subkoleksi, Anda perlu menghapus semua dokumen di dalamnya satu per satu.
-      // Atau, jika Anda hanya ingin menghapus dokumen 'tempat' dan 'semester' di bawahnya:
-      QuerySnapshot snapTempatLamaDiSiswa =
-          await refPengampuLamaDiSiswa.collection('tempat').get();
-      for (var docTempat in snapTempatLamaDiSiswa.docs) {
-        QuerySnapshot snapSemesterLamaDiSiswa =
-            await docTempat.reference.collection('semester').get();
-        for (var docSemester in snapSemesterLamaDiSiswa.docs) {
-          batch.delete(docSemester.reference);
-        }
-        batch.delete(docTempat.reference);
-      }
-      batch.delete(
-        refPengampuLamaDiSiswa,
-      ); // Hapus dokumen pengampu lama itu sendiri
-
-      // Buat struktur pengampu baru di bawah dokumen siswa
-      DocumentReference refPengampuBaruDiSiswa = firestore
-          .collection('Sekolah')
-          .doc(idSekolah)
-          .collection('siswa')
-          .doc(nisnSiswa)
-          .collection('tahunajarankelompok')
-          .doc(idTahunAjaran)
-          .collection('kelompokmengaji')
-          .doc(dataPengampuBaru['fase']) // FASE BARU
-          .collection('pengampu')
-          .doc(dataPengampuBaru['namapengampu']); // NAMA PENGAMPU BARU
-      batch.set(refPengampuBaruDiSiswa, {
-        /* data relevan pengampu baru */
-        'nisn': nisnSiswa,
-        'fase': dataPengampuBaru['fase'],
-        'tahunajaran': idTahunAjaran,
-        'namapengampu': dataPengampuBaru['namapengampu'],
-        'idpengampu': dataPengampuBaru['idpengampu'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
-
-      DocumentReference refTempatBaruDiSiswa = refPengampuBaruDiSiswa
-          .collection('tempat')
-          .doc(dataPengampuBaru['tempatmengaji']);
-      batch.set(refTempatBaruDiSiswa, {
-        /* data relevan tempat baru */
-        'nisn': nisnSiswa,
-        'tempatmengaji': dataPengampuBaru['tempatmengaji'],
-        'fase': dataPengampuBaru['fase'],
-        'tahunajaran': idTahunAjaran,
-        'namapengampu': dataPengampuBaru['namapengampu'],
-        'idpengampu': dataPengampuBaru['idpengampu'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
-
-      DocumentReference refSemesterBaruDiSiswa = refTempatBaruDiSiswa
-          .collection('semester')
-          .doc(semesterAktif);
-      batch.set(refSemesterBaruDiSiswa, {
-        /* data relevan semester baru */
-        // 'ummi': ummiSiswaLama,
-        'nisn': nisnSiswa,
-        'tempatmengaji': dataPengampuBaru['tempatmengaji'],
-        'fase': dataPengampuBaru['fase'],
-        'tahunajaran': idTahunAjaran,
-        'namasemester': semesterAktif,
-        'namapengampu': dataPengampuBaru['namapengampu'],
-        'idpengampu': dataPengampuBaru['idpengampu'],
-        'emailpenginput': emailAdmin,
-        'idpenginput': idUser,
-        'tanggalinput': DateTime.now().toIso8601String(),
-      });
-
-      // === OPERASI PADA PENGAMPU LAMA (PENGHAPUSAN) ===
-      // 8. Hapus nilai-nilai dari semester di pengampu lama
-      DocumentReference refSemesterDiPengampuLama = refSiswaDiPengampuLama
-          .collection('semester')
-          .doc(semesterAktif); // SEMESTER LAMA
-      for (var nilai in daftarNilaiLama) {
-        batch.delete(
-          refSemesterDiPengampuLama.collection('nilai').doc(nilai['idNilai']),
-        );
-      }
-      // Hapus dokumen semester itu sendiri di pengampu lama jika sudah tidak ada nilai & tidak ada data lain yang penting
-      // batch.delete(refSemesterDiPengampuLama); // Hati-hati jika ada data lain di doc semester ini
-
-      // 9. Hapus siswa dari daftarsiswa pengampu lama
-      batch.delete(refSiswaDiPengampuLama);
-
-      // COMMIT SEMUA OPERASI
-      await batch.commit();
-
-      Get.back(); // Tutup dialog
-      Get.snackbar(
-        'Berhasil',
-        '$namaSiswa berhasil dipindahkan ke ${dataPengampuBaru['namapengampu']}.',
-      );
-      pengampuC.clear();
-      alasanC.clear();
-    } catch (e) {
-      Get.back(); // Tutup dialog jika masih terbuka
-      Get.snackbar(
-        'Error Pindah',
-        'Gagal memindahkan siswa: ${e.toString()}',
-        duration: Duration(seconds: 5),
-      );
-      print("Error pindahkan: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
+  
 }
