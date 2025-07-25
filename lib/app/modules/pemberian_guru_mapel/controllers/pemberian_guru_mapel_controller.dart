@@ -15,6 +15,7 @@ class PemberianGuruMapelController extends GetxController {
   // --- STATE MANAGEMENT ---
   final RxBool isLoading = true.obs;
   final RxBool isLoadingMapel = false.obs;
+  final RxBool isDialogLoading = false.obs;
   
   final RxList<String> daftarKelas = <String>[].obs;
   final RxList<Map<String, String>> daftarGuru = <Map<String, String>>[].obs;
@@ -83,9 +84,17 @@ class PemberianGuruMapelController extends GetxController {
   }
 
   /// Mengambil daftar semua kelas aktif dari HomeController.
+  // Future<void> _fetchDaftarKelas() async {
+  //   final kelas = await homeC.getDataKelasMapel();
+  //   daftarKelas.assignAll(kelas);
+  // }
   Future<void> _fetchDaftarKelas() async {
-    final kelas = await homeC.getDataKelasMapel();
-    daftarKelas.assignAll(kelas);
+    // Memastikan kita mengambil dari sumber yang benar (kelastahunajaran)
+    final snapshot = await firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(idTahunAjaran)
+        .collection('kelastahunajaran').get();
+    daftarKelas.assignAll(snapshot.docs.map((doc) => doc.id).toList()..sort());
   }
 
   /// Mengambil daftar semua pegawai yang bisa menjadi guru mapel.
@@ -113,53 +122,94 @@ class PemberianGuruMapelController extends GetxController {
     return firestore
         .collection('Sekolah').doc(idSekolah)
         .collection('tahunajaran').doc(idTahunAjaran)
-        .collection('kelasmapel').doc(kelasTerpilih.value!)
+        // .collection('kelasmapel').doc(kelasTerpilih.value!)
+        .collection('penugasan').doc(kelasTerpilih.value!)
         .collection('matapelajaran')
         .snapshots();
   }
 
-  /// Menugaskan seorang guru ke sebuah mata pelajaran.
-  /// Menggunakan WriteBatch untuk menjaga konsistensi data di dua lokasi.
+  /// [FUNGSI BARU] Menyimpan konfigurasi bobot nilai.
+  // Future<void> simpanBobotNilai(Map<String, dynamic> bobotBaru) async {
+  //   if (kelasTerpilih.value == null) { Get.snackbar("Error", "Kelas belum dipilih."); return; }
+
+  //   int totalBobot = bobotBaru.values.reduce((a, b) => a + b);
+  //   if (totalBobot != 100) {
+  //     Get.snackbar("Peringatan", "Total bobot harus 100%, saat ini totalnya $totalBobot%.");
+  //     return;
+  //   }
+
+  //   final String namaMapel = bobotBaru['namaMapel'] as String; // Kita akan selipkan nama mapel ke map
+
+  //   isDialogLoading.value = true;
+  //   try {
+  //     final ref = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran')
+  //         .doc(idTahunAjaran).collection('penugasan').doc(kelasTerpilih.value!)
+  //         .collection('matapelajaran').doc(namaMapel);
+
+  //     await ref.set({'bobot_nilai': bobotBaru}, SetOptions(merge: true));
+  //     Get.back();
+  //     Get.snackbar("Berhasil", "Bobot nilai untuk $namaMapel telah disimpan.");
+  //   } catch (e) { Get.snackbar("Error", "Gagal menyimpan bobot: $e"); }
+  //   finally { isDialogLoading.value = false; }
+  // }
+
+
   Future<void> assignGuruToMapel(String idGuru, String namaGuru, String namaMapel) async {
     if (kelasTerpilih.value == null) {
       Get.snackbar("Gagal", "Kelas belum dipilih.");
       return;
     }
     final String namaKelas = kelasTerpilih.value!;
+    
+    // Ambil data global dari sumber yang sama untuk memastikan konsistensi
+    final String idTahunAjaranDariHome = homeC.idTahunAjaran.value!;
+    final String semesterAktif = homeC.semesterAktifId.value;
 
     Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
 
     try {
       WriteBatch batch = firestore.batch();
       
-      final kelasMapelRef = firestore
+      // Path 1: Ke koleksi 'penugasan' (master data untuk 1 tahun ajaran)
+      final penugasanRef = firestore
           .collection('Sekolah').doc(idSekolah)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelasmapel').doc(namaKelas)
+          .collection('tahunajaran').doc(idTahunAjaranDariHome)
+          .collection('penugasan').doc(namaKelas)
           .collection('matapelajaran').doc(namaMapel);
 
-      final docSnap = await kelasMapelRef.get();
+      // --- PERBAIKAN UTAMA DI SINI ---
+      // Path 1.5: Path ke DOKUMEN KELAS ("rumah") di dalam koleksi 'kelasnya'
+      final pegawaiKelasRef = firestore.collection('Sekolah').doc(idSekolah)
+          .collection('pegawai').doc(idGuru)
+          .collection('tahunajaran').doc(idTahunAjaranDariHome)
+          .collection('semester').doc(semesterAktif)
+          .collection('kelasnya').doc(namaKelas);
+
+      // Path 2: Path ke DOKUMEN MAPEL ("kamar") di dalam subkoleksi
+      final pegawaiMapelRef = pegawaiKelasRef.collection('matapelajaran').doc(namaMapel);
+      // ------------------------------------
+
+      final docSnap = await penugasanRef.get();
       if (docSnap.exists) {
         throw Exception('Mata pelajaran ini sudah memiliki guru.');
       }
 
-      final pegawaiMapelRef = firestore
-          .collection('Sekolah').doc(idSekolah)
-          .collection('pegawai').doc(idGuru)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelasnya').doc(namaKelas)
-          .collection('matapelajaran').doc(namaMapel);
-
       final dataToSave = {
-        'namamatapelajaran': namaMapel,
-        'guru': namaGuru,
-        'idGuru': idGuru,
-        'idKelas': namaKelas,
-        'idTahunAjaran': idTahunAjaran,
-        'diinputPada': FieldValue.serverTimestamp(),
+        'namamatapelajaran': namaMapel, 'guru': namaGuru, 'idGuru': idGuru,
+        'idKelas': namaKelas, 'idTahunAjaran': idTahunAjaranDariHome,
+        'diinputPada': FieldValue.serverTimestamp(), 'semester': semesterAktif,
       };
       
-      batch.set(kelasMapelRef, dataToSave);
+      // --- OPERASI BARU YANG KRUSIAL ---
+      // Buat atau update "rumahnya" (dokumen kelas) terlebih dahulu.
+      // SetOptions(merge: true) penting agar tidak menghapus subkoleksi 
+      // matapelajaran lain yang mungkin sudah ada jika guru ini mengajar
+      // lebih dari satu mapel di kelas yang sama.
+      batch.set(pegawaiKelasRef, {'namaKelas': namaKelas}, SetOptions(merge: true));
+      // ------------------------------------
+
+      // Tulis ke kedua lokasi
+      batch.set(penugasanRef, dataToSave);
       batch.set(pegawaiMapelRef, dataToSave);
       
       await batch.commit();
@@ -172,54 +222,36 @@ class PemberianGuruMapelController extends GetxController {
     }
   }
 
-  /// Menghapus penugasan seorang guru dari sebuah mata pelajaran.
-  /// Menggunakan WriteBatch untuk konsistensi data.
   Future<void> removeGuruFromMapel(String namaMapel) async {
-    if (kelasTerpilih.value == null) {
+       if (kelasTerpilih.value == null) {
       Get.snackbar("Gagal", "Kelas belum dipilih.");
       return;
     }
     final String namaKelas = kelasTerpilih.value!;
+    final String idTahunAjaranDariHome = homeC.idTahunAjaran.value!;
+    final String semesterAktif = homeC.semesterAktifId.value;
 
     Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
-
     try {
-      final kelasMapelRef = firestore
-          .collection('Sekolah').doc(idSekolah)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelasmapel').doc(namaKelas)
-          .collection('matapelajaran').doc(namaMapel);
-
-      final doc = await kelasMapelRef.get();
-      if (!doc.exists) {
-        Get.back();
-        Get.snackbar("Info", "Data sudah tidak ditemukan.");
-        return;
-      }
+      final penugasanRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaranDariHome).collection('penugasan').doc(namaKelas).collection('matapelajaran').doc(namaMapel);
+      final doc = await penugasanRef.get();
+      if (!doc.exists) { Get.back(); Get.snackbar("Info", "Data sudah tidak ditemukan."); return; }
       
       final String? idGuru = doc.data()?['idGuru'] as String?;
-      if (idGuru == null) {
-        throw Exception('ID Guru tidak ditemukan, tidak bisa menghapus data terkait.');
-      }
+      if (idGuru == null) { throw Exception('ID Guru tidak ditemukan.'); }
 
-      final pegawaiMapelRef = firestore
-          .collection('Sekolah').doc(idSekolah)
-          .collection('pegawai').doc(idGuru)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelasnya').doc(namaKelas)
-          .collection('matapelajaran').doc(namaMapel);
+      // Hapus hanya dokumen mapelnya saja. Dokumen induk 'kelasnya' biarkan ada.
+      final pegawaiMapelRef = firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').doc(idGuru)
+          .collection('tahunajaran').doc(idTahunAjaranDariHome).collection('semester').doc(semesterAktif)
+          .collection('kelasnya').doc(namaKelas).collection('matapelajaran').doc(namaMapel);
 
       WriteBatch batch = firestore.batch();
-      batch.delete(kelasMapelRef);
+      batch.delete(penugasanRef);
       batch.delete(pegawaiMapelRef);
-
       await batch.commit();
 
       Get.back();
       Get.snackbar('Berhasil', 'Guru untuk $namaMapel telah dihapus.');
-    } catch (e) {
-      Get.back();
-      Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
-    }
+    } catch (e) { Get.back(); Get.snackbar('Gagal', e.toString()); }
   }
 }

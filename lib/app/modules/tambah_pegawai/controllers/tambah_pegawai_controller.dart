@@ -1,198 +1,178 @@
+// lib/app/modules/tambah_pegawai/controllers/tambah_pegawai_controller.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../home/controllers/home_controller.dart';
 
 class TambahPegawaiController extends GetxController {
-  RxString jenisKelamin = "".obs;
-  RxString aliasNama = "".obs;
-  RxBool isLoading = false.obs;
-  RxBool isLoadingTambahPegawai = false.obs;
+  // --- DEPENDENSI & KUNCI ---
+  final formKey = GlobalKey<FormState>();
+  final auth = FirebaseAuth.instance;
+  final firestore = FirebaseFirestore.instance;
+  final homeC = Get.find<HomeController>();
 
+  // --- FORM CONTROLLERS ---
+  late TextEditingController namaC;
+  late TextEditingController emailC;
+  late TextEditingController passAdminC;
 
-  TextEditingController namaC = TextEditingController();
-  TextEditingController emailC = TextEditingController();
-  TextEditingController jabatanC = TextEditingController();
-  TextEditingController passAdminC = TextEditingController();
+  // --- STATE LOADING ---
+  final RxBool isLoadingProses = false.obs; // Untuk proses simpan utama
+  final RxBool isJabatanLoading = true.obs;
+  final RxBool isTugasLoading = true.obs;
 
-  FirebaseAuth auth = FirebaseAuth.instance;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  // --- STATE DATA MASTER & DATA TERPILIH ---
+  final RxString jenisKelamin = "".obs;
+  
+  // Untuk Jabatan (Single Choice)
+  final RxList<String> semuaJabatan = <String>[].obs;
+  final Rxn<String> jabatanTerpilih = Rxn<String>();
 
-  String idSekolah = "20404148";
+  // Untuk Tugas Tambahan (Multi Choice)
+  final RxList<String> semuaTugas = <String>[].obs;
+  final RxList<String> tugasTerpilih = <String>[].obs;
 
-  onChangeJenisKelamin(String nilai) {
-    jenisKelamin.value = nilai;
-  }
+  String? docId;
+  bool get isEditMode => docId != null;
 
-  onChangeAlias(String alias) {
-    aliasNama.value = alias;
-  }
+  @override
+  void onInit() {
+    super.onInit();
+    namaC = TextEditingController();
+    emailC = TextEditingController();
+    passAdminC = TextEditingController();
+    
+    if (Get.arguments != null) {
+      docId = Get.arguments['id'] as String;
+      final data = Get.arguments['data'] as Map<String, dynamic>;
 
-  List<String> getDataJabatan() {
-    List<String> jabatanList = [
-      'Kepala Sekolah',
-      'Koordinator Tahfidz',
-      'Pengampu',
-      'Guru Kelas',
-      'Guru Pelajaran',
-      'Guru BK',
-      'TU',
-      'Kurikulum',
-      'Operator',
-      'Admin',
+      // Isi semua field form dengan data yang ada
+      namaC.text = data['nama'] ?? '';
+      emailC.text = data['email'] ?? '';
+      jenisKelamin.value = data['jeniskelamin'] ?? '';
+      jabatanTerpilih.value = data['role'];
       
-    ];
-    return jabatanList;
+      final tugasData = data['tugas'];
+      if (tugasData is List) {
+        tugasTerpilih.assignAll(List<String>.from(tugasData));
+      }
+    }
+    
+    _muatSemuaJabatan();
+    _muatSemuaTugas();
   }
 
-  Future<void> pegawaiDitambahkan() async {
+  @override
+  void onClose() {
+    namaC.dispose();
+    emailC.dispose();
+    passAdminC.dispose();
+    super.onClose();
+  }
+  
+  // --- FUNGSI HELPER ---
+  void onChangeJenisKelamin(String? value) => jenisKelamin.value = value ?? "";
+  void onJabatanSelected(String? value) => jabatanTerpilih.value = value;
+  void onTugasSelected(List<String> values) => tugasTerpilih.assignAll(values);
 
-    if (passAdminC.text.isNotEmpty) {
-      isLoadingTambahPegawai.value = true;
-      try {
-        String emailAdmin = auth.currentUser!.email!;
-
-        // (jangan dihapus)
-        // ignore: unused_local_variable
-        UserCredential userCredentialAdmin  = await auth.signInWithEmailAndPassword(
-          email: emailAdmin,
-          password: passAdminC.text,
-        );
-
-        UserCredential pegawaiCredential =
-            await auth.createUserWithEmailAndPassword(
-          email: emailC.text,
-          password: 'sditui',
-        );
-        // print(pegawaiCredential);
-
-        if (pegawaiCredential.user != null) {
-          String uid = pegawaiCredential.user!.uid;
-
-          await firestore
-              .collection("Sekolah")
-              .doc(idSekolah)
-              .collection('pegawai')
-              .doc(uid)
-              .set({
-            "alias": ("${aliasNama.value} ${namaC.text}"),
-            "nama": namaC.text,
-            "email": emailC.text,
-            "role": jabatanC.text,
-            "jeniskelamin" : jenisKelamin.value,
-            "uid": uid,
-            "tanggalinput": DateTime.now().toIso8601String(),
-            "emailpenginput" : emailAdmin
-          });
-
-          await pegawaiCredential.user!.sendEmailVerification();
-
-          await auth.signOut();
-
-          //disini login ulang admin penginput (jangan dihapus)
-          // ignore: unused_local_variable
-          UserCredential userCredentialAdmin  = await auth.signInWithEmailAndPassword(
-          email: emailAdmin,
-          password: passAdminC.text,
-        );
-
-          Get.back(); // tutup dialog
-          Get.back(); // back to home
-
-          Get.snackbar(
-              snackPosition: SnackPosition.BOTTOM,
-              'Berhasil',
-              'Karyawan berhasil ditambahkan');
-        }
-        isLoadingTambahPegawai.value = false;
-      } on FirebaseAuthException catch (e) {
-        isLoadingTambahPegawai.value = false;
-        if (e.code == 'weak-password') {
-          Get.snackbar(
-              snackPosition: SnackPosition.BOTTOM,
-              'Terjadi Kesalahan',
-              'Password terlalu singkat');
-        } else if (e.code == 'email-already-in-use') {
-          Get.snackbar(
-              snackPosition: SnackPosition.BOTTOM,
-              'Terjadi Kesalahan',
-              'email pegawai sudah terdaftar');
-        } else if (e.code == 'invalid-credential') {
-          Get.snackbar(
-              snackPosition: SnackPosition.BOTTOM,
-              'Terjadi Kesalahan',
-              'password salah');
-        } else {
-          Get.snackbar(
-              snackPosition: SnackPosition.BOTTOM, 'Terjadi Kesalahan', e.code);
-        }
-      } catch (e) {
-        isLoadingTambahPegawai.value = false;
-        Get.snackbar(
-            snackPosition: SnackPosition.BOTTOM,
-            'Terjadi Kesalahan',
-            'Tidak dapat menambahkan pegawai, harap dicoba lagi');
-      }
-    } else {
-      isLoading.value = false;
-      Get.snackbar(
-          snackPosition: SnackPosition.BOTTOM,
-          'Error',
-          'Password Admin wajib diisi');
+  // --- LOGIKA PENGAMBILAN DATA ---
+  Future<void> _muatSemuaJabatan() async {
+    isJabatanLoading.value = true;
+    try {
+      final snapshot = await firestore.collection('Sekolah').doc(homeC.idSekolah).collection('jabatan').get();
+      semuaJabatan.assignAll(snapshot.docs.map((doc) => doc['nama'] as String).toList());
+    } finally {
+      isJabatanLoading.value = false;
     }
   }
 
-  Future<void> simpanPegawai() async {
-    if (isLoading.value = true) {
-      Get.defaultDialog(
-        title: 'Verifikasi Admnin',
-        content: Column(
-          children: [
-            Text('Masukan password'),
-            SizedBox(height: 10),
-            TextField(
-              controller: passAdminC,
-              obscureText: true,
-              autocorrect: false,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                labelText: 'Password',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () {
-              isLoading.value = false;
-              Get.back();
-            },
-            child: Text('CANCEL'),
-          ),
-          Obx(
-            () => ElevatedButton(
-              onPressed: () async {
-                if (isLoadingTambahPegawai.isFalse) {
-                  await pegawaiDitambahkan();
-                }
-                isLoading.value = false;
-              },
-              child: Text(
-                isLoadingTambahPegawai.isFalse
-                    ? 'Tambah Pegawai'
-                    : 'LOADING...',
-              ),
-            ),
-          ),
-        ],
-      );
+  Future<void> _muatSemuaTugas() async {
+    isTugasLoading.value = true;
+    try {
+      final snapshot = await firestore.collection('Sekolah').doc(homeC.idSekolah).collection('tugas_tambahan').get();
+      semuaTugas.assignAll(snapshot.docs.map((doc) => doc['nama'] as String).toList());
+    } finally {
+      isTugasLoading.value = false;
+    }
+  }
+
+  // --- LOGIKA UTAMA: SIMPAN DATA ---
+  Future<void> _prosesSimpanData() async {
+    final String? emailAdmin = auth.currentUser?.email;
+    if (emailAdmin == null) {
+      Get.snackbar("Error", "Sesi admin tidak valid.");
+      return;
+    }
+
+    isLoadingProses.value = true;
+    try {
+      final dataToSave = {
+        'nama': namaC.text.trim(),
+        'jeniskelamin': jenisKelamin.value,
+        'alias': "${jenisKelamin.value == "Laki-Laki" ? "Ustadz" : "Ustazah"} ${namaC.text.trim()}",
+        'role': jabatanTerpilih.value,
+        'tugas': tugasTerpilih.toList(),
+      };
+
+      if (isEditMode) {
+        // --- LOGIKA UNTUK MODE EDIT ---
+        await firestore.collection("Sekolah").doc(homeC.idSekolah).collection('pegawai').doc(docId!).update(dataToSave);
+        Get.back(result: true); // Kembali & kirim sinyal sukses
+        Get.snackbar('Berhasil', 'Data pegawai berhasil diperbarui.');
+
+      } else {
+        // --- LOGIKA UNTUK MODE TAMBAH (YANG SUDAH ADA) ---
+        await auth.signInWithEmailAndPassword(email: emailAdmin, password: passAdminC.text);
+        
+        // Buat user di Auth HANYA jika mode tambah
+        UserCredential pegawaiCredential = await auth.createUserWithEmailAndPassword(email: emailC.text.trim(), password: 'sditui');
+        await auth.signInWithEmailAndPassword(email: emailAdmin, password: passAdminC.text);
+
+        String uid = pegawaiCredential.user!.uid;
+        dataToSave['uid'] = uid;
+        dataToSave['email'] = emailC.text.trim();
+        dataToSave['createdAt'] = FieldValue.serverTimestamp();
+        dataToSave['createdBy'] = emailAdmin;
+
+        await firestore.collection("Sekolah").doc(homeC.idSekolah).collection('pegawai').doc(uid).set(dataToSave);
+        await pegawaiCredential.user!.sendEmailVerification();
+        Get.back(result: true); // Kembali & kirim sinyal sukses
+        Get.snackbar('Berhasil', 'Pegawai baru berhasil ditambahkan.');
+      }
+    } on FirebaseAuthException catch (e) {
+      Get.back();
+      // ... (Error handling yang sudah ada sebelumnya sudah cukup baik)
+      Get.snackbar('Error Otentikasi', e.message ?? 'Terjadi kesalahan');
+    } catch (e) {
+      Get.back();
+      Get.snackbar('Error Sistem', e.toString());
+    } finally {
+      isLoadingProses.value = false;
+      passAdminC.clear();
+    }
+  }
+
+  void validasiDanSimpan() {
+    if (!formKey.currentState!.validate()) return;
+    
+    // Untuk mode Edit, kita tidak perlu verifikasi password lagi, bisa langsung simpan
+    if (isEditMode) {
+      _prosesSimpanData();
     } else {
-      Get.snackbar(
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color.fromARGB(255, 156, 151, 151),
-        'Terjadi Kesalahan',
-        '* Wajib di isi',
-      );
+      // Tampilkan dialog verifikasi HANYA untuk mode Tambah
+      Get.defaultDialog(
+        title: 'Verifikasi Admin',
+      content: TextField(controller: passAdminC, obscureText: true, decoration: InputDecoration(labelText: 'Password Admin')),
+      actions: [
+        OutlinedButton(onPressed: () => Get.back(), child: Text('Batal')),
+        Obx(() => ElevatedButton(
+          onPressed: isLoadingProses.isTrue ? null : _prosesSimpanData,
+          child: Text(isLoadingProses.isTrue ? 'MEMPROSES...' : 'KONFIRMASI'),
+        )),
+      ],
+    );
     }
   }
 }

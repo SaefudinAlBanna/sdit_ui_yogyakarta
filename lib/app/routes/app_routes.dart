@@ -62,6 +62,12 @@ abstract class Routes {
   static const REKAP_JURNAL_GURU = _Paths.REKAP_JURNAL_GURU;
   static const REKAP_JURNAL_ADMIN = _Paths.REKAP_JURNAL_ADMIN;
   static const LAKSANAKAN_UJIAN = _Paths.LAKSANAKAN_UJIAN;
+  static const REKAP_ABSENSI = _Paths.REKAP_ABSENSI;
+  static const ANALISIS_AKADEMIK = _Paths.ANALISIS_AKADEMIK;
+  static const MANAJEMEN_JABATAN = _Paths.MANAJEMEN_JABATAN;
+  static const MANAJEMEN_TUGAS = _Paths.MANAJEMEN_TUGAS;
+  static const DAFTAR_PEGAWAI = _Paths.DAFTAR_PEGAWAI;
+  static const PANTAU_TAHFIDZ = _Paths.PANTAU_TAHFIDZ;
 }
 
 abstract class _Paths {
@@ -124,4 +130,10 @@ abstract class _Paths {
   static const REKAP_JURNAL_GURU = '/rekap-jurnal-guru';
   static const REKAP_JURNAL_ADMIN = '/rekap-jurnal-admin';
   static const LAKSANAKAN_UJIAN = '/laksanakan-ujian';
+  static const REKAP_ABSENSI = '/rekap-absensi';
+  static const ANALISIS_AKADEMIK = '/analisis-akademik';
+  static const MANAJEMEN_JABATAN = '/manajemen-jabatan';
+  static const MANAJEMEN_TUGAS = '/manajemen-tugas';
+  static const DAFTAR_PEGAWAI = '/daftar-pegawai';
+  static const PANTAU_TAHFIDZ = '/pantau-tahfidz';
 }

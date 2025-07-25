@@ -1,54 +1,40 @@
-// pengampu_info.dart
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class PengampuInfo {
   final String namaPengampu;
   final String fase;
   final String idPengampu;
-  final String namaTempat; // <-- FIELD BARU DITAMBAHKAN
+  final String namaTempat;
   final String? profileImageUrl;
   final int jumlahSiswa;
+  final int jumlahSiapUjian;
 
   PengampuInfo({
     required this.namaPengampu,
     required this.fase,
     required this.idPengampu,
-    required this.namaTempat, // <-- TAMBAHKAN DI CONSTRUCTOR
+    required this.namaTempat,
     this.profileImageUrl,
-    this.jumlahSiswa = 0, // Beri nilai default 0
+    required this.jumlahSiswa,
+    required this.jumlahSiapUjian,
   });
 
-  // Factory ini TIDAK BISA LAGI DIGUNAKAN secara langsung,
-  // karena 'namaTempat' berasal dari sub-koleksi.
-  // Kita akan membuat objek ini secara manual di controller.
-  factory PengampuInfo.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc, {required String namaTempat}) {
-    final data = doc.data() ?? {};
-    return PengampuInfo(
-      namaPengampu: data['namapengampu'] ?? 'Tanpa Nama',
-      fase: data['fase'] ?? '',
-      idPengampu: data['idpengampu'] ?? '',
-      namaTempat: namaTempat, // <-- ISI DARI PARAMETER
-      // jumlahSiswa & profileImageUrl diisi nanti via copyWith
-    );
-  }
-
-  // Update method 'copyWith'
+  // --- FUNGSI COPYWITH YANG SUDAH DIPERBAIKI ---
   PengampuInfo copyWith({
     String? namaPengampu,
     String? fase,
     String? idPengampu,
-    String? namaTempat, // <-- TAMBAHKAN DI COPYWITH
+    String? namaTempat,
     String? profileImageUrl,
     int? jumlahSiswa,
+    int? jumlahSiapUjian, // <-- Tambahkan ini
   }) {
     return PengampuInfo(
       namaPengampu: namaPengampu ?? this.namaPengampu,
       fase: fase ?? this.fase,
       idPengampu: idPengampu ?? this.idPengampu,
-      namaTempat: namaTempat ?? this.namaTempat, // <-- TAMBAHKAN DI COPYWITH
+      namaTempat: namaTempat ?? this.namaTempat,
       jumlahSiswa: jumlahSiswa ?? this.jumlahSiswa,
-      profileImageUrl: profileImageUrl, // Jangan gunakan '?? this.profileImageUrl' agar bisa di-set jadi null
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      jumlahSiapUjian: jumlahSiapUjian ?? this.jumlahSiapUjian, // <-- Bawa nilai lama
     );
   }
 }

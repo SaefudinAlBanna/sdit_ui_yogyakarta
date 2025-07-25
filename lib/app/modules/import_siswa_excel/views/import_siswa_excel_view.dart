@@ -32,7 +32,8 @@ class ImportSiswaExcelView extends GetView<ImportSiswaExcelController> {
                   const Text("Petunjuk Penggunaan:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
                   const Text("1. Unduh file template Excel di bawah ini."),
-                  const Text("2. Isi data siswa sesuai kolom: NISN, Nama, Email, SPP."),
+                  // const Text("2. Isi data siswa sesuai kolom: NISN, Nama, Email, SPP."),
+                  const Text("2. Isi data siswa sesuai kolom: NISN, Nama, SPP."),
                   const Text("3. Upload kembali file yang sudah diisi."),
                   const SizedBox(height: 12),
                   SizedBox(

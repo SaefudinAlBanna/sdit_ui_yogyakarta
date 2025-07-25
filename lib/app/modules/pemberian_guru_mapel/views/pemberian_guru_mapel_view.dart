@@ -111,8 +111,17 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
                       fontStyle: guruDitugaskan != null ? FontStyle.normal : FontStyle.italic,
                     ),
                   ),
-                  trailing: guruDitugaskan != null
-                      ? IconButton(
+                  trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Tombol baru untuk mengatur bobot
+                        // IconButton(
+                        //   icon: const Icon(Icons.percent_rounded, color: Colors.blue),
+                        //   tooltip: "Atur Bobot Penilaian",
+                        //   onPressed: () => _showBobotDialog(context, namaMapel, guruDitugaskan),
+                        // ),
+                        guruDitugaskan != null 
+                             ? IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
                           onPressed: () => _showConfirmationDialog(
                             context,
@@ -125,6 +134,8 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
                           child: const Text('Atur Guru'),
                           onPressed: () => _showGuruSelectionDialog(context, namaMapel),
                         ),
+                      ],
+                    )
                 ),
               );
             },
@@ -133,6 +144,40 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
       );
     });
   }
+
+//   void _showBobotDialog(BuildContext context, String namaMapel, String? guru) {
+//   // Buat controller untuk setiap field
+//   final harianC = TextEditingController(text: "25"); // Nilai default
+//   final ulanganC = TextEditingController(text: "25");
+//   final ptsC = TextEditingController(text: "25");
+//   final pasC = TextEditingController(text: "25");
+
+//   Get.defaultDialog(
+//     title: "Atur Bobot Nilai: $namaMapel",
+//     content: Column(
+//       children: [
+//         TextField(controller: harianC, decoration: const InputDecoration(labelText: "Bobot Harian/PR (%)"), keyboardType: TextInputType.number),
+//         TextField(controller: ulanganC, decoration: const InputDecoration(labelText: "Bobot Ulangan Harian (%)"), keyboardType: TextInputType.number),
+//         TextField(controller: ptsC, decoration: const InputDecoration(labelText: "Bobot PTS (%)"), keyboardType: TextInputType.number),
+//         TextField(controller: pasC, decoration: const InputDecoration(labelText: "Bobot PAS (%)"), keyboardType: TextInputType.number),
+//       ],
+//     ),
+//     confirm: ElevatedButton(
+//       onPressed: () {
+//         final bobot = {
+//           'namaMapel': namaMapel,
+//           'harian': int.tryParse(harianC.text) ?? 0,
+//           'ulangan': int.tryParse(ulanganC.text) ?? 0,
+//           'pts': int.tryParse(ptsC.text) ?? 0,
+//           'pas': int.tryParse(pasC.text) ?? 0,
+//           'tambahan': 0, // Default
+//         };
+//         controller.simpanBobotNilai(bobot);
+//       },
+//       child: const Text("Simpan Bobot")
+//     )
+//   );
+//  }
   
   void _showGuruSelectionDialog(BuildContext context, String namaMapel) {
      Get.defaultDialog(

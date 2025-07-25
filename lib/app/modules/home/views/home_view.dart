@@ -4,10 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+
+// --- TAMBAHAN PENTING: IMPORT SEMUA HALAMAN YANG AKAN DIGUNAKAN ---
+import '../pages/home.dart';
+import '../pages/marketplace.dart';
+import '../pages/profile.dart';
+// -----------------------------------------------------------------
+
 import '../controllers/home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
+
+  // --- FUNGSI BARU UNTUK MEMBUAT DAFTAR LAYAR (WIDGETS) ---
+  // Ini adalah praktik terbaik: UI didefinisikan di dalam kelas View.
+  List<Widget> _buildScreens() {
+    return [
+      HomePage(),
+      MarketplacePage(),
+      ProfilePage(),
+    ];
+  }
+  // ----------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +38,11 @@ class HomeView extends GetView<HomeController> {
       child: PersistentTabView(
         context,
         controller: controller.tabController,
-        screens: controller.navBarScreens,
+        // --- PERUBAHAN UTAMA DI SINI ---
+        // Kita tidak lagi memanggil controller.navBarScreens,
+        // tetapi memanggil fungsi _buildScreens() yang ada di kelas ini.
+        screens: _buildScreens(),
+        // ---------------------------------
         items: _navBarItems(),
         navBarStyle: NavBarStyle.style6,
         backgroundColor: Colors.white,
@@ -40,32 +62,21 @@ class HomeView extends GetView<HomeController> {
         stateManagement: true,
         hideNavigationBarWhenKeyboardAppears: true,
         popBehaviorOnSelectedNavBarItemPress: PopBehavior.once,
-        
-        // is基本的なスワイプを有効にする: true,
-
-        // --- PERUBAHAN DI SINI ---
-        // Parameter untuk animasi transisi halaman
         animationSettings: const NavBarAnimationSettings(
-           navBarItemAnimation: ItemAnimationSettings(
-              // Navigation Bar's items animation properties.
-              duration: Duration(milliseconds: 400),
-              curve: Curves.ease,
-        ),
-        screenTransitionAnimation: ScreenTransitionAnimationSettings(
-              // Screen transition animation on change of selected tab.
-              animateTabTransition: true,
-              duration: Duration(milliseconds: 300),
-              screenTransitionAnimationType:
-                  ScreenTransitionAnimationType.fadeIn,
-            ),
-            onNavBarHideAnimation: OnHideAnimationSettings(
-              duration: Duration(milliseconds: 100),
-              curve: Curves.bounceInOut,
-            ),
+          navBarItemAnimation: ItemAnimationSettings(
+            duration: Duration(milliseconds: 400),
+            curve: Curves.ease,
           ),
-
-        // Parameter untuk mengaktifkan swipe
-        // -------------------------
+          screenTransitionAnimation: ScreenTransitionAnimationSettings(
+            animateTabTransition: true,
+            duration: Duration(milliseconds: 300),
+            screenTransitionAnimationType: ScreenTransitionAnimationType.fadeIn,
+          ),
+          onNavBarHideAnimation: OnHideAnimationSettings(
+            duration: Duration(milliseconds: 100),
+            curve: Curves.bounceInOut,
+          ),
+        ),
       ),
     );
   }
@@ -73,7 +84,7 @@ class HomeView extends GetView<HomeController> {
   List<PersistentBottomNavBarItem> _navBarItems() {
     return [
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.home),
+        icon: const Icon(Icons.home_rounded), // Sedikit penyesuaian ikon
         title: "Home",
         activeColorPrimary: Colors.green.shade700,
         inactiveColorPrimary: Colors.grey,
@@ -102,7 +113,7 @@ class HomeView extends GetView<HomeController> {
         actions: [
           TextButton(onPressed: Get.back, child: const Text('Tidak')),
           TextButton(
-            onPressed: SystemNavigator.pop,
+            onPressed: () => SystemNavigator.pop(), // Aksi yang lebih langsung
             child: Text('Ya', style: TextStyle(color: Colors.red)),
           ),
         ],

@@ -1,298 +1,118 @@
-import 'package:dropdown_search/dropdown_search.dart';
+// lib/app/modules/tambah_pegawai/views/tambah_pegawai_view.dart
+
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
-
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 import '../controllers/tambah_pegawai_controller.dart';
 
 class TambahPegawaiView extends GetView<TambahPegawaiController> {
-  const TambahPegawaiView({super.key});
+  const TambahPegawaiView({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    // Controller di-binding melalui routing GetX, tidak perlu Get.put di sini
+    final theme = Theme.of(context);
+
     return Scaffold(
-      // appBar: AppBar(
-      //   centerTitle: true,
-      //   title: Text("Tambah Pegawai"),
-      //   backgroundColor: Colors.indigo[400],
-      // ),
-      body: ListView(
-        children: [
-          SafeArea(
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                Container(
-                  height: 150,
-                  width: Get.width,
-                  decoration: BoxDecoration(
-                    color: Colors.indigo[400],
-                    // image: DecorationImage(
-                    //   image: AssetImage("assets/images/profile.png"),
-                    // ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 15),
-                    child: Text(
-                      "Tambah Pegawai",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-
-                Container(
-                  margin: EdgeInsets.only(top: 50),
-                  // width: Get.width,
-                  child: Column(
-                    children: [
-                      Column(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 15,
-                              vertical: 10,
-                            ),
-                            margin: EdgeInsets.symmetric(horizontal: 25),
-                            // height: 140,
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withValues(alpha: 0.5),
-                                  // spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: Offset(2, 2),
-                                ),
-                              ],
-                              color: Colors.grey.shade50,
-                              // borderRadius: BorderRadius.only(
-                              //   topLeft: Radius.circular(20),
-                              //   topRight: Radius.circular(20),
-                              // ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Column(
-                              children: [
-                                
-                                FieldTambahPegawai(
-                                  controller: controller,
-                                  controllerNya: controller.namaC,
-                                  label: 'Nama',
-                                ),
-                                // FieldTambahPegawai(
-                                //   controller: controller,
-                                //   controllerNya: controller.aliasC,
-                                //   label: 'No HP',
-                                // ),
-                                Row(
-                                  children: [
-                                    Obx(
-                                      () => Radio(
-                                        value: "Ustadz",
-                                        groupValue:
-                                            controller.aliasNama.value,
-                                        activeColor: Colors.black,
-                                        fillColor: WidgetStateProperty.all(
-                                          Colors.grey[700],
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the change here
-                                          controller.aliasNama.value =
-                                              value.toString();
-                                          // print(value);
-                                        },
-                                      ),
-                                    ),
-                                    Text("Ustadz"),
-                                    SizedBox(width: 20),
-                                    Obx(
-                                      () => Radio(
-                                        value: "Ustadzah",
-                                        groupValue:
-                                            controller.jenisKelamin.value,
-                                        activeColor: Colors.black,
-                                        fillColor: WidgetStateProperty.all(
-                                          Colors.grey[700],
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the change here
-                                          controller.jenisKelamin.value =
-                                              value.toString();
-                                          // print(value);
-                                        },
-                                      ),
-                                    ),
-                                    Text("Ustadzah"),
-                                  ],
-                                ),
-                                FieldTambahPegawai(
-                                  controller: controller,
-                                  controllerNya: controller.emailC,
-                                  label: 'Email',
-                                ),
-                                Row(
-                                  children: [
-                                    Obx(
-                                      () => Radio(
-                                        value: "Laki-Laki",
-                                        groupValue:
-                                            controller.jenisKelamin.value,
-                                        activeColor: Colors.black,
-                                        fillColor: WidgetStateProperty.all(
-                                          Colors.grey[700],
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the change here
-                                          controller.jenisKelamin.value =
-                                              value.toString();
-                                          // print(value);
-                                        },
-                                      ),
-                                    ),
-                                    Text("Laki-Laki"),
-                                    SizedBox(width: 20),
-                                    Obx(
-                                      () => Radio(
-                                        value: "Perempuan",
-                                        groupValue:
-                                            controller.jenisKelamin.value,
-                                        activeColor: Colors.black,
-                                        fillColor: WidgetStateProperty.all(
-                                          Colors.grey[700],
-                                        ),
-                                        onChanged: (value) {
-                                          // Handle the change here
-                                          controller.jenisKelamin.value =
-                                              value.toString();
-                                          // print(value);
-                                        },
-                                      ),
-                                    ),
-                                    Text("Perempuan"),
-                                  ],
-                                ),
-                                DropdownSearch<String>(
-                                  decoratorProps: DropDownDecoratorProps(
-                                    decoration: InputDecoration(
-                                      
-                                      border: OutlineInputBorder(),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      filled: true,
-                                      labelText: 'Jabatan',
-                                      labelStyle: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  selectedItem:
-                                      controller.jabatanC.text.isNotEmpty
-                                          ? controller.jabatanC.text
-                                          : null,
-                                  items: (f, cs) => controller.getDataJabatan(),
-                                  onChanged: (String? value) {
-                                    if (value != null) {
-                                      controller.jabatanC.text = value;
-                                    }
-                                  },
-                                  popupProps: PopupProps.menu(
-                                    fit: FlexFit.tight,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: ElevatedButton(onPressed: (){
-              // if(controller.nipC.text.isEmpty){
-              //   Get.snackbar("Error", "NIP masih kosong");
-              // }
-              // else 
-              if(controller.namaC.text.isEmpty){
-                Get.snackbar("Error", "nama masih kosong");
-              }
-              else if(controller.emailC.text.isEmpty){
-                Get.snackbar("Error", "email masih kosong");
-              }
-              else if(controller.jenisKelamin.value.isEmpty){
-                Get.snackbar("Error", "jenisKelamin masih kosong");
-              }
-              else if(controller.jabatanC.text.isEmpty){
-                Get.snackbar("Error", "jabatan masih kosong");
-              } else {
-                controller.simpanPegawai();
-              }
-            }, child: Text("Simpan")),
-          ),
-        ],
+      appBar: AppBar(
+        title: Text(controller.isEditMode ? 'Edit Data Pegawai' : 'Tambah Pegawai Baru')
       ),
-    );
-  }
-}
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: controller.formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Nama Lengkap
+              TextFormField(
+                controller: controller.namaC,
+                decoration: _buildInputDecoration(labelText: 'Nama Lengkap', icon: Icons.person),
+                validator: (v) => v!.isEmpty ? 'Nama tidak boleh kosong' : null,
+              ),
+              const SizedBox(height: 16),
+              
+              // Jenis Kelamin
+              Text("Jenis Kelamin", style: theme.textTheme.titleMedium),
+              Obx(() => Row(
+                children: [
+                  Expanded(child: RadioListTile<String>(title: Text("Laki-Laki"), value: "Laki-Laki", groupValue: controller.jenisKelamin.value, onChanged: controller.onChangeJenisKelamin)),
+                  Expanded(child: RadioListTile<String>(title: Text("Perempuan"), value: "Perempuan", groupValue: controller.jenisKelamin.value, onChanged: controller.onChangeJenisKelamin)),
+                ],
+              )),
+              SizedBox(height: 8),
 
-class FieldTambahPegawai extends StatelessWidget {
-  const FieldTambahPegawai({
-    super.key,
-    required this.controller,
-    required this.controllerNya,
-    required this.label,
-  });
+              // Email
+              TextFormField(
+                controller: controller.emailC,
+              keyboardType: TextInputType.emailAddress,
+              // Buat read-only jika dalam mode edit
+              readOnly: controller.isEditMode, 
+              decoration: _buildInputDecoration(
+                labelText: 'Email', 
+                icon: Icons.email
+              ).copyWith(
+                // Beri warna berbeda agar terlihat non-aktif
+                fillColor: controller.isEditMode ? Colors.grey[200] : null
+              ),
+              validator: (v) => !GetUtils.isEmail(v!) ? 'Format email tidak valid' : null,
+              ),
+              const SizedBox(height: 16),
 
-  final TambahPegawaiController controller;
-  final TextEditingController controllerNya;
-  final String label;
+              // Pemilihan JABATAN (Single Choice Dropdown)
+              Obx(() {
+                if (controller.isJabatanLoading.isTrue) return Center(child: CircularProgressIndicator());
+                return DropdownButtonFormField<String>(
+                  value: controller.jabatanTerpilih.value,
+                  decoration: _buildInputDecoration(labelText: 'Jabatan Utama', icon: Icons.work),
+                  hint: Text('Pilih satu jabatan...'),
+                  items: controller.semuaJabatan.map((jabatan) {
+                    return DropdownMenuItem(value: jabatan, child: Text(jabatan));
+                  }).toList(),
+                  onChanged: controller.onJabatanSelected,
+                  validator: (v) => v == null ? 'Jabatan wajib dipilih' : null,
+                );
+              }),
+              const SizedBox(height: 16),
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(top: 10),
-      child: TextField(
-        controller: controllerNya,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(fontSize: 12),
-          border: OutlineInputBorder(),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey),
+              // Pemilihan TUGAS TAMBAHAN (Multi Choice Dialog)
+              Obx(() {
+                if (controller.isTugasLoading.isTrue) return Center(child: CircularProgressIndicator());
+                return MultiSelectDialogField<String>(
+                  buttonIcon: Icon(Icons.arrow_downward),
+                  buttonText: Text("Tugas Tambahan (Opsional)"),
+                  title: Text("Pilih Tugas"),
+                  items: controller.semuaTugas.map((tugas) => MultiSelectItem<String>(tugas, tugas)).toList(),
+                  listType: MultiSelectListType.CHIP,
+                  onConfirm: controller.onTugasSelected,
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(4)),
+                  chipDisplay: MultiSelectChipDisplay(
+                    onTap: (value) => controller.tugasTerpilih.remove(value),
+                  ),
+                );
+              }),
+              const SizedBox(height: 30),
+
+              // Tombol Simpan
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                onPressed: controller.validasiDanSimpan,
+                child: Obx(() => Text(
+                  controller.isLoadingProses.isTrue ? 'MEMPROSES...' : (controller.isEditMode ? 'UPDATE DATA PEGAWAI' : 'SIMPAN DATA PEGAWAI')
+                )),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-class ClassClipPathTop extends CustomClipper<Path> {
-  @override
-  getClip(Size size) {
-    Path path = Path();
-    path.lineTo(0, size.height - 60);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height,
-      size.width,
-      size.height - 60,
+  InputDecoration _buildInputDecoration({required String labelText, required IconData icon}) {
+    return InputDecoration(
+      labelText: labelText,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(),
     );
-    path.lineTo(size.width, 0);
-    path.close();
-
-    return path;
   }
-
-  @override
-  bool shouldReclip(covariant CustomClipper oldClipper) => false;
 }

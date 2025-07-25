@@ -14,6 +14,11 @@ class NilaiHalaqohUmi {
   final String capaian;
   final String kelas;
   final int nilai;
+  final String materi;
+  final String tempatMengaji;
+  final Timestamp? terakhirDiubah;
+  final String? diubahOlehNama;
+  final String? diubahOlehUid;
 
   NilaiHalaqohUmi({
     required this.id,
@@ -26,6 +31,11 @@ class NilaiHalaqohUmi {
     required this.capaian,
     required this.kelas,
     required this.nilai,
+    required this.materi,
+    required this.tempatMengaji,
+    this.terakhirDiubah,
+    this.diubahOlehNama,
+    this.diubahOlehUid,
   });
 
   // Factory untuk membuat objek dari data Firestore
@@ -56,6 +66,11 @@ class NilaiHalaqohUmi {
       capaian: data['capaian'] ?? '-',
       kelas: data['kelas'] ?? '-',
       nilai: data['nilai'] ?? '-',
+      materi: data['materi'] ?? '-',
+      tempatMengaji: data['tempatmengaji'] ?? 'Tidak tercatat', 
+      terakhirDiubah: data['terakhir_diubah'] as Timestamp?,
+      diubahOlehNama: data['diubah_oleh_nama'] as String?,
+      diubahOlehUid: data['diubah_oleh_uid'] as String?,
     );
   }
 

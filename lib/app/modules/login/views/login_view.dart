@@ -11,17 +11,20 @@ class LoginView extends GetView<LoginController> {
   const LoginView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: Column(
-          children: <Widget>[
-            const HeaderContainer(),
-            Expanded(
-              flex: 1,
-              child: Container(
-                margin: const EdgeInsets.only(left: 20, right: 20, top: 30),
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Container(
+      // Padding di sini tidak lagi diperlukan karena SingleChildScrollView akan menangani ruang
+      // padding: const EdgeInsets.only(bottom: 30), 
+      child: Column(
+        children: <Widget>[
+          const HeaderContainer(),
+          Expanded(
+            flex: 1,
+            child: Container(
+              margin: const EdgeInsets.only(left: 20, right: 20, top: 30),
+              // --- [PERBAIKAN] Bungkus Column dengan SingleChildScrollView ---
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
@@ -42,13 +45,12 @@ class LoginView extends GetView<LoginController> {
                           child: Icon(controller.isLogin.value ? Icons.visibility_outlined : 
                           Icons.visibility_off_outlined, ),
                           onTap: () {
-                            controller.isLogin.value =
-                                !controller.isLogin.value;
+                            controller.isLogin.value = !controller.isLogin.value;
                           },
                         ),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 20), // Sedikit tambah spasi
                     Obx(
                       () => SizedBox(
                         width: 150,
@@ -64,7 +66,7 @@ class LoginView extends GetView<LoginController> {
                             foregroundColor: Colors.white,
                           ),
                           child: Text(
-                            controller.isLoading.isFalse ? "Login" : "LOADING...", style: TextStyle(fontSize: 17),
+                            controller.isLoading.isFalse ? "Login" : "LOADING...", style: const TextStyle(fontSize: 17),
                           ),
                         ),
                       ),
@@ -77,16 +79,20 @@ class LoginView extends GetView<LoginController> {
                         child: const Text("Forgot Password?"),
                       ),
                     ),
-                    const Spacer(),
+                    // Spacer tidak lagi diperlukan karena SingleChildScrollView
+                    // tidak memiliki tinggi tak terbatas. Kita bisa ganti dengan SizedBox
+                    // jika butuh spasi di bawah.
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+ }
 
   Widget _textInput({
     required TextEditingController controller,

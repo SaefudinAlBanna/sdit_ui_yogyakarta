@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 
 import '../modules/absensi/bindings/absensi_binding.dart';
 import '../modules/absensi/views/absensi_view.dart';
+import '../modules/analisis_akademik/bindings/analisis_akademik_binding.dart';
+import '../modules/analisis_akademik/views/analisis_akademik_view.dart';
 import '../modules/atp_form/bindings/atp_form_binding.dart';
 import '../modules/atp_form/views/atp_form_view.dart';
 import '../modules/buat_jadwal_pelajaran/bindings/buat_jadwal_pelajaran_binding.dart';
@@ -26,6 +28,8 @@ import '../modules/daftar_kelas/bindings/daftar_kelas_binding.dart';
 import '../modules/daftar_kelas/views/daftar_kelas_view.dart';
 import '../modules/daftar_nilai/bindings/daftar_nilai_binding.dart';
 import '../modules/daftar_nilai/views/daftar_nilai_view.dart';
+import '../modules/daftar_pegawai/bindings/daftar_pegawai_binding.dart';
+import '../modules/daftar_pegawai/views/daftar_pegawai_view.dart';
 import '../modules/daftar_siswa_perkelas/bindings/daftar_siswa_perkelas_binding.dart';
 import '../modules/daftar_siswa_perkelas/views/daftar_siswa_perkelas_view.dart';
 import '../modules/daftar_siswa_permapel/bindings/daftar_siswa_permapel_binding.dart';
@@ -68,12 +72,18 @@ import '../modules/laksanakan_ujian/bindings/laksanakan_ujian_binding.dart';
 import '../modules/laksanakan_ujian/views/laksanakan_ujian_view.dart';
 import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
+import '../modules/manajemen_jabatan/bindings/manajemen_jabatan_binding.dart';
+import '../modules/manajemen_jabatan/views/manajemen_jabatan_view.dart';
+import '../modules/manajemen_tugas/bindings/manajemen_tugas_binding.dart';
+import '../modules/manajemen_tugas/views/manajemen_tugas_view.dart';
 import '../modules/mapel_siswa/bindings/mapel_siswa_binding.dart';
 import '../modules/mapel_siswa/views/mapel_siswa_view.dart';
 import '../modules/modul_ajar_form/bindings/modul_ajar_form_binding.dart';
 import '../modules/modul_ajar_form/views/modul_ajar_form_view.dart';
 import '../modules/new_password/bindings/new_password_binding.dart';
 import '../modules/new_password/views/new_password_view.dart';
+import '../modules/pantau_tahfidz/bindings/pantau_tahfidz_binding.dart';
+import '../modules/pantau_tahfidz/views/pantau_tahfidz_view.dart';
 import '../modules/pembayaran_spp/bindings/pembayaran_spp_binding.dart';
 import '../modules/pembayaran_spp/views/pembayaran_spp_view.dart';
 import '../modules/pemberian_guru_mapel/bindings/pemberian_guru_mapel_binding.dart';
@@ -88,6 +98,8 @@ import '../modules/prota_prosem/bindings/prota_prosem_binding.dart';
 import '../modules/prota_prosem/views/prota_prosem_view.dart';
 import '../modules/rapor_siswa/bindings/rapor_siswa_binding.dart';
 import '../modules/rapor_siswa/views/rapor_siswa_view.dart';
+import '../modules/rekap_absensi/bindings/rekap_absensi_binding.dart';
+import '../modules/rekap_absensi/views/rekap_absensi_view.dart';
 import '../modules/rekap_jurnal_admin/bindings/rekap_jurnal_admin_binding.dart';
 import '../modules/rekap_jurnal_admin/views/rekap_jurnal_admin_view.dart';
 import '../modules/rekap_jurnal_guru/bindings/rekap_jurnal_guru_binding.dart';
@@ -393,6 +405,36 @@ class AppPages {
       name: _Paths.LAKSANAKAN_UJIAN,
       page: () => const LaksanakanUjianView(),
       binding: LaksanakanUjianBinding(),
+    ),
+    GetPage(
+      name: _Paths.REKAP_ABSENSI,
+      page: () => const RekapAbsensiView(),
+      binding: RekapAbsensiBinding(),
+    ),
+    // GetPage(
+    //   name: _Paths.ANALISIS_AKADEMIK,
+    //   page: () => const AnalisisAkademikPage(),
+    //   binding: AnalisisAkademikBinding(),
+    // ),
+    GetPage(
+      name: _Paths.MANAJEMEN_JABATAN,
+      page: () => const ManajemenJabatanView(),
+      binding: ManajemenJabatanBinding(),
+    ),
+    GetPage(
+      name: _Paths.MANAJEMEN_TUGAS,
+      page: () => const ManajemenTugasView(),
+      binding: ManajemenTugasBinding(),
+    ),
+    GetPage(
+      name: _Paths.DAFTAR_PEGAWAI,
+      page: () => const DaftarPegawaiView(),
+      binding: DaftarPegawaiBinding(),
+    ),
+    GetPage(
+      name: _Paths.PANTAU_TAHFIDZ,
+      page: () => const PantauTahfidzView(),
+      binding: PantauTahfidzBinding(),
     ),
   ];
 }

@@ -120,10 +120,13 @@ class PemberianKelasSiswaController extends GetxController {
       return const Stream.empty();
     }
     String idTahunAjaran = homeC.idTahunAjaran.value!;
+    String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
+
     return firestore
         .collection('Sekolah').doc(idSekolah)
         .collection('tahunajaran').doc(idTahunAjaran)
         .collection('kelastahunajaran').doc(kelasTerpilih.value!)
+        .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
         .collection('daftarsiswa')
         .snapshots();
   }
@@ -136,22 +139,24 @@ class PemberianKelasSiswaController extends GetxController {
     
     try {
       String idTahunAjaran = homeC.idTahunAjaran.value!;
+      String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
       final String namaKelas = kelasTerpilih.value!;
 
-      // Definisikan path yang akan dimodifikasi
-      final siswaDiKelasRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(namaKelas).collection('daftarsiswa').doc(nisn);
+      // Path siswa di dalam kelas, sekarang sudah menyertakan semester
+      final siswaDiKelasRef = firestore.collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(idTahunAjaran)
+        .collection('kelastahunajaran').doc(namaKelas)
+        .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+        .collection('daftarsiswa').doc(nisn);
+      
       final siswaUtamaRef = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisn);
 
       WriteBatch batch = firestore.batch();
-
-      // Operasi 1: Hapus dokumen siswa dari dalam sub-koleksi kelas
       batch.delete(siswaDiKelasRef);
-      // Operasi 2: Update status siswa di dokumen utama kembali menjadi 'tidak aktif'
       batch.update(siswaUtamaRef, {'status': 'tidak aktif'});
-
       await batch.commit();
       
-      Get.back(); // Tutup dialog loading
+      Get.back();
       Get.snackbar("Berhasil", "Siswa telah dihapus dari kelas $namaKelas.");
 
     } catch(e) {
@@ -160,163 +165,121 @@ class PemberianKelasSiswaController extends GetxController {
     }
   }
 
+  // Di dalam PemberianKelasSiswaController
+
+  /// [FINAL & LENGKAP] Menginisialisasi SEMUA siswa yang berstatus 'baru' ke kelas dengan struktur semester.
+  Future<void> inisialisasiSemuaSiswaKeKelas() async {
+    if (kelasTerpilih.value == null || waliKelasSiswaC.text.isEmpty) {
+      Get.snackbar("Gagal", "Pilih kelas dan tentukan wali kelas terlebih dahulu.");
+      return;
+    }
+    Get.defaultDialog(
+      title: "Konfirmasi Aksi Massal",
+      middleText: "Anda yakin ingin menambahkan SEMUA siswa yang belum memiliki kelas ke ${kelasTerpilih.value}?",
+      textConfirm: "Ya, Tambahkan Semua",
+      onConfirm: () async {
+        Get.back();
+        Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+        isLoadingTambahKelas.value = true;
+        try {
+          final String namaKelasSaatIni = kelasTerpilih.value!;
+          final String idTahunAjaran = homeC.idTahunAjaran.value!;
+          final String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
+
+          // (Sisa logika persiapan data tidak berubah...)
+          final String kelasAngka = namaKelasSaatIni.substring(0, 1);
+          final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
+          final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
+          final guruDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').where('alias', isEqualTo: waliKelasSiswaC.text).limit(1).get();
+          if (guruDoc.docs.isEmpty) throw Exception("Data wali kelas tidak ditemukan.");
+          final String idWaliKelas = guruDoc.docs.first.id;
+          final String namaWaliKelas = guruDoc.docs.first.data()['alias'];
+
+          final siswaBaruSnapshot = await firestore.collection('Sekolah').doc(idSekolah).collection('siswa').where('status', isNotEqualTo: 'aktif').get();
+          if (siswaBaruSnapshot.docs.isEmpty) {
+            Get.back(); Get.snackbar("Info", "Tidak ada siswa baru yang bisa ditambahkan.");
+            isLoadingTambahKelas.value = false; return;
+          }
+          
+          WriteBatch batch = firestore.batch();
+          final kelasTahunAjaranRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(namaKelasSaatIni);
+          final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
+
+          for (var docSiswa in siswaBaruSnapshot.docs) {
+            final nisnSiswa = docSiswa.id;
+            final namaSiswa = docSiswa.data()['nama'] ?? 'Tanpa Nama';
+            
+            // Path siswa di dalam semester
+            final siswaDiSemesterRef = kelasTahunAjaranRef
+                .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+                .collection('daftarsiswa').doc(nisnSiswa);
+                
+            final siswaUtamaRef = docSiswa.reference;
+            final dataSiswa = {'namasiswa': namaSiswa, 'nisn': nisnSiswa, ...dataKelas, 'statuskelompok': "baru"};
+            
+            batch.set(kelasTahunAjaranRef, dataKelas, SetOptions(merge: true));
+            batch.set(siswaDiSemesterRef, dataSiswa);
+            batch.update(siswaUtamaRef, {'status': 'aktif'});
+          }
+          
+          await batch.commit();
+          Get.back();
+          Get.snackbar("Berhasil", "${siswaBaruSnapshot.docs.length} siswa telah ditambahkan ke kelas $namaKelasSaatIni.");
+        } catch (e) {
+          Get.back();
+          Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
+        } finally {
+          isLoadingTambahKelas.value = false;
+        }
+      },
+      textCancel: "Batal"
+    );
+  }
+
   Future<void> inisialisasiSiswaDiKelas(String namaSiswa, String nisnSiswa) async {
-    // =================================================================
-    // BAGIAN 1: VALIDASI INPUT
-    // =================================================================
-    if (kelasTerpilih.value == null) {
-      Get.snackbar("Gagal", "Kelas belum dipilih. Silakan pilih kelas di bagian atas.");
+    if (kelasTerpilih.value == null || waliKelasSiswaC.text.isEmpty) {
+      Get.snackbar("Gagal", "Pilih kelas dan tentukan wali kelas terlebih dahulu.");
       return;
     }
-    if (waliKelasSiswaC.text.isEmpty) {
-      Get.snackbar("Gagal", "Wali kelas belum ditentukan. Silakan pilih wali kelas.");
-      return;
-    }
-
     isLoadingTambahKelas.value = true;
-
-    // =================================================================
-    // BAGIAN 2: PERSIAPAN DATA
-    // =================================================================
     try {
       final String namaKelasSaatIni = kelasTerpilih.value!;
-      final String tahunAjaran = await getTahunAjaranTerakhir();
-      final String idTahunAjaran = tahunAjaran.replaceAll("/", "-");
-      
-      // Menentukan Fase berdasarkan nama kelas
+      final String idTahunAjaran = homeC.idTahunAjaran.value!;
+      final String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
+
+      // (Sisa logika persiapan data tidak berubah...)
       final String kelasAngka = namaKelasSaatIni.substring(0, 1);
-      final String idFase = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" 
-                          : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" 
-                          : "fase_c";
-
-      // =================================================================
-      // BAGIAN 3: PENGAMBILAN DATA YANG DIPERLUKAN (PRE-FETCH)
-      // =================================================================
-      
-      // Ambil data kurikulum (daftar mapel) dari Firestore
-      final kurikulumDoc = await firestore.collection('konfigurasi_kurikulum').doc(idFase).get();
-      if (!kurikulumDoc.exists || kurikulumDoc.data()?['matapelajaran'] == null) {
-        throw Exception("Konfigurasi kurikulum untuk $idFase tidak ditemukan di Firestore.");
-      }
-      final List<String> daftarMapelWajib = List<String>.from(kurikulumDoc.data()!['matapelajaran']);
-
-      // Ambil data wali kelas
+      final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
+      final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
       final guruDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').where('alias', isEqualTo: waliKelasSiswaC.text).limit(1).get();
-      if (guruDoc.docs.isEmpty) throw Exception("Data wali kelas tidak ditemukan.");
+      if (guruDoc.docs.isEmpty) throw Exception("Data wali kelas dengan nama '${waliKelasSiswaC.text}' tidak ditemukan.");
       final String idWaliKelas = guruDoc.docs.first.id;
       final String namaWaliKelas = guruDoc.docs.first.data()['alias'];
 
-      // =================================================================
-      // BAGIAN 4: PROSES PENULISAN ATOMIK DENGAN WRITEBATCH
-      // =================================================================
       WriteBatch batch = firestore.batch();
-
-      // --- 4.1 Definisikan semua path dokumen yang akan kita sentuh ---
+      
       final kelasTahunAjaranRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(namaKelasSaatIni);
-      final siswaDiKelasRef = kelasTahunAjaranRef.collection('daftarsiswa').doc(nisnSiswa);
-      final semesterRef = siswaDiKelasRef.collection('semester').doc('Semester I');
+      
+      // Path siswa di dalam struktur semester
+      final siswaDiSemesterRef = kelasTahunAjaranRef
+          .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+          .collection('daftarsiswa').doc(nisnSiswa);
+          
       final siswaUtamaRef = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisnSiswa);
-
-      // --- 4.2 Siapkan data dasar untuk di-set ---
-      final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': idFase.replaceAll('_', ' ').toUpperCase()};
-      final dataSiswaDiKelas = {'namasiswa': namaSiswa, 'nisn': nisnSiswa, ...dataKelas};
       
-      // --- 4.3 Tambahkan operasi tulis ke Batch ---
+      final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
+      final dataSiswa = {'namasiswa': namaSiswa, 'nisn': nisnSiswa, ...dataKelas, 'statuskelompok': "baru"};
       
-      // a. Set/Update dokumen kelas (merge:true agar tidak menimpa data pendamping)
       batch.set(kelasTahunAjaranRef, dataKelas, SetOptions(merge: true));
-
-      // b. Set dokumen siswa di dalam kelas
-      batch.set(siswaDiKelasRef, dataSiswaDiKelas);
-      
-      // c. Set dokumen semester
-      batch.set(semesterRef, {'namaSemester': 'Semester I'});
-      
-      // d. Loop untuk "menanam" semua mata pelajaran wajib
-      for (String namaMapel in daftarMapelWajib) {
-        final mapelRef = semesterRef.collection('matapelajaran').doc(namaMapel);
-        final dataMapel = {
-          'namamatapelajaran': namaMapel,
-          'nilai_akhir': null,
-          'catatan_guru': null
-        };
-        batch.set(mapelRef, dataMapel);
-      }
-      
-      // e. Update status siswa di koleksi utama
+      batch.set(siswaDiSemesterRef, dataSiswa);
       batch.update(siswaUtamaRef, {'status': 'aktif'});
-
-      // --- 4.4 Jalankan semua operasi tulis ---
+      
       await batch.commit();
-
-      Get.snackbar("Berhasil", "$namaSiswa telah diinisialisasi di kelas $namaKelasSaatIni.");
-
+      Get.snackbar("Berhasil", "$namaSiswa telah ditambahkan ke kelas $namaKelasSaatIni.");
     } catch (e) {
-      Get.snackbar('Gagal', e.toString());
+      Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
     } finally {
       isLoadingTambahKelas.value = false;
     }
   }
-
-  // Future<void> simpanKelasBaruLagi(String namaSiswa, String nisnSiswa) async {
-  //   if (kelasTerpilih.value == null) {
-  //     Get.snackbar("Gagal", "Kelas belum dipilih.");
-  //     return;
-  //   }
-  //   if (waliKelasSiswaC.text.isEmpty) {
-  //     Get.snackbar("Gagal", "Wali kelas belum ditentukan.");
-  //     return;
-  //   }
-
-  //   isLoadingTambahKelas.value = true;
-  //   final String namaKelasSaatIni = kelasTerpilih.value!; 
-
-  //   try {
-  //     String tahunajaranya = await getTahunAjaranTerakhir();
-  //     String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-  //     String kelasNya = namaKelasSaatIni.substring(0, 1);
-  //     String faseNya = (kelasNya == '1' || kelasNya == '2') ? "Fase A" : (kelasNya == '3' || kelasNya == '4') ? "Fase B" : "Fase C";
-      
-  //     CollectionReference<Map<String, dynamic>> colKelas = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran');
-  //     DocumentSnapshot<Map<String, dynamic>> docIdKelas = await colKelas.doc(namaKelasSaatIni).get();
-      
-  //     WriteBatch batch = firestore.batch();
-  //     String idwalikelas;
-  //     String walikelas;
-
-  //     if (docIdKelas.exists && docIdKelas.data()?['walikelas'] != null) {
-  //       walikelas = docIdKelas.data()!['walikelas'];
-  //       idwalikelas = docIdKelas.data()!['idwalikelas'];
-  //     } else {
-  //       walikelas = waliKelasSiswaC.text;
-  //       QuerySnapshot<Map<String, dynamic>> querySnapshot = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').where('alias', isEqualTo: walikelas).get();
-  //       if (querySnapshot.docs.isEmpty) throw Exception('Wali kelas "$walikelas" tidak ditemukan.');
-  //       idwalikelas = querySnapshot.docs.first.id;
-  //     }
-      
-  //     final kelasDocRef = colKelas.doc(namaKelasSaatIni);
-  //     final daftarSiswaDocRef = kelasDocRef.collection('daftarsiswa').doc(nisnSiswa);
-  //     final siswaUtamaRef = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisnSiswa);
-  //     final kelasAktifDocRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelasaktif').doc(namaKelasSaatIni);
-  //     final pegawaiTahunAjaranRef = firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').doc(idwalikelas).collection('tahunajaran').doc(idTahunAjaran);
-  //     final pegawaiKelasnyaRef = pegawaiTahunAjaranRef.collection('kelasnya').doc(namaKelasSaatIni);
-
-  //     final dataKelas = {'namakelas': namaKelasSaatIni, 'fase': faseNya, 'walikelas': walikelas, 'idwalikelas': idwalikelas, 'tahunajaran': tahunajaranya, 'emailpenginput': emailAdmin, 'idpenginput': idUser, 'tanggalinput': FieldValue.serverTimestamp()};
-  //     final dataDaftarSiswa = {'namasiswa': namaSiswa, 'nisn': nisnSiswa, 'status': 'aktif', ...dataKelas};
-      
-  //     batch.set(kelasDocRef, dataKelas, SetOptions(merge: true));
-  //     batch.set(daftarSiswaDocRef, dataDaftarSiswa);
-  //     batch.set(pegawaiTahunAjaranRef, {'tahunajaran': tahunajaranya}, SetOptions(merge: true));
-  //     batch.set(pegawaiKelasnyaRef, {'namakelas': namaKelasSaatIni, 'fase': faseNya});
-  //     batch.set(kelasAktifDocRef, {'namakelas': namaKelasSaatIni, 'fase': faseNya}, SetOptions(merge: true));
-  //     batch.update(siswaUtamaRef, {'status': 'aktif'});
-
-  //     await batch.commit();
-  //     Get.snackbar("Berhasil", "$namaSiswa telah ditambahkan ke kelas $namaKelasSaatIni.");
-  //   } catch (e) {
-  //     Get.snackbar('Gagal Menambahkan Siswa', e.toString());
-  //   } finally {
-  //     isLoadingTambahKelas.value = false;
-  //   }
-  // }
 }

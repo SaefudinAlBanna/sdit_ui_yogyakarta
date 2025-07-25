@@ -14,7 +14,7 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Halaqoh Pengampu'),
+        title: const Text('Kelas Tahsin'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -45,7 +45,7 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
           _buildHalaqohSelector(),
 
           // --- WIDGET BARU UNTUK MENAMPILKAN TEMPAT ---
-          _buildTempatInfo(),
+          _buildTempatInfo(context),
           // ------------------------------------------
           
           Padding(
@@ -63,6 +63,38 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
             child: _buildSantriList(),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditLokasiDialog() {
+    // --- PERBAIKAN DI SINI ---
+    final kelompok = controller.halaqohTerpilih.value;
+    if (kelompok == null) return; // Pengaman jika tidak ada kelompok terpilih
+    
+    // Ambil lokasi saat ini dari data kelompok terpilih
+    controller.lokasiC.text = kelompok['lokasi_terakhir'] ?? kelompok['tempatmengaji'];
+    // --- AKHIR PERBAIKAN ---
+
+    Get.defaultDialog(
+      title: "Ubah Lokasi Halaqoh",
+      content: TextField(
+        controller: controller.lokasiC,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: "Nama Lokasi Baru",
+          border: OutlineInputBorder(),
+        ),
+      ),
+      confirm: Obx(() => ElevatedButton(
+        onPressed: controller.isDialogLoading.value ? null : controller.updateLokasiHalaqoh,
+        child: controller.isDialogLoading.value 
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+            : const Text("Simpan"),
+      )),
+      cancel: TextButton(
+        onPressed: () => Get.back(),
+        child: const Text("Batal"),
       ),
     );
   }
@@ -280,8 +312,7 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
     );
   }
 
-  /// Widget untuk menampilkan daftar kelompok halaqoh yang bisa dipilih.
-  Widget _buildHalaqohSelector() {
+   Widget _buildHalaqohSelector() {
     return Obx(() {
       if (controller.isLoadingHalaqoh.value) {
         return const Center(child: Padding(
@@ -304,13 +335,15 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: controller.daftarHalaqoh.length,
           itemBuilder: (context, index) {
-            final namaHalaqoh = controller.daftarHalaqoh[index];
+            final kelompok = controller.daftarHalaqoh[index];
+            final String namaTampilan = kelompok['fase'] ?? 'Kelompok'; // Tampilkan fase sebagai nama
+
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: Obx(() {
-                final isSelected = controller.halaqohTerpilih.value == namaHalaqoh;
+                final isSelected = controller.halaqohTerpilih.value?['fase'] == kelompok['fase'];
                 return ChoiceChip(
-                  label: Text(namaHalaqoh),
+                  label: Text(namaTampilan),
                   avatar: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
                   labelStyle: TextStyle(
                     color: isSelected ? Colors.white : Colors.black,
@@ -319,7 +352,7 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
-                      controller.gantiHalaqohTerpilih(namaHalaqoh);
+                      controller.gantiHalaqohTerpilih(kelompok as Map<String, dynamic>); // Kirim seluruh Map
                     }
                   },
                   selectedColor: Colors.teal.shade500,
@@ -338,54 +371,58 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
   }
 
    /// Widget BARU untuk menampilkan informasi tempat.
-  Widget _buildTempatInfo() {
+  Widget _buildTempatInfo(BuildContext context) {
     return Obx(() {
-      // Tampilkan widget ini hanya jika sedang loading atau jika tempat sudah terpilih
-      final tempat = controller.tempatTerpilih.value;
+      // --- PERBAIKAN DI SINI ---
+      // Ambil data tempat langsung dari kelompok yang terpilih
+      final kelompok = controller.halaqohTerpilih.value;
+      if (kelompok == null) return const SizedBox.shrink();
+      
+      // Tentukan lokasi: gunakan 'lokasi_terakhir' jika ada, jika tidak, gunakan 'tempatmengaji' sebagai fallback
+      final tempat = kelompok['lokasi_terakhir'] ?? kelompok['tempatmengaji'];
+      // --- AKHIR PERBAIKAN ---
+
       final isLoading = controller.isLoadingSantri.value;
 
-      if (isLoading) {
-        // Tampilkan placeholder saat loading
+      if (isLoading && tempat == null) {
         return Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
           child: const Text("Mencari lokasi..."),
         );
       }
 
       if (tempat == null || tempat.isEmpty) {
-        // Jangan tampilkan apa-apa jika tidak ada tempat
         return const SizedBox.shrink();
       }
 
-      // Tampilkan info lokasi jika sudah ditemukan
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.teal.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.teal.shade200)
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_on_outlined, color: Colors.teal.shade700, size: 18),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                "Lokasi: $tempat",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal.shade800
+      return InkWell(
+        onTap: _showEditLokasiDialog,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.teal.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.teal.shade200)
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_on_outlined, color: Colors.teal.shade700, size: 18),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  "Lokasi: $tempat",
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade800),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Icon(Icons.edit, size: 16, color: Colors.teal.shade600),
+            ],
+          ),
         ),
       );
     });

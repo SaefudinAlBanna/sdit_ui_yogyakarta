@@ -136,55 +136,64 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
   final controller = Get.find<HomeController>();
   // Daftar semua menu yang mungkin ada
   final List<Widget> allMenuItems = [
-    if (controller.userRole.value == 'Kepala Sekolah')
-  _MenuItem(
-    title: 'Pesan Akhir Sekolah',
-    imagePath: "assets/png/update_waktu.png", // Ganti ikon jika perlu
-    onTap: () {
-      Get.back(); // Tutup bottom sheet menu
-      // Panggil dialog untuk edit
-      final pesanC = TextEditingController(text: controller.pesanAkhirSekolahKustom.value);
-      Get.defaultDialog(
-        title: "Ubah Pesan Akhir Sekolah",
-        content: TextField(
-          controller: pesanC,
-          autofocus: true,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: "Pesan untuk ditampilkan", border: OutlineInputBorder()),
-        ),
-        confirm: ElevatedButton(
-          onPressed: () {
-            controller.simpanPesanAkhirSekolah(pesanC.text.trim());
-            Get.back();
-          },
-          child: const Text("Simpan"),
-        ),
-        cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
-      );
-    },
-  ),
-    if (controller.userRole.value == 'Koordinator Halaqoh')
-    _MenuItem(title: 'Tambah Halaqoh', imagePath: "assets/png/daftar_list.png", onTap: () {
-      Get.back();
-      Get.toNamed(Routes.TAMBAH_KELOMPOK_MENGAJI);}),
+    
+    // if (controller.userRole.value == 'Kepala Sekolah' || controller.userRole.value == 'Admin')
+  //   if (controller.isSuperUser)
+  // _MenuItem(
+  //   title: 'Pesan Akhir Sekolah',
+  //   imagePath: "assets/png/update_waktu.png", // Ganti ikon jika perlu
+  //   onTap: () {
+  //     Get.back(); // Tutup bottom sheet menu
+  //     // Panggil dialog untuk edit
+  //     final pesanC = TextEditingController(text: controller.pesanAkhirSekolahKustom.value);
+  //     Get.defaultDialog(
+  //       title: "Ubah Pesan Akhir Sekolah",
+  //       content: TextField(
+  //         controller: pesanC,
+  //         autofocus: true,
+  //         maxLines: 4,
+  //         decoration: const InputDecoration(labelText: "Pesan untuk ditampilkan", border: OutlineInputBorder()),
+  //       ),
+  //       confirm: ElevatedButton(
+  //         onPressed: () {
+  //           controller.simpanPesanAkhirSekolah(pesanC.text.trim());
+  //           Get.back();
+  //         },
+  //         child: const Text("Simpan"),
+  //       ),
+  //       cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
+  //     );
+  //   },
+  // ),
+  //   if (controller.userRole.value == 'Koordinator Halaqoh' || controller.userRole.value =='Admin')
+  //   _MenuItem(title: 'Tambah Tahsin', imagePath: "assets/png/daftar_list.png", onTap: () {
+  //     Get.back();
+  //     Get.toNamed(Routes.TAMBAH_KELOMPOK_MENGAJI);}),
+    if( controller.isAdmin || controller.isDalang)
     _MenuItem(title: 'Ekskul', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.DAFTAR_EKSKUL);}),
-    if (controller.userRole.value == 'Koordinator Halaqoh')
-    _MenuItem(title: 'Tahsin Tahfidz', imagePath: "assets/png/daftar_tes.png", onTap: () { Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE);}),
-    if (controller.userRole.value == 'Koordinator Halaqoh')
+    // if (controller.userRole.value == 'Koordinator Halaqoh' || controller.userRole.value =='Admin')
+    // _MenuItem(title: 'Tahsin Tahfidz', imagePath: "assets/png/daftar_tes.png", onTap: () { Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE);}),
+    
+    // if (controller.userRole.value == 'Koordinator Halaqoh' || controller.userRole.value =='Admin')
+    if(controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Siap Ujian', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.LAKSANAKAN_UJIAN);}),
-    if (controller.userRole.value == 'Admin')
+
+    if (controller.isAdmin || controller.isDalang)
     _MenuItem(title: 'Bayar SPP', imagePath: "assets/png/uang.png", onTap: () {
       Get.toNamed(Routes.PEMBAYARAN_SPP);
     }),
-    if (controller.userRole.value == 'Admin')
+    if (controller.isAdminKepsek || controller.isDalang)
     _MenuItem(title: 'Tambah Info', imagePath: "assets/png/tumpukan_buku.png", onTap: () {
     
       Get.back();
       Get.toNamed(Routes.INPUT_INFO_SEKOLAH);}),
+    
     _MenuItem(title: 'Daftar Jurnal', imagePath: "assets/png/tumpukan_buku.png", onTap: () {
       Get.back();
       Get.toNamed(Routes.DAFTAR_JURNAL_AJAR);}),
-    if (controller.userRole.value == 'Admin')
+    // if (controller.userRole.value == 'Admin' || controller.userRole.value == 'Koordinator Halaqoh')
+
+    if(controller.isAdminKepsek || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Pemberian Mapel Guru', imagePath: "assets/png/jurnal_ajar.png",
           onTap: () {
             // Tutup bottom sheet menu dulu, lalu langsung navigasi tanpa argumen.
@@ -192,13 +201,17 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
             Get.toNamed(Routes.PEMBERIAN_GURU_MAPEL);
           },
         ),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Tambah Siswa', imagePath: "assets/png/jurnal_ajar.png", onTap: () { Get.toNamed(Routes.TAMBAH_SISWA);}),
-    if (controller.userRole.value == 'Admin')
-    _MenuItem(title: 'Tambah Pegawai', imagePath: "assets/png/kamera_layar.png", onTap: () { Get.toNamed(Routes.TAMBAH_PEGAWAI); }),
-    if (controller.userRole.value == 'Admin')
+    
+    _MenuItem(title: 'Daftar Pegawai', imagePath: "assets/png/kamera_layar.png", onTap: () { Get.toNamed(Routes.DAFTAR_PEGAWAI); }),
+    
+
+    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Tambah Kelas', imagePath: "assets/png/layar.png", onTap: () { Get.back(); Get.toNamed(Routes.PEMBERIAN_KELAS_SISWA); }),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.isDalang)
     _MenuItem(title: 'Tahun Ajaran', imagePath: "assets/png/layar_list.png", onTap: () {
      Get.defaultDialog(
                                               onCancel: () {
@@ -269,23 +282,29 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
     // _MenuItem(title: 'Tanggapan Catatan (KS, WK)', imagePath: "assets/png/update_waktu.png", onTap: () {
     //   Get.toNamed(Routes.TANGGAPAN_CATATAN);
     // }),
-    // _MenuItem(title: 'Catatan Siswa(WK)', imagePath: "assets/png/daftar_list.png", onTap: () {}),
-    if (controller.userRole.value == 'Kepala Sekolah')
+    
+
+    if (controller.isDalang)
     _MenuItem(title: 'Rekapitulasi Sekolah', imagePath: "assets/png/layar.png", onTap: () { Get.toNamed(Routes.REKAPITULASI_PEMBAYARAN); }),
-    if (controller.userRole.value == 'Kepala Sekolah')
+    
+    if (controller.isDalang)
     _MenuItem(title: 'Rekapitulasi Rinci', imagePath: "assets/png/kamera_layar.png", onTap: () { Get.toNamed(Routes.REKAPITULASI_PEMBAYARAN_RINCI); }),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.canManageTahsin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Buat Jadwal Pelajaran', imagePath: "assets/png/papan_list.png", onTap: () { Get.toNamed(Routes.BUAT_JADWAL_PELAJARAN); }),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Input Sarpras', imagePath: "assets/png/tumpukan_buku.png", onTap: () { Get.toNamed(Routes.BUAT_SARPRAS); }),
     _MenuItem(title: 'Info Sarpras', imagePath: "assets/png/toga_lcd.png", onTap: () { Get.toNamed(Routes.DATA_SARPRAS); }),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Import Siswa Excel', imagePath: "assets/png/layar.png", onTap: () { Get.toNamed(Routes.IMPORT_SISWA_EXCEL); }),
-    if (controller.userRole.value == 'Admin')
+    
+    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Import Pegawai Excel', imagePath: "assets/png/toga_lcd.png", onTap: () { Get.toNamed(Routes.IMPORT_PEGAWAI); }),
-    _MenuItem(title: 'Hapus Pegawai', imagePath: "assets/png/update_waktu.png", onTap: () { }),
-    _MenuItem(title: 'Hapus Siswa', imagePath: "assets/png/ktp.png", onTap: () { }),
-    _MenuItem(title: 'Absen', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.ABSENSI); }),
+    // _MenuItem(title: 'Hapus Pegawai', imagePath: "assets/png/update_waktu.png", onTap: () { }),
+    // _MenuItem(title: 'Hapus Siswa', imagePath: "assets/png/ktp.png", onTap: () { }),
+    // _MenuItem(title: 'Absen', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.ABSENSI); }),
     _MenuItem(title: 'Jurnal Guru', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.REKAP_JURNAL_GURU); }),
      _MenuItem(title: 'Jurnal Admin', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.REKAP_JURNAL_ADMIN); }),
     _MenuItem(
@@ -333,6 +352,7 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
                 crossAxisCount: 4,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 5,
+                childAspectRatio: 0.85,
               ),
               itemBuilder: (context, index) {
                 return allMenuItems[index];
@@ -360,40 +380,79 @@ class _MenuGrid extends StatelessWidget {
         crossAxisCount: 4,
         mainAxisSpacing: 16,
         crossAxisSpacing: 16,
+        childAspectRatio: 0.85,
         children: [
+          if(controller.informasiKelas)
            _MenuItem(
-                title: 'Kelas Akademik',
+                title: 'Informasi Kelas',
                 imagePath: "assets/png/tas.png",
                 onTap: () {
                   // Langsung navigasi ke halaman tujuan, tanpa dialog, tanpa argumen.
                   Get.toNamed(Routes.DAFTAR_KELAS);
                 },
               ),
+
+              // if(controller.kelasTahsin)
             _MenuItem(
-                title: 'Kelas Halaqoh',
+                title: 'Kelas Tahsin',
                 imagePath: "assets/png/toga_lcd.png",
                 onTap: () {
-                  // Langsung navigasi ke halaman tujuan, tanpa dialog dan argumen.
-                  Get.toNamed(Routes.DAFTAR_HALAQOH_PENGAMPU);
+                  // Terapkan logika kondisional
+                  if (controller.kelasTahsin) {
+                    Get.toNamed(Routes.DAFTAR_HALAQOH_PENGAMPU);
+                  } else if (controller.kapten || controller.canManageTahsin || controller.isAdminKepsek) {
+                    Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE);
+                  } else {
+                    Get.snackbar("Informasi", "Maaf, kelas khusus Tahsin");
+                  }
                 },
               ),
               _MenuItem(
                 title: 'Tahfidz Kelas',
-                imagePath: "assets/png/toga_lcd.png", // Ganti dengan ikon yang sesuai
+                imagePath: "assets/png/toga_lcd.png",
                 onTap: () {
-                  Get.back(); // Tutup bottom sheet
-                  Get.toNamed(Routes.KELAS_TAHFIDZ); // Navigasi ke halaman baru
+                    // Cek jika pengguna adalah Pimpinan
+                    if (controller.isPimpinan) {
+                      // Arahkan ke dasbor pemantauan BARU
+                      Get.toNamed(Routes.PANTAU_TAHFIDZ); // Anda perlu menambahkan route ini di app_pages.dart
+                    } 
+                    // Cek jika pengguna adalah Guru (Wali Kelas atau Pendamping)
+                    else if (controller.tahfidzKelas) {
+                      // Arahkan ke halaman operasional yang sudah ada
+                      Get.toNamed(Routes.KELAS_TAHFIDZ);
+                    } 
+                    // Jika bukan keduanya
+                    else {
+                    // Pesan ini sekarang berlaku untuk semua yang tidak punya akses.
+                    Get.snackbar("Akses Ditolak", "Fitur ini khusus untuk kelas Tahfidz.");
+                  }
                 },
               ),
             _MenuItem(
               title: 'Jurnal Harian',
               imagePath: "assets/png/faq.png",
-              onTap: () => Get.toNamed(Routes.JURNAL_AJAR_HARIAN, arguments: userData),
+              onTap: () { 
+                if(controller.jurnalHarian || controller.isDalang) {
+                Get.toNamed(Routes.JURNAL_AJAR_HARIAN, arguments: userData);
+                } else if (controller.isKepsek) {
+                  // Get.snackbar("Info", "Ini buat kepala sekolah");
+                  Get.toNamed(Routes.REKAP_JURNAL_ADMIN);
+                } else {
+                  Get.snackbar("Info", "Maaf, khusus jurnal harian");
+                }
+              }
             ),
+
             _MenuItem(
               title: 'Catatan Siswa(BK)',
               imagePath: "assets/png/daftar_list.png",
-              onTap: () => Get.toNamed(Routes.CATATAN_SISWA),
+              onTap: () { 
+                if(controller.walikelas || controller.isKepsek || controller.guruBK || controller.isDalang) {
+                Get.toNamed(Routes.CATATAN_SISWA); 
+                } else {
+                  Get.snackbar("Info", "Maaf, khusus catatan siswa");
+                }
+              }
             ),
             _MenuItem(
               title: 'Jadwal',
@@ -432,21 +491,33 @@ class _MenuItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.05), spreadRadius: 2, blurRadius: 10)],
-            ),
-            child: Image.asset(imagePath, width: 32, height: 32),
-          ),
-          const SizedBox(height: 8),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.05), spreadRadius: 2, blurRadius: 10)],
+      ),
+      child: Image.asset(imagePath, width: 32, height: 32),
+    ),
+    // --- Kurangi spasi vertikal sedikit ---
+    const SizedBox(height: 4), // Diubah dari 8 menjadi 4
+
+    // --- Atau, kurangi ukuran font sedikit ---
+    Text(
+      title, 
+      textAlign: TextAlign.center, 
+      // Diubah dari 11 menjadi 10.5 atau 10
+      style: const TextStyle(fontSize: 10.5, height: 1.2), 
+      maxLines: 2, 
+      overflow: TextOverflow.ellipsis
+    ),
+  ],
+),
       ),
     );
   }

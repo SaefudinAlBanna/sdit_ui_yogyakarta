@@ -25,7 +25,20 @@ class DaftarNilaiController extends GetxController {
   late TextEditingController ayatEditC;
   late TextEditingController capaianEditC;
   late TextEditingController nilaiEditC;
+  late TextEditingController catatanEditC;
   // ... tambahkan controller lain jika perlu diedit
+
+  //  bool get canEditOrDelete {
+  //   final role = homeController.userRole.value;
+  //   // HANYA Pengampu dan Koordinator yang boleh edit/hapus
+  //   return role == 'Pengampu' || role == 'Koordinator Halaqoh' || role == 'Admin';
+  // }
+  bool get canEditOrDelete {
+    // Pengampu yang bersangkutan, Koordinator, atau Admin boleh edit/hapus
+    final user = homeController.auth.currentUser;
+    if (user == null) return false;
+    return user.uid == dataSiswa['idpengampu'] || homeController.canEditOrDeleteHalaqoh;
+  }
 
   @override
   void onInit() {
@@ -34,6 +47,7 @@ class DaftarNilaiController extends GetxController {
     ayatEditC = TextEditingController();
     capaianEditC = TextEditingController();
     nilaiEditC = TextEditingController();
+    catatanEditC = TextEditingController();
     fetchDataNilai(); // Langsung panggil fungsi untuk memuat data
   }
 
@@ -42,18 +56,78 @@ class DaftarNilaiController extends GetxController {
     // Selalu dispose controller
     suratEditC.dispose(); ayatEditC.dispose();
     capaianEditC.dispose(); nilaiEditC.dispose();
+    catatanEditC.dispose();
     super.onClose();
+  }
+
+  // Future<void> updateCatatanPengampu(NilaiHalaqohUmi nilai) async {
+  //   if (catatanEditC.text == nilai.keteranganPengampu) {
+  //     Get.back(); // Jika tidak ada perubahan, tutup saja
+  //     return;
+  //   }
+
+  //   isDialogLoading.value = true;
+  //   try {
+  //     // Dapatkan path ke dokumen nilai yang spesifik
+  //     final docRef = await _getNilaiDocRef(nilai.id);
+  //     final namaPengedit = homeController.userRole.value ?? 'Admin'; 
+  //     final uidPengedit = homeController.auth.currentUser!.uid;
+
+  //     // Update hanya field keterangan dan timestamp
+  //     await docRef.update({
+  //       'keteranganpengampu': catatanEditC.text.trim(),
+  //       'last_updated': FieldValue.serverTimestamp(),
+  //       'terakhir_diubah': FieldValue.serverTimestamp(), // <-- REKAM JEJAK WAKTU
+  //       'diubah_oleh_nama': namaPengedit,             // <-- REKAM JEJAK NAMA
+  //       'diubah_oleh_uid': uidPengedit,               // <-- REKAM JEJAK UID
+  //     });
+
+  //     Get.back(); // Tutup dialog edit
+  //     Get.snackbar("Berhasil", "Catatan pengampu berhasil diperbarui.");
+  //     fetchDataNilai(); // Muat ulang daftar nilai untuk menampilkan data baru
+
+  //   } catch (e) {
+  //     Get.snackbar("Error", "Gagal memperbarui catatan: $e");
+  //   } finally {
+  //     isDialogLoading.value = false;
+  //   }
+  // }
+
+  Future<void> updateCatatanPengampu(NilaiHalaqohUmi nilai) async {
+    if (catatanEditC.text.trim() == nilai.keteranganPengampu) { Get.back(); return; }
+    isDialogLoading.value = true;
+    try {
+      final docRef = await _getNilaiDocRef(nilai.id);
+      
+      // --- PERBAIKAN UTAMA DI SINI ---
+      final uidPengedit = homeController.auth.currentUser!.uid;
+      final docPengedit = await firestore.collection('Sekolah').doc(homeController.idSekolah).collection('pegawai').doc(uidPengedit).get();
+      final aliasPengedit = docPengedit.data()?['alias'] ?? 'User';
+      final rolePengedit = homeController.userRole.value ?? 'Role';
+      final namaTampilanPengedit = "$aliasPengedit ($rolePengedit)";
+      // --- AKHIR PERBAIKAN ---
+
+      await docRef.update({
+        'keteranganpengampu': catatanEditC.text.trim(),
+        'terakhir_diubah': FieldValue.serverTimestamp(),
+        'diubah_oleh_nama': namaTampilanPengedit, // <-- Simpan nama yang lebih informatif
+        'diubah_oleh_uid': uidPengedit,
+      });
+
+      Get.back();
+      Get.snackbar("Berhasil", "Catatan pengampu berhasil diperbarui.");
+      fetchDataNilai();
+
+    } catch (e) {
+      Get.snackbar("Error", "Gagal memperbarui catatan: $e");
+    } finally {
+      isDialogLoading.value = false;
+    }
   }
 
   //========================================================================
   // --- FUNGSI BARU UNTUK HAK AKSES, EDIT, DAN DELETE ---
   //========================================================================
-
-  /// Getter untuk memeriksa apakah user saat ini boleh melakukan edit/delete.
-  bool get canEditOrDelete {
-    final role = homeController.userRole.value;
-    return role == 'Pengampu' || role == 'Koordinator Halaqoh';
-  }
 
   String _getGrade(int score) {
     if (score >= 90) return 'A';
@@ -165,14 +239,14 @@ class DaftarNilaiController extends GetxController {
   }
 
   /// Helper untuk mendapatkan path DOKUMEN INDUK SISWA.
-  Future<DocumentReference<Map<String, dynamic>>> _getSiswaIndukRef() async {
+  DocumentReference _getSiswaIndukRef() {
     final idTahunAjaran = homeController.idTahunAjaran.value!;
     final semesterAktif = dataSiswa['semester'] ?? homeController.semesterAktifId.value;
     return firestore
-        .collection('Sekolah').doc(idSekolah)
+        .collection('Sekolah').doc(homeController.idSekolah)
         .collection('tahunajaran').doc(idTahunAjaran)
         .collection('kelompokmengaji').doc(dataSiswa['fase'])
-        .collection('pengampu').doc(dataSiswa['namapengampu'])
+        .collection('pengampu').doc(dataSiswa['idpengampu']) // <-- MENGGUNAKAN UID
         .collection('tempat').doc(dataSiswa['tempatmengaji'])
         .collection('semester').doc(semesterAktif)
         .collection('daftarsiswa').doc(dataSiswa['nisn']);
@@ -183,48 +257,22 @@ class DaftarNilaiController extends GetxController {
   Future<void> fetchDataNilai() async {
     try {
       isLoading.value = true;
-      
-      // Ambil detail path dari dataSiswa argument
-      final String idTahunAjaran = homeController.idTahunAjaran.value!;
-      final String semesterAktif = dataSiswa['semester'] ?? homeController.semesterAktifId.value; // Prioritaskan semester dari argumen
-      final String fase = dataSiswa['fase'];
-      final String pengampu = dataSiswa['namapengampu'];
-      final String tempat = dataSiswa['tempatmengaji'];
       final String nisn = dataSiswa['nisn'];
-
-      // // 1. Dapatkan path ke koleksi 'semester' siswa
-      // final semesterRef = await _getSemesterCollectionRef(fase, pengampu, tempat, nisn);
-
-      // // 2. Ambil dokumen semester pertama (asumsi "Semester I" atau yang paling baru)
-      // final semesterSnapshot = await semesterRef.orderBy('namasemester').limit(1).get();
-      // if (semesterSnapshot.docs.isEmpty) {
-      //   print("Siswa belum memiliki data semester.");
-      //   daftarNilai.clear(); // Pastikan daftar kosong
-      //   return; // Hentikan proses
-      // }
-      // final String idSemester = semesterSnapshot.docs.first.id;
-
-      // 3. Ambil semua data 'nilai' dari dalam semester tersebut
-       final nilaiSnapshot = await firestore
-          .collection('Sekolah').doc(idSekolah)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelompokmengaji').doc(fase)
-          .collection('pengampu').doc(pengampu)
-          .collection('tempat').doc(tempat)
-          .collection('semester').doc(semesterAktif) // <-- INTEGRASI SEMESTER
-          .collection('daftarsiswa').doc(nisn)
-          .collection('nilai')
-          .orderBy('tanggalinput', descending: true) // Urutkan berdasarkan tanggal
+      
+      // Menggunakan collectionGroup untuk mengambil semua nilai siswa, tidak peduli kelompoknya
+      final nilaiSnapshot = await firestore
+          .collectionGroup('nilai')
+          .where('idsiswa', isEqualTo: nisn)
+          .orderBy('tanggalinput', descending: true)
           .get();
       
       daftarNilai.value = nilaiSnapshot.docs
           .map((doc) => NilaiHalaqohUmi.fromFirestore(doc))
           .toList();
 
-    } catch (e, s) {
-      print("Error saat memuat data nilai: $e");
-      print(s);
-      Get.snackbar("Terjadi Kesalahan", "Tidak dapat memuat riwayat nilai siswa.");
+    } catch (e) {
+      print("xx = $e");
+      Get.snackbar("Terjadi Kesalahan", "Tidak dapat memuat riwayat nilai siswa. Mungkin perlu membuat index Firestore.");
     } finally {
       isLoading.value = false;
     }
