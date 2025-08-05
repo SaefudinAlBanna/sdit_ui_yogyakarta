@@ -1,5 +1,3 @@
-// lib/app/modules/home/controllers/home_controller.dart
-
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../../controller/storage_controller.dart';
@@ -11,9 +9,6 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../models/event_kalender_model.dart';
-// import '../pages/home.dart';
-// import '../pages/marketplace.dart';
-// import '../pages/profile.dart';
 import '../../../models/jurnal_model.dart';
 
 class HomeController extends GetxController {
@@ -47,12 +42,16 @@ class HomeController extends GetxController {
   List<DocumentSnapshot<Map<String, dynamic>>> kelasAktifList = []; 
   
   List<Map<String, dynamic>> jadwalPelajaranList = [];
-  final TextEditingController kelasSiswaC = TextEditingController();
+  // final TextEditingController kelasSiswaC = TextEditingController();
   final TextEditingController tahunAjaranBaruC = TextEditingController();
   final PersistentTabController tabController = PersistentTabController(initialIndex: 0);
   // final List<Widget> navBarScreens = [ HomePage(), MarketplacePage(), ProfilePage() ];
 
   final RxList<Map<String, dynamic>> kelompokMengajiDiajar = <Map<String, dynamic>>[].obs;
+
+  final RxList<Map<String, dynamic>> ekskulDiampuPengguna = <Map<String, dynamic>>[].obs;
+
+  bool get isPembina => ekskulDiampuPengguna.isNotEmpty;
 
 
   // --- (Getter untuk TUGAS TAMBAHAN) ---
@@ -61,18 +60,18 @@ class HomeController extends GetxController {
   // bool get canManageHalaqoh => userTugas.contains('Koordinator Halaqoh'); // Koordinator Halaqoh kini adalah tugas
   
   // stelah ada tugas -------------------------
-  bool get isDalang => auth.currentUser?.email == 'saefudin123.skom@gmail.com'; 
+  bool get isDalang => auth.currentUser?.email == 'saefudin.skom@gmail.com'; 
   bool get kapten => auth.currentUser?.email == 'hidayyat@gmail.com';
   bool get isKepsek => userRole.value == 'Kepala Sekolah';
   bool get isAdmin => userRole.value == 'Admin';
   bool get isAdminKepsek => userRole.value == 'Admin' || userRole.value == 'Kepala Sekolah'; 
   bool get canManageTahsin => userTugas.contains('Koordinator Halaqoh') || isDalang;
-  bool get informasiKelas => userRole.value == 'Guru Kelas' || userRole.value == 'Guru Mapel' || userTugas.contains('Guru Mapel');
+  bool get informasiKelas => userRole.value == 'Guru Kelas' || userRole.value == 'Guru Mapel' || userTugas.contains('Guru Mapel') || isAdminKepsek || kapten || isDalang;
   bool get jurnalHarian => userRole.value == 'Guru Kelas' || userRole.value == 'Guru Mapel';
   bool get walikelas => userRole.value == 'Guru Kelas';
   bool get guruBK => userRole.value == 'Guru BK';
   // bool get tahfidzKelas => userRole.value == 'Guru Kelas' || userTugas.contains('Pendamping Tahfidz');
-  bool get tahfidzKelas => walikelas || tugasPendampingKelasId.value != null;
+  bool get tahfidzKelas => walikelas || tugasPendampingKelasId.value != null || tugasPendampingKelasId.value != null;
   bool get isPimpinan => isAdminKepsek && !walikelas && tugasPendampingKelasId.value == null;
   bool get canEditOrDeleteHalaqoh => kelasTahsin || canManageTahsin || kapten; 
   bool get tambahHalaqohFase => canManageTahsin || kapten;
@@ -80,6 +79,34 @@ class HomeController extends GetxController {
   // bool get kelasTahsin => userRole.value == 'Pengampu' || userTugas.contains('Pengampu');
   bool get kelasTahsin => kelompokMengajiDiajar.isNotEmpty;
 
+  bool get isPenggantiHariIni {
+    return kelompokMengajiDiajar.any((kelompok) => kelompok['isPengganti'] == true);
+  }
+
+  List<Map<String, dynamic>> get kelompokPermanen {
+    return kelompokMengajiDiajar.where((k) => k['isPengganti'] != true).toList();
+  }
+
+  List<Map<String, dynamic>> get kelompokPenggantiHariIni {
+    return kelompokMengajiDiajar.where((k) => k['isPengganti'] == true).toList();
+  }
+  
+
+  List<String> get rolePenggantiTahsin {
+    return [
+      'Guru Kelas',
+      'Guru Mapel',
+      'Pengampu',
+      // Tambahkan role lain di sini jika diperlukan di masa depan
+    ];
+  }
+
+  List<String> get tugasPenggantiTahsin {
+    return [
+      'Pengampu', // Jika ada yang punya tugas sebagai 'Pengampu'
+      // Tambahkan tugas lain di sini jika perlu
+    ];
+  }
   
 
   Timer? _timer;
@@ -104,57 +131,93 @@ class HomeController extends GetxController {
     _timer?.cancel();
     _configListener?.cancel(); 
     tabController.dispose();
-    kelasSiswaC.dispose();
+    // kelasSiswaC.dispose();
     tahunAjaranBaruC.dispose();
     super.onClose();
   }
   
-  
+
   Future<void> fetchUserRoleAndTugas() async {
     try {
-      final doc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').doc(idUser).get();
-          
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        
+      final userDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').doc(idUser).get();
+      
+      // Ambil data permanen (role, tugas, dll) dari dokumen pegawai
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
         userRole.value = data['role'] as String?;
-        
-        // Ambil 'tugas' (List/Array)
         final tugasData = data['tugas'];
         if (tugasData is List) {
           userTugas.assignAll(List<String>.from(tugasData));
-          } else {
-          userTugas.clear(); // Pastikan kosong jika field tidak ada
+        } else {
+          userTugas.clear();
         }
+        tugasPendampingKelasId.value = data['tugas_pendamping_tahfidz'] as String?;
 
-         kelompokMengajiDiajar.clear(); // Kosongkan dulu untuk refresh
-        if (idTahunAjaran.value != null) {
-          final kelompokSnapshot = await doc.reference
-              .collection('tahunajarankelompok').doc(idTahunAjaran.value!)
-              .collection('semester').doc(semesterAktifId.value)
-              .collection('kelompokmengaji').get();
-          
-          if (kelompokSnapshot.docs.isNotEmpty) {
-            // Simpan semua kelompok yang diajar ke dalam state
-            kelompokMengajiDiajar.assignAll(
-              kelompokSnapshot.docs.map((kelompokDoc) => kelompokDoc.data()).toList()
-            );
-          }
+         if (data.containsKey('ekskulYangDiampu')) {
+          ekskulDiampuPengguna.assignAll(List<Map<String, dynamic>>.from(data['ekskulYangDiampu']));
+        } else {
+          ekskulDiampuPengguna.clear();
         }
-        print("INFO: Ditemukan ${kelompokMengajiDiajar.length} kelompok halaqoh yang diajar.");
-        // --- AKHIR TAMBAHAN ---
       }
+
+      // --- LOGIKA PENGGABUNGAN DATA HALAQOH DIMULAI ---
+
+      // 1. Ambil SEMUA kelompok PERMANEN yang diajar (dari "shortcut" di dokumen pegawai)
+      final List<Map<String, dynamic>> kelompokPermanen = [];
+      if (idTahunAjaran.value != null) {
+        final kelompokSnapshot = await userDoc.reference
+            .collection('tahunajarankelompok').doc(idTahunAjaran.value!)
+            .collection('semester').doc(semesterAktifId.value)
+            .collection('kelompokmengaji').get();
+        
+        if (kelompokSnapshot.docs.isNotEmpty) {
+          kelompokPermanen.addAll(kelompokSnapshot.docs.map((doc) => doc.data()));
+        }
+      }
+
+      // 2. Lakukan query collectionGroup untuk mencari TUGAS PENGGANTI HARI INI
+      final tanggalHariIni = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final sesiPenggantiSnapshot = await firestore.collectionGroup('sesi_pengganti')
+          .where('tanggal', isEqualTo: tanggalHariIni)
+          .where('uid_pengganti', isEqualTo: idUser) // Cari di mana SAYA adalah penggantinya
+          .get();
+      
+      final List<Map<String, dynamic>> kelompokPengganti = [];
+      if (sesiPenggantiSnapshot.docs.isNotEmpty) {
+        print("INFO: Ditemukan ${sesiPenggantiSnapshot.docs.length} tugas sebagai pengganti hari ini.");
+        for (var doc in sesiPenggantiSnapshot.docs) {
+          final dataPengganti = doc.data();
+          // Rakit ulang data kelompok agar strukturnya sama, dengan penanda khusus
+          kelompokPengganti.add({
+            'fase': dataPengganti['fase'],
+            'tempatmengaji': dataPengganti['namaTempat'], // Standarisasi nama kunci
+            'idpengampu': dataPengganti['uid_pengganti'], // ID saya sebagai pengganti
+            'namapengampu': dataPengganti['nama_pengganti'],
+            'idPengampuAsli': dataPengganti['uid_pengampu_asli'], 
+            'namaPengampuAsli': dataPengganti['nama_pengampu_asli'],
+            'isPengganti': true, // Penanda penting bahwa ini adalah sesi pengganti
+          });
+        }
+      }
+
+      // 3. Gabungkan keduanya dan perbarui state utama.
+      // State ini akan menjadi satu-satunya sumber kebenaran untuk hak akses Halaqoh.
+      kelompokMengajiDiajar.assignAll([...kelompokPermanen, ...kelompokPengganti]);
+      
+      print("INFO: Total ${kelompokMengajiDiajar.length} kelompok halaqoh ditemukan (permanen + pengganti).");
+      
     } catch (e) {
-      print("Gagal mengambil role & tugas pengguna: $e");
+      print("Gagal mengambil role & tugas & sesi pengganti: $e");
+      // Jika terjadi error, pastikan semua state bersih
       userRole.value = null;
       userTugas.clear();
+      kelompokMengajiDiajar.clear();
+      ekskulDiampuPengguna.clear();
     }
   }
 
 
-
-
-void _listenToConfigChanges() {
+ void _listenToConfigChanges() {
   if (idTahunAjaran == null) return;
 
   final docRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran.value!);
@@ -164,8 +227,6 @@ void _listenToConfigChanges() {
   _configListener = docRef.snapshots().listen((snapshot) {
     if (snapshot.exists && snapshot.data() != null) {
       final data = snapshot.data()!;
-      
-      // ... (kode pesanLiburKustom sudah benar, biarkan saja)
 
       // --- MODIFIKASI BAGIAN INI ---
       // Update pesan akhir sekolah kustom
@@ -186,15 +247,11 @@ void _listenToConfigChanges() {
         pesanAkhirSekolahKustom.value = ""; 
         tanggalUpdatePesanAkhirSekolah.value = null;
       }
-      // --- AKHIR MODIFIKASI ---
-
-      print("DEBUG: Pesan config terupdate -> ${pesanAkhirSekolahKustom.value} pada ${tanggalUpdatePesanAkhirSekolah.value}");
 
     }
   }, onError: (error) {
-    print("Error mendengarkan config: $error");
   });
-}
+ }
 
 // Buat FUNGSI BARU untuk menyimpan pesan
 Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
@@ -226,22 +283,6 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
   }
 }
 
-  Future<void> _fetchUserRole() async {
-  try {
-    final doc = await firestore
-        .collection('Sekolah').doc(idSekolah)
-        .collection('pegawai').doc(idUser)
-        .get();
-    if (doc.exists) {
-      // Ambil field 'role' dari dokumen, jika tidak ada, defaultnya null.
-      userRole.value = doc.data()?['role'];
-    }
-  } catch (e) {
-    print("Gagal mengambil role pengguna: $e");
-    // Biarkan role null jika terjadi error
-  }
-}
-
   void _showSafeSnackbar(String title, String message, {bool isError = false}) {
     // Memastikan snackbar hanya ditampilkan setelah frame UI selesai digambar
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -267,11 +308,6 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
         .collection('pegawai')
         .doc(idUser)
         .snapshots();
-  }
-
-  Stream<DocumentSnapshot<Map<String, dynamic>>> streamUserProfile() {
-    return firestore.collection('Sekolah').doc(idSekolah)
-                   .collection('pegawai').doc(idUser).snapshots();
   }
 
 
@@ -320,7 +356,6 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
 
     } catch (e) {
       // 5. Tangani SEMUA jenis error di sini
-      print("Error pickAndUploadProfilePicture: $e"); // Log error untuk debug
       _showSafeSnackbar('Error', 'Gagal memperbarui foto: ${e.toString()}', isError: true);
     } finally {
       // 6. PASTIKAN dialog loading SELALU ditutup, baik berhasil maupun gagal.
@@ -369,7 +404,7 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
         _fetchKelasAktif(),
         _fetchJurnalOtomatisConfig(),
         _fetchHariLibur(),
-        _fetchUserRole(),
+        // _fetchUserRole(),
         fetchUserRoleAndTugas()
       ]);
 
@@ -388,7 +423,6 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
 
   Future<void> _fetchSemesterAktif() async {
     if (idTahunAjaran.value == null) {
-      print("Peringatan: Tidak bisa mengambil semester karena ID Tahun Ajaran null.");
       return;
     }
     try {
@@ -398,34 +432,15 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
       if (doc.exists && doc.data() != null) {
         // Ambil nilai dari field 'semesterAktif', jika tidak ada, gunakan '1' sebagai fallback.
         semesterAktifId.value = doc.data()!['semesterAktif'] ?? '1';
-        print("INFO: Semester aktif dimuat: ${semesterAktifId.value}");
       } else {
-        print("PERINGATAN: Dokumen tahun ajaran tidak ditemukan, menggunakan semester default '1'.");
         semesterAktifId.value = '1';
       }
     } catch (e) {
-      print("ERROR: Gagal mengambil semester aktif: $e");
       // Jika terjadi error, gunakan nilai default agar aplikasi tidak crash.
       semesterAktifId.value = '1';
     }
   }
   
-
-  Future<void> _fetchPesanLiburKustom() async {
-  if (idTahunAjaran == null) return;
-  try {
-    final doc = await firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran.value!).get();
-    if (doc.exists && doc.data() != null && doc.data()!.containsKey('pesanLiburConfig')) {
-      final config = doc.data()!['pesanLiburConfig'] as Map<String, dynamic>;
-      final pesan = config['pesan'] as String?;
-      if (pesan != null && pesan.isNotEmpty) {
-        pesanLiburKustom.value = pesan;
-      }
-    }
-  } catch (e) {
-    print("Gagal mengambil pesan libur kustom: $e");
-  }
-}
 
   // --- FUNGSI BARU ---
   Future<void> _fetchHariLibur() async {
@@ -440,14 +455,13 @@ Future<void> simpanPesanAkhirSekolah(String pesanBaru) async {
       // Simpan tanggal dalam format yyyy-MM-dd
       hariLiburSet.add(doc.id); 
     }
-    // print("DEBUG: Hari libur dimuat: $hariLiburSet");
   }
 
   // --- FUNGSI BARU ---
-bool isHariSekolahAktif(DateTime tanggal) {
-  // 1. Cek apakah hari Sabtu (6) atau Minggu (7)
-  if (tanggal.weekday == DateTime.saturday || tanggal.weekday == DateTime.sunday) {
-    return false;
+ bool isHariSekolahAktif(DateTime tanggal) {
+    // 1. Cek apakah hari Sabtu (6) atau Minggu (7)
+    if (tanggal.weekday == DateTime.saturday || tanggal.weekday == DateTime.sunday) {
+      return false;
   }
 
   // 2. Cek apakah tanggal ada di daftar hari libur nasional/sekolah
@@ -469,7 +483,6 @@ bool isHariSekolahAktif(DateTime tanggal) {
     for (var doc in snapshot.docs) {
       jurnalOtomatisConfig[doc.id] = doc.data();
     }
-    // print("DEBUG: Konfigurasi Jurnal Otomatis dimuat: $jurnalOtomatisConfig");
   }
 
 
@@ -506,15 +519,12 @@ bool isHariSekolahAktif(DateTime tanggal) {
       endTime = parts[1];   // contoh: "23.59"
     } else {
       // Sebagai fallback jika formatnya tidak sesuai, agar tidak crash
-      print("Peringatan: Format jam pelajaran salah untuk dokumen ID: ${doc.id}. Menggunakan waktu default.");
     }
     
     // Kembalikan Map dengan format yang benar
     return {'id': doc.id, 'start': startTime, 'end': endTime};
   }).toList();
 
-  // (Optional) Tambahkan print untuk memastikan hasilnya benar
-  print("DEBUG: Jadwal Pelajaran yang dimuat: $jadwalPelajaranList");
 }
 
   Future<void> _fetchKelasAktif() async {
@@ -528,7 +538,6 @@ bool isHariSekolahAktif(DateTime tanggal) {
       // Mengisi variabel yang digunakan oleh UI (home.dart)
       kelasAktifList = snapshot.docs;
     } catch (e) {
-      print("Gagal mengambil semua kelas aktif: $e");
       kelasAktifList = []; // Pastikan kosong jika error.
     }
   }
@@ -588,62 +597,93 @@ bool isHariSekolahAktif(DateTime tanggal) {
         .doc(idTahunAjaran.value!) // Sekarang aman digunakan karena sudah dicek
         .collection('informasisekolah')
         .orderBy('tanggalinput', descending: true).limit(10).snapshots();
-}
+  }
 
-  // Tambahkan deklarasi events di atas fungsi ini, misal:
-  // Map<DateTime, List<EventKalenderModel>> events = {};
+  Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
+      final now = DateTime.now();
+      // [PERBAIKAN KUNCI] Dapatkan waktu saat ini dalam format HH:mm untuk perbandingan
+      final String jamSekarang = DateFormat('HH:mm').format(now); 
+      final String namaHari = DateFormat('EEEE', 'id_ID').format(now);
+      final String tanggalStr = DateFormat('yyyy-MM-dd').format(now);
 
-  // Jika events perlu diisi dari Firestore, tambahkan logika pengisian pada _fetchHariLibur atau fungsi lain yang sesuai.
-
-  Map<DateTime, List<EventKalenderModel>> events = {};
-
-  // di HomeController (Aplikasi Guru)
-
-Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
-    final jamId = jamPelajaranDocId.value;
-    
-    // Gunakan ID Tahun Ajaran & Semester dari state controller ini
-    final tahunAjaranId = idTahunAjaran.value;
-    final semesterId = semesterAktifId.value;
-
-    if (tahunAjaranId == null || jamId.isEmpty || jamId.contains('...')) {
-      return Stream.value(null);
-    }
-
-    // Logika untuk hari libur dan jam sekolah usai (tetap sama, sudah benar)
-    final now = DateTime.now();
-    if (!isHariSekolahAktif(now)) {
-      // ... logika hari libur
-      return Stream.value(JurnalModel(materipelajaran: "Selamat menikmati hari libur.", namapenginput: "Sistem", jampelajaran: "Hari Libur"));
-    }
-    if (jamId == 'Tidak ada jam pelajaran') {
-      // ... logika jam usai
-      return Stream.value(JurnalModel(materipelajaran: "Kegiatan belajar telah usai.", namapenginput: "Info Sekolah", jampelajaran: "Jam Sekolah Usai"));
-    }
-
-    // --- INTI PERUBAHAN ---
-    // Sekarang kita membuat path yang lengkap dengan semester.
-    final docIdTanggalJurnal = DateFormat('yyyy-MM-dd').format(now);
-    
-    final docRef = firestore
-      .collection('Sekolah').doc(idSekolah)
-      .collection('tahunajaran').doc(tahunAjaranId)
-      .collection('kelastahunajaran').doc(idKelas) // <- Menggunakan `kelastahunajaran`
-      .collection('semester').doc(semesterId)      // <-- INTEGRASI SEMESTER
-      .collection('tanggaljurnal').doc(docIdTanggalJurnal)
-      .collection('jurnalkelas').doc(jamId);
-
-    // Sisa logikanya tetap sama
-    return docRef.snapshots().map((docSnapshot) {
-      if (docSnapshot.exists && docSnapshot.data() != null) {
-        return JurnalModel.fromFirestore(docSnapshot.data()!);
+      // 1. HIRARKI #1: Cek Hari Libur
+      if (!isHariSekolahAktif(now)) {
+        return Stream.value(JurnalModel(
+          materipelajaran: pesanLiburKustom.value.isNotEmpty ? pesanLiburKustom.value : "Selamat menikmati hari libur.",
+          namapenginput: "Info Sekolah",
+          jampelajaran: "Hari Libur"
+        ));
       }
-      if (jurnalOtomatisConfig.containsKey(jamId)) {
-        final configData = jurnalOtomatisConfig[jamId]!;
-        return JurnalModel.fromFirestore(configData);
-      }
-      return null;
-    });
+
+      return Stream.fromFuture((() async {
+        try {
+          final idTahunAjaran = this.idTahunAjaran.value!;
+          final semester = semesterAktifId.value;
+
+          // 2. HIRARKI #2: Cek Kegiatan Global
+          final kegiatanGlobalSnap = await firestore.collection('kegiatan_global')
+              .where('hari', whereIn: [namaHari, 'Setiap Hari Kerja']).get();
+          for (var doc in kegiatanGlobalSnap.docs) {
+            final data = doc.data();
+            final mulai = data['jamMulai'] as String;    // Contoh: "20:00"
+            final selesai = data['jamSelesai'] as String;  // Contoh: "20:36"
+
+            // [PERBAIKAN KUNCI] Bandingkan jamSekarang dengan rentang dari Firestore
+            if (jamSekarang.compareTo(mulai) >= 0 && jamSekarang.compareTo(selesai) < 0) {
+              if (data['tipe'] == 'PESAN_TEMPLATE') {
+                return JurnalModel(materipelajaran: data['templatePesan'], namapenginput: data['namaKegiatan']);
+              }
+              return JurnalModel(materipelajaran: data['namaKegiatan'], namapenginput: "Kegiatan Sekolah");
+            }
+          }
+
+          // 3. HIRARKI #3: Cek Jadwal KBM & Pengganti
+          final jadwalKelasSnap = await firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('jadwalkelas').doc(idKelas).get();
+          if (jadwalKelasSnap.exists && jadwalKelasSnap.data()!.containsKey(namaHari)) {
+            final jadwalHari = jadwalKelasSnap.data()![namaHari] as List;
+            // Cari slot jadwal yang sesuai dengan jam saat ini
+            final slot = jadwalHari.firstWhere((s) {
+              final parts = (s['jam'] as String).split('-');
+              return jamSekarang.compareTo(parts[0]) >= 0 && jamSekarang.compareTo(parts[1]) < 0;
+            }, orElse: () => null);
+
+            if (slot != null) {
+              String jamSlot = slot['jam'];
+
+              // Cek apakah ada pengganti untuk slot ini
+              final penggantiSnap = await firestore.collection('sesi_pengganti_kbm').where('idKelas', isEqualTo: idKelas).where('tanggal', isEqualTo: tanggalStr).where('jam', isEqualTo: jamSlot).limit(1).get();
+
+              String guruBertugasNama = penggantiSnap.docs.isNotEmpty 
+                  ? penggantiSnap.docs.first.data()['namaGuruPengganti'] 
+                  : (slot['listNamaGuru'] as List).join(', ');
+
+              // 4. HIRARKI #4: Cek apakah jurnal sudah diisi
+              final jurnalSnap = await firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(idKelas).collection('semester').doc(semester).collection('tanggaljurnal').doc(DateFormat.yMd('id_ID').format(now).replaceAll('/', '-')).collection('jurnalkelas').doc(jamSlot).get();
+
+              if (jurnalSnap.exists) {
+                return JurnalModel.fromFirestore(jurnalSnap.data()!);
+              } else {
+                return JurnalModel(
+                  materipelajaran: slot['namaMapel'],
+                  namapenginput: guruBertugasNama,
+                  catatanjurnal: penggantiSnap.docs.isNotEmpty ? "(Menggantikan)" : "Jurnal belum diisi",
+                  jampelajaran: jamSlot, // Tampilkan rentang jamnya
+                );
+              }
+            }
+          }
+
+          // 5. HIRARKI TERAKHIR: Di luar jam KBM
+          return JurnalModel(
+            materipelajaran: pesanAkhirSekolahKustom.value.isNotEmpty ? pesanAkhirSekolahKustom.value : "Kegiatan belajar telah usai.",
+            namapenginput: "Info Sekolah",
+            jampelajaran: "Jam Sekolah Usai",
+          );
+
+        } catch (e) {
+          return JurnalModel(materipelajaran: "Error memuat data jurnal.", namapenginput: e.toString());
+        }
+      })());
   }
 
   // UNTUK KEPALA SEKOLAH
@@ -686,8 +726,6 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
     await auth.signOut();
     Get.offAllNamed('/login'); // Ganti dengan rute login Anda
   }
-
-  
 
   Future<void> simpanTahunAjaran() async {
     String uid = auth.currentUser!.uid;
@@ -747,28 +785,6 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
     // Get.back();
   }
 
-  Future<String?> getDataKelasWali() async {
-  String tahunajaranya = await getTahunAjaranTerakhir();
-  String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-  QuerySnapshot<Map<String, dynamic>> snapshot = await firestore
-      .collection('Sekolah')
-      .doc(idSekolah)
-      .collection('tahunajaran')
-      .doc(idTahunAjaran)
-      .collection('kelastahunajaran')
-      .where('idwalikelas', isEqualTo: idUser)
-      .get();
-
-  if (snapshot.docs.isNotEmpty) {
-    return snapshot.docs.first.id;
-  } else {
-    // print('Tidak ditemukan kelas untuk walikelas dengan id: $idUser');
-    // Get.snackbar("Informasi", "Tidak ada catatan dalam kelas anda");
-    return null;
-  }
-}
-
   Future<String> getTahunAjaranTerakhir() async {
     CollectionReference<Map<String, dynamic>> colTahunAjaran = firestore
         .collection('Sekolah')
@@ -783,45 +799,12 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
     return tahunAjaranTerakhir;
   }
 
-  Future<List<String>> getDataFase() async {
-    String tahunajaranya = await getTahunAjaranTerakhir();
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-    // String idSemester = 'Semester I';  // nanti ini diambil dari database
-
-    List<String> faseList = [];
-
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        .collection('kelompokmengaji')
-        .get()
-        .then((querySnapshot) {
-          for (var docSnapshot in querySnapshot.docs) {
-            faseList.add(docSnapshot.id);
-          }
-        });
-    return faseList;
-  }
-
   Future<List<String>> getDataKelasYangDiajar() async {
     // Ambil data global yang sudah ada di controller ini
     final idTahunAjaranValue = idTahunAjaran.value;
     final semesterAktif = semesterAktifId.value;
 
-    // --- BLOK DEBUGGING ---
-    // Cetak semua variabel yang kita gunakan untuk query ke konsol.
-    debugPrint("=========================================");
-    debugPrint("[DEBUG] Menjalankan getDataKelasYangDiajar()");
-    debugPrint("   -> Menggunakan idUser: $idUser");
-    debugPrint("   -> Menggunakan idTahunAjaran: $idTahunAjaranValue");
-    debugPrint("   -> Menggunakan semesterAktif: $semesterAktif");
-    // ----------------------
-
     if (idTahunAjaranValue == null) {
-      debugPrint("   -> HASIL: Gagal, idTahunAjaranValue adalah null.");
-      debugPrint("=========================================");
       return [];
     }
 
@@ -833,11 +816,6 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
           .collection('tahunajaran').doc(idTahunAjaranValue)
           .collection('semester').doc(semesterAktif)
           .collection('kelasnya').get();
-      
-      // --- BLOK DEBUGGING ---
-      debugPrint("   -> Query berhasil dijalankan.");
-      debugPrint("   -> Ditemukan ${snapshot.docs.length} kelas.");
-      // ----------------------
           
       for (var docSnapshot in snapshot.docs) {
         kelasList.add(docSnapshot.id);
@@ -848,9 +826,6 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
     } catch (e) {
       debugPrint("   -> Query GAGAL dengan error: $e");
     }
-    
-    debugPrint("   -> HASIL AKHIR: Mengembalikan daftar kelas: $kelasList");
-    debugPrint("=========================================");
     return kelasList;
   }
 
@@ -869,82 +844,6 @@ Stream<JurnalModel?> streamJurnalDetail(String idKelas) {
         });
     return kelasList;
   }
-
-  Future<List<String>> getDataKelasMapel() async {
-
-    String tahunajaranya =
-        await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    List<String> kelasList = [];
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran)
-        // .collection('kelasaktif')
-        .collection('kelastahunajaran')
-        .get()
-        .then((querySnapshot) {
-          for (var docSnapshot in querySnapshot.docs) {
-            kelasList.add(docSnapshot.id);
-          }
-        });
-    return kelasList;
-  }
-
-  Future<List<String>> getDataMapel(String kelas) async {
-    String tahunajaranya =
-        await getTahunAjaranTerakhir(); // ambil dari tahun ajaran di collection pegawai
-    String idTahunAjaran = tahunajaranya.replaceAll("/", "-");
-
-    List<String> mapelList = [];
-    await firestore
-        .collection('Sekolah')
-        .doc(idSekolah)
-        .collection('pegawai')
-        .doc(idUser)
-        .collection('tahunajaran')
-        .doc(idTahunAjaran) // tahun ajaran yang d kelas pegawai
-        .collection('kelasnya')
-        .doc(kelas)
-        .collection('matapelajaran')
-        .get()
-        .then((querySnapshot) {
-          for (var docSnapshot in querySnapshot.docs) {
-            mapelList.add(docSnapshot.id);
-          }
-        });
-    return mapelList;
-  }
-
-  // Di dalam HomeController
-
-Future<List<String>> getDataKelompok() async {
-  // Ambil data global yang sudah ada di controller ini
-  final idTahunAjaranValue = idTahunAjaran.value;
-  final semesterAktif = semesterAktifId.value;
-
-  if (idTahunAjaranValue == null) return [];
-
-  List<String> kelompokList = [];
-  try {
-    final snapshot = await firestore
-        .collection('Sekolah').doc(idSekolah)
-        .collection('pegawai').doc(idUser)
-        .collection('tahunajarankelompok').doc(idTahunAjaranValue)
-        .collection('semester').doc(semesterAktif) // <-- PATH SEMESTER BARU
-        .collection('kelompokmengaji').get();
-        
-    for (var docSnapshot in snapshot.docs) {
-      kelompokList.add(docSnapshot.id);
-    }
-  } catch (e) {
-    print("Error getDataKelompok (semester): $e");
-    // Kembalikan list kosong jika error
-  }
-  return kelompokList;
-}
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getDataInfo() async* {
     // ignore: unnecessary_null_comparison
@@ -979,166 +878,5 @@ Future<List<String>> getDataKelompok() async {
         .collection('Sekolah').doc(idSekolah).collection('tahunajaran')
         .doc(idTahunAjaran.value!)
         .collection('kelasaktif').snapshots();
-}
-
-  String getJamPelajaranSaatIni() {
-  DateTime now = DateTime.now();
-  int currentMinutes = now.hour * 60 + now.minute;
-  print('currentMinutes: $currentMinutes');
-  List<String> jamPelajaran = [
-    '07-00-07.05',
-    '07.05-07.30',
-    '08.00-08.45',
-
-  ];
-  for (String jam in jamPelajaran) {
-    List<String> range = jam.split('-');
-    int startMinutes = _parseToMinutes(range[0]);
-    int endMinutes = _parseToMinutes(range[1]);
-    print('Cek: $currentMinutes >= $startMinutes && $currentMinutes < $endMinutes');
-    if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-      print('MATCH: $jam');
-      return jam;
     }
-  }
-  print('Tidak ada jam pelajaran');
-  return 'Tidak ada jam pelajaran';
 }
-
-int _parseToMinutes(String hhmm) {
-  List<String> parts = hhmm.split('.');
-  int hour = int.parse(parts[0]);
-  int minute = int.parse(parts[1]);
-  return hour * 60 + minute;
-}
-
-  // void test() {
-  //   // print("jamPelajaranRx.value = ${jamPelajaranRx.value}, getJamPelajaranSaatIni() = ${getJamPelajaranSaatIni()}");
-  //   jamPelajaranRx.value = getJamPelajaranSaatIni();
-  //   print('jamPelajaranRx.value (init): ${jamPelajaranRx.value}');
-  // }
-
-  void tampilkanjurnal(String docId, String jamPelajaran) {
-    getDataJurnalPerKelas(docId, jamPelajaran);
-  }
-
-  Stream<QuerySnapshot<Map<String, dynamic>>> getDataJurnalPerKelas(
-  String docId,
-  String jamPelajaran,
-) {
-    if (idTahunAjaran.value == null) { // Tambahkan pengecekan
-      return const Stream.empty();
-    }
-    DateTime now = DateTime.now();
-    String docIdJurnal = DateFormat.yMd().format(now).replaceAll('/', '-');
-
-    return firestore
-        .collection('Sekolah').doc(idSekolah).collection('tahunajaran')
-        .doc(idTahunAjaran.value!) // Aman digunakan
-        .collection('kelasaktif').doc(docId)
-        .collection('tanggaljurnal').doc(docIdJurnal)
-        .collection('jurnalkelas')
-        .where('jampelajaran', isEqualTo: jamPelajaranDocId.value)
-        .snapshots();
- }
-}
-
-//**
-//1. Menggunakan Tipe Data Numerik untuk Perbandingan
-// Pendekatan ini lebih robust karena membandingkan angka lebih mudah dan akurat daripada membandingkan string waktu.
-//Anda bisa mengubah semua waktu menjadi menit total dari tengah malam atau menggunakan objek DateTime secara langsung.
-// Contoh Implementasi: */
-
-void tampilkanSesuaiWaktu() {
-  DateTime now = DateTime.now();
-  int currentHour = now.hour;
-  int currentMinute = now.minute;
-
-  // Konversi waktu sekarang ke menit total dari tengah malam
-  int currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-  // Definisikan rentang waktu dalam menit total
-  // 01.00 - 01.30
-  int startTime1 = 1 * 60 + 0;
-  int endTime1 = 1 * 60 + 30;
-
-  // 01.31 - 02.00
-  int startTime2 = 1 * 60 + 31;
-  int endTime2 = 2 * 60 + 0;
-
-  // 02.01 - 02.30
-  int startTime3 = 2 * 60 + 1;
-  int endTime3 = 2 * 60 + 30;
-
-  String isidataWaktu1 = 'pertama';
-  String isidataWaktu2 = 'kedua';
-  String isidataWaktu3 = 'ketiga';
-
-  String tampilanYangSesuai =
-      'Tidak ada data waktu yang cocok.'; // Default value
-
-  if (currentTimeInMinutes >= startTime1 && currentTimeInMinutes <= endTime1) {
-    tampilanYangSesuai = isidataWaktu1;
-  } else if (currentTimeInMinutes >= startTime2 &&
-      currentTimeInMinutes <= endTime2) {
-    tampilanYangSesuai = isidataWaktu2;
-  } else if (currentTimeInMinutes >= startTime3 &&
-      currentTimeInMinutes <= endTime3) {
-    tampilanYangSesuai = isidataWaktu3;
-  }
-
-  print('Waktu sekarang: $currentHour:$currentMinute');
-  print('Tampilan yang sesuai: $tampilanYangSesuai');
-
-  // Di sini Anda bisa memperbarui UI berdasarkan nilai tampilanYangSesuai
-  // Contoh: setState(() { _dataYangDitampilkan = tampilanYangSesuai; });
-}
-
-//*** 2. Menggunakan Objek DateTime dan isAfter/isBefore
-//Ini adalah cara yang lebih modern dan direkomendasikan
-//karena DateTime dirancang untuk perbandingan waktu.
-//Anda bisa membuat objek DateTime untuk waktu mulai dan
-//akhir setiap rentang.
-// */
-void tampilkanSesuaiWaktuDenganDateTime() {
-  DateTime now = DateTime.now();
-
-  // Penting: Pastikan Anda hanya membandingkan jam dan menit saja
-  // atau pastikan rentang waktu yang Anda definisikan adalah untuk hari yang sama.
-  // Untuk perbandingan waktu harian saja (tanpa mempertimbangkan tanggal):
-  DateTime timeOnly(int hour, int minute) {
-    return DateTime(now.year, now.month, now.day, hour, minute);
-  }
-
-  // Definisikan rentang waktu menggunakan objek DateTime
-  DateTime start1 = timeOnly(1, 0); // 01.00
-  DateTime end1 = timeOnly(1, 30); // 01.30
-
-  DateTime start2 = timeOnly(1, 31); // 01.31
-  DateTime end2 = timeOnly(2, 0); // 02.00
-
-  DateTime start3 = timeOnly(2, 1); // 02.01
-  DateTime end3 = timeOnly(4, 30); // 02.30
-
-  String isidataWaktu1 = 'pertama';
-  String isidataWaktu2 = 'kedua';
-  String isidataWaktu3 = 'ketiga';
-
-  String tampilanYangSesuai = 'Tidak ada data waktu yang cocok.';
-
-  // Perbandingan menggunakan isAfter dan isBefore
-  if ((now.isAfter(start1) || now.isAtSameMomentAs(start1)) &&
-      (now.isBefore(end1) || now.isAtSameMomentAs(end1))) {
-    tampilanYangSesuai = isidataWaktu1;
-  } else if ((now.isAfter(start2) || now.isAtSameMomentAs(start2)) &&
-      (now.isBefore(end2) || now.isAtSameMomentAs(end2))) {
-    tampilanYangSesuai = isidataWaktu2;
-  } else if ((now.isAfter(start3) || now.isAtSameMomentAs(start3)) &&
-      (now.isBefore(end3) || now.isAtSameMomentAs(end3))) {
-    tampilanYangSesuai = isidataWaktu3;
-  }
-
-  // print('Waktu sekarang: ${now.hour}:${now.minute}');
-  // print('Tampilan yang sesuai: $tampilanYangSesuai');
-}
-

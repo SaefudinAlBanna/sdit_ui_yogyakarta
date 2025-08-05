@@ -35,7 +35,7 @@ class InputEkskulView extends GetView<InputEkskulController> {
           ),
         );
       }),
-      bottomNavigationBar: _buildSimpanButton(),
+      // bottomNavigationBar: _buildSimpanButton(),
     );
   }
 
@@ -95,25 +95,25 @@ class InputEkskulView extends GetView<InputEkskulController> {
     ));
   }
   
-  Widget _buildSimpanButton() {
-    // Kode ini tidak berubah
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16,0,16,24), // penyesuaian padding
-      child: Obx(() => ElevatedButton.icon(
-          onPressed: controller.isSaving.value ? null : () => controller.simpanPerubahan(),
-          icon: controller.isSaving.value
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Icon(Icons.save),
-          label: Text(controller.isSaving.value ? 'Menyimpan...' : 'Simpan Perubahan'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildSimpanButton() {
+  //   // Kode ini tidak berubah
+  //   return Padding(
+  //     padding: const EdgeInsets.fromLTRB(16,0,16,24), // penyesuaian padding
+  //     child: Obx(() => ElevatedButton.icon(
+  //         onPressed: controller.isSaving.value ? null : () => controller.simpanPerubahan(),
+  //         icon: controller.isSaving.value
+  //             ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+  //             : const Icon(Icons.save),
+  //         label: Text(controller.isSaving.value ? 'Menyimpan...' : 'Simpan Perubahan'),
+  //         style: ElevatedButton.styleFrom(
+  //           backgroundColor: Colors.teal,
+  //           foregroundColor: Colors.white,
+  //           padding: const EdgeInsets.symmetric(vertical: 16),
+  //           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  //           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }

@@ -13,7 +13,7 @@ class PemberianKelasSiswaView extends GetView<PemberianKelasSiswaController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
+        appBar: AppBar(
         title: Obx(() {
           final kelas = controller.kelasTerpilih.value;
           return Text(kelas == null ? 'Pemberian Kelas Siswa' : 'Atur Kelas $kelas');
@@ -21,6 +21,23 @@ class PemberianKelasSiswaView extends GetView<PemberianKelasSiswaController> {
         centerTitle: true,
         // --- BAGIAN PENTING 1: TOMBOL PEMICU DI APPBAR ---
         actions: [
+          if(controller.homeC.isDalang)
+          IconButton(
+            icon: const Icon(Icons.sync),
+            tooltip: "Update Semua Data Kelas Siswa",
+            onPressed: () {
+              Get.defaultDialog(
+                title: "Konfirmasi",
+                middleText: "Aksi ini akan meng-update field 'kelas' untuk semua siswa berdasarkan data tahun ajaran aktif. Lanjutkan?",
+                textConfirm: "Ya, Update",
+                textCancel: "Batal",
+                onConfirm: () {
+                  Get.back(); // tutup dialog
+                  controller.updateKelasSiswaMassal();
+                }
+              );
+            },
+          ),
           Obx(() {
             // Tombol ini hanya akan muncul jika sebuah kelas sudah dipilih.
             if (controller.kelasTerpilih.value != null) {
@@ -272,7 +289,75 @@ class PemberianKelasSiswaView extends GetView<PemberianKelasSiswaController> {
         leading: const Icon(Icons.person_pin_rounded, color: Colors.green),
         title: const Text("Wali Kelas"),
         subtitle: Text(namaWaliKelas, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        trailing: Obx(() => controller.isChangingWaliKelas.value
+            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator())
+            : TextButton(
+                child: const Text("Ganti"),
+                onPressed: () => _showGantiWaliKelasDialog(Get.context!),
+              )),
       ),
+    );
+  }
+
+  void _showGantiWaliKelasDialog(BuildContext context) {
+    Get.defaultDialog(
+      title: "Ganti Wali Kelas untuk ${controller.kelasTerpilih.value}",
+      content: SizedBox(
+        width: Get.width * 0.8,
+        height: 200, // Beri ketinggian agar tidak overflow
+        child: Column(
+          children: [
+            const Text("Pilih guru pengganti:"),
+            const SizedBox(height: 16),
+            Expanded(
+              child: DropdownSearch<Map<String, dynamic>>(
+                popupProps: const PopupProps.menu(
+                  showSearchBox: true,
+                  fit: FlexFit.loose,
+                ),
+                // Ambil semua guru kelas
+                items: (f, cs) => controller.getAllGuruKelas(), 
+                itemAsString: (guru) => guru['nama'],
+                compareFn: (item, selectedItem) => item['uid'] == selectedItem['uid'],
+                decoratorProps: const DropDownDecoratorProps(
+                  decoration: InputDecoration(
+                    labelText: "Pilih Guru",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                onChanged: (guruBaru) async {
+                  if (guruBaru == null) return;
+                  
+                  Get.back(); // Tutup dialog pemilihan
+
+                  // Cek apakah guru ini sudah jadi wali kelas di tempat lain
+                  final kelasLain = await controller.checkExistingWaliKelas(guruBaru['uid'], controller.kelasTerpilih.value!);
+                  
+                  if (kelasLain != null) {
+                    // Jika ya, tampilkan dialog konfirmasi dengan peringatan
+                    Get.defaultDialog(
+                      title: "Peringatan",
+                      middleText: "${guruBaru['nama']} sudah menjadi Wali Kelas untuk kelas $kelasLain. Anda yakin ingin melanjutkan?",
+                      textConfirm: "Ya, Lanjutkan",
+                      textCancel: "Batal",
+                      confirmTextColor: Colors.white,
+                      onConfirm: () {
+                        Get.back();
+                        controller.changeWaliKelas(controller.kelasTerpilih.value!, guruBaru);
+                      }
+                    );
+                  } else {
+                    // Jika tidak, langsung jalankan perubahan
+                    controller.changeWaliKelas(controller.kelasTerpilih.value!, guruBaru);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      // Kita tidak butuh tombol OK/Cancel di sini karena aksi terjadi saat onChanged
+      actions: [ TextButton(onPressed: () => Get.back(), child: const Text("Tutup")) ],
     );
   }
 

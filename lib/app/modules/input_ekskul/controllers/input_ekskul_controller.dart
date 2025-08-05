@@ -59,32 +59,32 @@ class InputEkskulController extends GetxController {
   }
 
   // REVISI: Menyimpan data ke path Firestore yang benar
-  Future<void> simpanPerubahan() async {
-    isSaving.value = true;
-    try {
-      String idTahunAjaran = Get.find<DaftarEkskulController>().activeTahunAjaranId;
+  // Future<void> simpanPerubahan() async {
+  //   isSaving.value = true;
+  //   try {
+  //     // String idTahunAjaran = Get.find<DaftarEkskulController>().activeTahunAjaranId;
       
-      // Path yang benar ke dokumen siswa
-      await firestore
-          .collection('Sekolah').doc(idSekolah)
-          .collection('tahunajaran').doc(idTahunAjaran)
-          .collection('kelastahunajaran').doc(idKelas)
-          .collection('daftarsiswa').doc(idSiswa)
-          .update({
-            'daftar_ekskul': ekskulTerpilih.toList(),
-      });
+  //     // Path yang benar ke dokumen siswa
+  //     await firestore
+  //         .collection('Sekolah').doc(idSekolah)
+  //         .collection('tahunajaran').doc(idTahunAjaran)
+  //         .collection('kelastahunajaran').doc(idKelas)
+  //         .collection('daftarsiswa').doc(idSiswa)
+  //         .update({
+  //           'daftar_ekskul': ekskulTerpilih.toList(),
+  //     });
 
-      Get.back(); // Kembali & memicu callback .then() di controller sebelumnya
-      Get.snackbar(
-        'Sukses', 
-        'Data ekskul ${dataSiswa['nama']} berhasil diperbarui.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+  //     Get.back(); // Kembali & memicu callback .then() di controller sebelumnya
+  //     Get.snackbar(
+  //       'Sukses', 
+  //       'Data ekskul ${dataSiswa['nama']} berhasil diperbarui.',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //     );
       
-    } catch (e) {
-      Get.snackbar('Error', 'Gagal menyimpan data: $e');
-    } finally {
-      isSaving.value = false;
-    }
-  }
+  //   } catch (e) {
+  //     Get.snackbar('Error', 'Gagal menyimpan data: $e');
+  //   } finally {
+  //     isSaving.value = false;
+  //   }
+  // }
 }

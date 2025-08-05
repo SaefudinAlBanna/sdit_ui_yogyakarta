@@ -52,7 +52,7 @@ class DaftarNilaiView extends GetView<DaftarNilaiController> {
   // --- APPBAR (Adaptasi dari Al-Husna) ---
   /// Membangun AppBar fleksibel yang menampilkan foto dan nama siswa
   SliverAppBar _buildSliverAppBar() {
-    final Map<String, dynamic> siswa = controller.dataSiswa;
+    final Map<String, dynamic> siswa = controller.dataSiswa.value;
     final String? imageUrl = siswa['profileImageUrl'];
     final ImageProvider imageProvider = (imageUrl != null && imageUrl.isNotEmpty)
         ? NetworkImage(imageUrl)
@@ -144,9 +144,10 @@ class DaftarNilaiView extends GetView<DaftarNilaiController> {
             // Ambil lokasi SAAT INI dari controller, bukan dari data nilai yang lama.
             const SizedBox(height: 3),
             Text(
-              "Lokasi: ${controller.dataSiswa['tempatmengaji']}", 
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.normal),
-            ),
+            // Ambil data lokasi langsung dari objek 'nilai'
+            "Lokasi: ${nilai.lokasiSaatInput}", 
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.normal),
+          ),
             // --- AKHIR PERBAIKAN ---
           ],
         ),
@@ -304,7 +305,7 @@ class DaftarNilaiView extends GetView<DaftarNilaiController> {
   
   /// Helper untuk menampilkan tampilan jika data kosong (sama seperti Al-Husna)
   Widget _buildEmptyState() {
-    final Map<String, dynamic> siswa = controller.dataSiswa;
+    final Map<String, dynamic> siswa = controller.dataSiswa.value;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),

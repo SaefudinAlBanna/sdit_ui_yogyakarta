@@ -48,7 +48,7 @@ class DaftarEkskulView extends GetView<DaftarEkskulController> {
         hint: const Text('Pilih Kelas...'),
         onChanged: (value) {
           if (value != null) {
-            controller.fetchSiswaByKelas(value);
+            controller.fetchSiswaDanEkskul(value);
           }
         },
         items: controller.daftarKelas.map((kelas) {
@@ -63,21 +63,23 @@ class DaftarEkskulView extends GetView<DaftarEkskulController> {
 
   Widget _buildDaftarSiswa() {
     return Obx(() {
-      if (controller.isSiswaLoading.value) {
+     if (controller.isSiswaLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
       if (controller.selectedKelas.value == null) {
         return _buildEmptyState("Silakan pilih kelas terlebih dahulu.", Icons.arrow_upward);
       }
-      if (controller.daftarSiswa.isEmpty) {
+      
+      // Gunakan state yang baru
+      if (controller.daftarSiswaDenganEkskul.isEmpty) {
         return _buildEmptyState("Tidak ada siswa di kelas ini.", Icons.people_outline);
       }
+
       return ListView.builder(
-        itemCount: controller.daftarSiswa.length,
+        itemCount: controller.daftarSiswaDenganEkskul.length,
         itemBuilder: (context, index) {
-          final siswaDoc = controller.daftarSiswa[index];
-          final data = siswaDoc.data();
-          final List<dynamic> ekskul = data['daftar_ekskul'] ?? [];
+          final siswaData = controller.daftarSiswaDenganEkskul[index];
+          final List<dynamic> ekskul = siswaData['daftar_ekskul'] ?? [];
 
           return Card(
             elevation: 3,
@@ -88,15 +90,15 @@ class DaftarEkskulView extends GetView<DaftarEkskulController> {
               leading: CircleAvatar(
                 backgroundColor: Colors.teal.shade100,
                 child: Text(
-                  data['nama']?.substring(0, 1) ?? 'S', // Asumsi field 'nama'
+                  siswaData['nama']?.substring(0, 1) ?? 'S', // Asumsi field 'nama'
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
                 ),
               ),
-              title: Text(data['namasiswa'] ?? 'Nama tidak ada', style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(siswaData['namasiswa'] ?? 'Nama tidak ada', style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("ID: ${siswaDoc.id}"),
+                  Text("ID: ${siswaData['id'] ?? ''}"),
                   const SizedBox(height: 4),
                   if (ekskul.isNotEmpty)
                     Wrap(
@@ -114,7 +116,7 @@ class DaftarEkskulView extends GetView<DaftarEkskulController> {
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.edit, color: Colors.teal),
-                onPressed: () => controller.goToInputEkskul(siswaDoc),
+                onPressed: () => controller.goToInputEkskul(siswaData),
               ),
             ),
           );
@@ -124,7 +126,6 @@ class DaftarEkskulView extends GetView<DaftarEkskulController> {
   }
   
   Widget _buildEmptyState(String message, IconData icon) {
-    // ... (kode ini tidak berubah)
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

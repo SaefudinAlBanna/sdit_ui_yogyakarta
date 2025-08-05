@@ -118,10 +118,12 @@ class DaftarPegawaiView extends GetView<DaftarPegawaiController> {
                       Text("Tugas: $tugas"),
                     ],
                   ),
+                  
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Tombol Edit (untuk masa depan)
+                      if(controller.homeC.kapten)
                       IconButton(
                           icon: Icon(Icons.edit, color: Colors.blue.shade700),
                           onPressed: () async {
@@ -142,6 +144,7 @@ class DaftarPegawaiView extends GetView<DaftarPegawaiController> {
                           tooltip: 'Edit Pegawai',
                         ),
                       // Tombol Hapus
+                      if(controller.homeC.kapten)
                       IconButton(
                         icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
                         onPressed: () {
@@ -159,18 +162,20 @@ class DaftarPegawaiView extends GetView<DaftarPegawaiController> {
           ),
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Navigasi ke halaman tambah pegawai.
-          // Setelah kembali, panggil fetchPegawai() untuk refresh data.
-          final result = await Get.to(() => TambahPegawaiView(), binding: TambahPegawaiBinding());
-          if (result == true) { // Jika halaman tambah pegawai ditutup dgn sukses
-             controller.fetchPegawai();
-          }
-        },
-        child: Icon(Icons.person_add),
-        tooltip: 'Tambah Pegawai Baru',
-      ),
+      floatingActionButton: controller.homeC.kapten
+          ? FloatingActionButton(
+              onPressed: () async {
+                // Navigasi ke halaman tambah pegawai.
+                // Setelah kembali, panggil fetchPegawai() untuk refresh data.
+                final result = await Get.to(() => TambahPegawaiView(), binding: TambahPegawaiBinding());
+                if (result == true) { // Jika halaman tambah pegawai ditutup dgn sukses
+                  controller.fetchPegawai();
+                }
+              },
+              child: Icon(Icons.person_add),
+              tooltip: 'Tambah Pegawai Baru',
+            )
+          : null,
     );
   }
 }

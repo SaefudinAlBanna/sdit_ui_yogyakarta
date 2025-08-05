@@ -19,6 +19,11 @@ class NilaiHalaqohUmi {
   final Timestamp? terakhirDiubah;
   final String? diubahOlehNama;
   final String? diubahOlehUid;
+  final String lokasiSaatInput;
+
+  // // Info data edit (opsional)
+  // final DateTime? terakhirDiubah;
+  // final String? diubahOlehNama;
 
   NilaiHalaqohUmi({
     required this.id,
@@ -36,6 +41,7 @@ class NilaiHalaqohUmi {
     this.terakhirDiubah,
     this.diubahOlehNama,
     this.diubahOlehUid,
+    required this.lokasiSaatInput,
   });
 
   // Factory untuk membuat objek dari data Firestore
@@ -71,6 +77,7 @@ class NilaiHalaqohUmi {
       terakhirDiubah: data['terakhir_diubah'] as Timestamp?,
       diubahOlehNama: data['diubah_oleh_nama'] as String?,
       diubahOlehUid: data['diubah_oleh_uid'] as String?,
+      lokasiSaatInput: data['lokasi_saat_input'] ?? data['tempatmengaji'] ?? 'N/A',
     );
   }
 

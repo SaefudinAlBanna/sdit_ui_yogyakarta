@@ -91,7 +91,7 @@ class HomeView extends GetView<HomeController> {
       ),
       PersistentBottomNavBarItem(
         icon: const Icon(Icons.shopping_cart_outlined),
-        title: "Market",
+        title: "R.Belajar",
         activeColorPrimary: Colors.green.shade700,
         inactiveColorPrimary: Colors.grey,
       ),

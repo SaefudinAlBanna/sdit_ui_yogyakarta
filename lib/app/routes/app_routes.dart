@@ -68,6 +68,29 @@ abstract class Routes {
   static const MANAJEMEN_TUGAS = _Paths.MANAJEMEN_TUGAS;
   static const DAFTAR_PEGAWAI = _Paths.DAFTAR_PEGAWAI;
   static const PANTAU_TAHFIDZ = _Paths.PANTAU_TAHFIDZ;
+  static const ATUR_PENGGANTI = _Paths.ATUR_PENGGANTI;
+  static const HALAMAN_PENGGANTI = _Paths.HALAMAN_PENGGANTI;
+  static const KURIKULUM_MASTER = _Paths.KURIKULUM_MASTER;
+  static const DAFTAR_INFORMASI = _Paths.DAFTAR_INFORMASI;
+  static const MANAJEMEN_JAM = _Paths.MANAJEMEN_JAM;
+  static const MANAJEMEN_EKSKUL = _Paths.MANAJEMEN_EKSKUL;
+  static const GURU_PENGGANTI = _Paths.GURU_PENGGANTI;
+  static const ADMIN_MANAJEMEN = _Paths.ADMIN_MANAJEMEN;
+  static const SPESIALISASI = _Paths.SPESIALISASI;
+  static const PEMBINA_EKSTERNAL = _Paths.PEMBINA_EKSTERNAL;
+  static const MASTER_EKSKUL = _Paths.MASTER_EKSKUL;
+  static const INSTANCE_EKSKUL = _Paths.INSTANCE_EKSKUL;
+  static const DASBOR_PEMBINA = _Paths.DASBOR_PEMBINA;
+  static const PEMBINA_EKSKUL_DETAIL = _Paths.PEMBINA_EKSKUL_DETAIL;
+  static const LOG_EKSKUL_SISWA = _Paths.LOG_EKSKUL_SISWA;
+  static const LAPORAN_EKSKUL = _Paths.LAPORAN_EKSKUL;
+  static const MANAJEMEN_TAHUN_AJARAN_EKSKUL =
+      _Paths.MANAJEMEN_TAHUN_AJARAN_EKSKUL;
+  static const PENILAIAN_RAPOR_EKSKUL = _Paths.PENILAIAN_RAPOR_EKSKUL;
+  static const RAPOR_EKSKUL_SISWA = _Paths.RAPOR_EKSKUL_SISWA;
+  static const RAPOR_TERPADU = _Paths.RAPOR_TERPADU;
+  static const KELOLA_CATATAN_RAPOR = _Paths.KELOLA_CATATAN_RAPOR;
+  static const PENILAIAN_RAPOR_HALAQOH = _Paths.PENILAIAN_RAPOR_HALAQOH;
 }
 
 abstract class _Paths {
@@ -136,4 +159,26 @@ abstract class _Paths {
   static const MANAJEMEN_TUGAS = '/manajemen-tugas';
   static const DAFTAR_PEGAWAI = '/daftar-pegawai';
   static const PANTAU_TAHFIDZ = '/pantau-tahfidz';
+  static const ATUR_PENGGANTI = '/atur-pengganti';
+  static const HALAMAN_PENGGANTI = '/halaman-pengganti';
+  static const KURIKULUM_MASTER = '/kurikulum-master';
+  static const DAFTAR_INFORMASI = '/daftar-informasi';
+  static const MANAJEMEN_JAM = '/manajemen-jam';
+  static const MANAJEMEN_EKSKUL = '/manajemen-ekskul';
+  static const GURU_PENGGANTI = '/guru-pengganti';
+  static const ADMIN_MANAJEMEN = '/admin-manajemen';
+  static const SPESIALISASI = '/spesialisasi';
+  static const PEMBINA_EKSTERNAL = '/pembina-eksternal';
+  static const MASTER_EKSKUL = '/master-ekskul';
+  static const INSTANCE_EKSKUL = '/instance-ekskul';
+  static const DASBOR_PEMBINA = '/dasbor-pembina';
+  static const PEMBINA_EKSKUL_DETAIL = '/pembina-detail';
+  static const LOG_EKSKUL_SISWA = '/log-ekskul';
+  static const LAPORAN_EKSKUL = '/laporan-ekskul';
+  static const MANAJEMEN_TAHUN_AJARAN_EKSKUL = '/manajemen-tahun-ajaran-ekskul';
+  static const PENILAIAN_RAPOR_EKSKUL = '/penilaian-rapor-ekskul';
+  static const RAPOR_EKSKUL_SISWA = '/rapor-ekskul-siswa';
+  static const RAPOR_TERPADU = '/rapor-terpadu';
+  static const KELOLA_CATATAN_RAPOR = '/kelola-catatan-rapor';
+  static const PENILAIAN_RAPOR_HALAQOH = '/penilaian-rapor-halaqoh';
 }

@@ -105,48 +105,12 @@ class DaftarKelasController extends GetxController with GetSingleTickerProviderS
     }
   }
 
-  // lib/app/modules/daftar_kelas/controllers/daftar_kelas_controller.dart
-
-  // @override
-  // void onInit() {
-  //   super.onInit();
-  //   tabController = TabController(length: 4, vsync: this);
-  //   tabController.addListener(() { selectedTabIndex.value = tabController.index; });
-
-  //   // Kembali ke listener 'once' yang aman
-  //   if (homeC.isReady.value) {
-  //     fetchInitialDataBasedOnRole();
-  //   } else {
-  //     once(homeC.isReady, (_) => fetchInitialDataBasedOnRole());
-  //   }
-  // }
-
    @override
   void onClose() {
     // --- PERUBAHAN 3: Jangan lupa dispose TabController ---
     tabController.dispose();
     super.onClose();
   }
-
-  
-
-  // void toggleObservingMode() {
-  //   isObservingMode.value = !isObservingMode.value;
-    
-  //   // Tukar sumber data yang ditampilkan
-  //   if (isObservingMode.value) {
-  //     displayKelasList.assignAll(_allSchoolClasses);
-  //   } else {
-  //     displayKelasList.assignAll(_taughtClasses);
-  //   }
-    
-  //   // Reset pilihan kelas saat mode berganti
-  //   if (displayKelasList.isNotEmpty) {
-  //     gantiKelasTerpilih(displayKelasList.first);
-  //   } else {
-  //     kelasTerpilih.value = null;
-  //   }
-  // }
 
   Future<void> fetchHalaqohData(String namaKelas) async {
   try {

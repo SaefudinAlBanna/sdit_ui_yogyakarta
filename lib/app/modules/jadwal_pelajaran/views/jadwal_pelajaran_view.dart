@@ -91,6 +91,7 @@ class JadwalPelajaranView extends GetView<JadwalPelajaranController> {
 
   // WIDGET BARU: Tampilan daftar jadwal yang keren dan futuristik
   Widget _buildScheduleList(BuildContext context, String hari) {
+    // Variabel ini tetap di sini, ini adalah sumber datanya
     final RxList<Map<String, dynamic>> pelajaranHariIni = controller.jadwalPelajaranPerHari[hari]!;
 
     return Obx(() {
@@ -101,12 +102,17 @@ class JadwalPelajaranView extends GetView<JadwalPelajaranController> {
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         itemCount: pelajaranHariIni.length,
         itemBuilder: (context, index) {
+          // 'pelajaran' didefinisikan DI DALAM builder, untuk setiap item
           final pelajaran = pelajaranHariIni[index];
+
+          // [FIX] DEKLARASIKAN SEMUA VARIABEL YANG BERASAL DARI 'pelajaran' DI SINI
           final String mapel = pelajaran['mapel'] as String? ?? 'Tanpa Nama';
           final String mulai = pelajaran['mulai'] as String? ?? '--:--';
           final String selesai = pelajaran['selesai'] as String? ?? '--:--';
           final int jamKe = pelajaran['jamKe'] as int? ?? 0;
+          final String guru = pelajaran['guru'] as String? ?? 'Guru Belum Ditentukan'; // <-- POSISI YANG BENAR
 
+          // Sekarang, semua variabel aman untuk digunakan di dalam Container ini
           return Container(
             margin: const EdgeInsets.only(bottom: 16.0),
             decoration: BoxDecoration(
@@ -159,6 +165,14 @@ class JadwalPelajaranView extends GetView<JadwalPelajaranController> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
+                          // [TAMBAHAN] Tampilkan nama guru
+                          Text(
+                            guru,
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
                           Chip(
                             label: Text('Jam ke-$jamKe'),
                             backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),

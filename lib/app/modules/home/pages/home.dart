@@ -31,7 +31,7 @@ class HomePage extends GetView<HomeController> {
             return const Center(child: CircularProgressIndicator());
           }
           return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: controller.streamUserProfile(),
+            stream: controller.userStream(),
             builder: (context, userSnapshot) {
               if (!userSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
@@ -136,6 +136,22 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
   final controller = Get.find<HomeController>();
   // Daftar semua menu yang mungkin ada
   final List<Widget> allMenuItems = [
+    if(controller.isDalang)
+    _MenuItem(title: 'Rapor (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.PENILAIAN_RAPOR_EKSKUL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Duplikat (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.MANAJEMEN_TAHUN_AJARAN_EKSKUL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Laporan (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.LAPORAN_EKSKUL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Dash.Pembina (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.DASBOR_PEMBINA);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Instance (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.INSTANCE_EKSKUL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Master (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.MASTER_EKSKUL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'pembinaX (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.PEMBINA_EKSTERNAL);}),
+    if(controller.isDalang)
+    _MenuItem(title: 'Spesialisasi (Ekskul)', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.SPESIALISASI);}),
     
     // if (controller.userRole.value == 'Kepala Sekolah' || controller.userRole.value == 'Admin')
   //   if (controller.isSuperUser)
@@ -169,28 +185,28 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
   //   _MenuItem(title: 'Tambah Tahsin', imagePath: "assets/png/daftar_list.png", onTap: () {
   //     Get.back();
   //     Get.toNamed(Routes.TAMBAH_KELOMPOK_MENGAJI);}),
-    if( controller.isAdmin || controller.isDalang)
+    if( controller.isAdmin || controller.isDalang || controller.kapten)
     _MenuItem(title: 'Ekskul', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.DAFTAR_EKSKUL);}),
     // if (controller.userRole.value == 'Koordinator Halaqoh' || controller.userRole.value =='Admin')
     // _MenuItem(title: 'Tahsin Tahfidz', imagePath: "assets/png/daftar_tes.png", onTap: () { Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE);}),
     
     // if (controller.userRole.value == 'Koordinator Halaqoh' || controller.userRole.value =='Admin')
-    if(controller.canManageTahsin || controller.isDalang)
+    if(controller.canManageTahsin || controller.isDalang || controller.kapten)
     _MenuItem(title: 'Siap Ujian', imagePath: "assets/png/play.png", onTap: () { Get.toNamed(Routes.LAKSANAKAN_UJIAN);}),
 
     if (controller.isAdmin || controller.isDalang)
     _MenuItem(title: 'Bayar SPP', imagePath: "assets/png/uang.png", onTap: () {
       Get.toNamed(Routes.PEMBAYARAN_SPP);
     }),
-    if (controller.isAdminKepsek || controller.isDalang)
+    if (controller.isAdminKepsek || controller.isDalang || controller.kapten)
     _MenuItem(title: 'Tambah Info', imagePath: "assets/png/tumpukan_buku.png", onTap: () {
     
       Get.back();
       Get.toNamed(Routes.INPUT_INFO_SEKOLAH);}),
     
-    _MenuItem(title: 'Daftar Jurnal', imagePath: "assets/png/tumpukan_buku.png", onTap: () {
-      Get.back();
-      Get.toNamed(Routes.DAFTAR_JURNAL_AJAR);}),
+    // _MenuItem(title: 'Daftar Jurnal', imagePath: "assets/png/tumpukan_buku.png", onTap: () {
+    //   Get.back();
+    //   Get.toNamed(Routes.DAFTAR_JURNAL_AJAR);}),
     // if (controller.userRole.value == 'Admin' || controller.userRole.value == 'Koordinator Halaqoh')
 
     if(controller.isAdminKepsek || controller.canManageTahsin || controller.isDalang)
@@ -290,19 +306,22 @@ void _showAllMenus(BuildContext context, Map<String, dynamic> userData) {
     if (controller.isDalang)
     _MenuItem(title: 'Rekapitulasi Rinci', imagePath: "assets/png/kamera_layar.png", onTap: () { Get.toNamed(Routes.REKAPITULASI_PEMBAYARAN_RINCI); }),
     
-    if (controller.canManageTahsin || controller.canManageTahsin || controller.isDalang)
+    if (controller.isAdminKepsek || controller.kapten || controller.isDalang)
     _MenuItem(title: 'Buat Jadwal Pelajaran', imagePath: "assets/png/papan_list.png", onTap: () { Get.toNamed(Routes.BUAT_JADWAL_PELAJARAN); }),
     
     if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Input Sarpras', imagePath: "assets/png/tumpukan_buku.png", onTap: () { Get.toNamed(Routes.BUAT_SARPRAS); }),
+    if (controller.isDalang)
     _MenuItem(title: 'Info Sarpras', imagePath: "assets/png/toga_lcd.png", onTap: () { Get.toNamed(Routes.DATA_SARPRAS); }),
     
-    if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
+    if (controller.kapten || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Import Siswa Excel', imagePath: "assets/png/layar.png", onTap: () { Get.toNamed(Routes.IMPORT_SISWA_EXCEL); }),
     
     if (controller.isAdmin || controller.canManageTahsin || controller.isDalang)
     _MenuItem(title: 'Import Pegawai Excel', imagePath: "assets/png/toga_lcd.png", onTap: () { Get.toNamed(Routes.IMPORT_PEGAWAI); }),
     // _MenuItem(title: 'Hapus Pegawai', imagePath: "assets/png/update_waktu.png", onTap: () { }),
+    if(controller.isAdminKepsek || controller.kapten || controller.isDalang)
+    _MenuItem(title: 'Pengganti', imagePath: "assets/png/update_waktu.png", onTap: () {Get.toNamed(Routes.GURU_PENGGANTI); }),
     // _MenuItem(title: 'Hapus Siswa', imagePath: "assets/png/ktp.png", onTap: () { }),
     // _MenuItem(title: 'Absen', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.ABSENSI); }),
     _MenuItem(title: 'Jurnal Guru', imagePath: "assets/png/layar.png", onTap: () {Get.toNamed(Routes.REKAP_JURNAL_GURU); }),
@@ -397,14 +416,35 @@ class _MenuGrid extends StatelessWidget {
                 title: 'Kelas Tahsin',
                 imagePath: "assets/png/toga_lcd.png",
                 onTap: () {
-                  // Terapkan logika kondisional
-                  if (controller.kelasTahsin) {
-                    Get.toNamed(Routes.DAFTAR_HALAQOH_PENGAMPU);
-                  } else if (controller.kapten || controller.canManageTahsin || controller.isAdminKepsek) {
+                  // Gunakan controller yang sudah ada di view, atau Get.find() jika perlu
+                  // Asumsi `controller` adalah instance dari HomeController
+                  final homeC = controller; 
+
+                  // --- [LOGIKA BARU YANG LEBIH KOKOH] ---
+
+                  // Prioritas 1: Pimpinan / Koordinator / Super User
+                  // Mereka selalu diarahkan ke halaman pantauan per fase.
+                  if (homeC.canManageTahsin || homeC.isAdminKepsek || homeC.kapten) {
                     Get.toNamed(Routes.DAFTAR_HALAQOH_PERFASE);
-                  } else {
-                    Get.snackbar("Informasi", "Maaf, kelas khusus Tahsin");
+                    return; // Hentikan eksekusi setelah menemukan peran yang cocok
                   }
+
+                  // Prioritas 2: Pengganti Murni
+                  // Jika BUKAN pimpinan, cek apakah dia HANYA seorang pengganti hari ini.
+                  if (homeC.isPenggantiHariIni && homeC.kelompokPermanen.isEmpty) {
+                    Get.toNamed(Routes.HALAMAN_PENGGANTI);
+                    return;
+                  }
+
+                  // Prioritas 3: Pengampu Biasa (atau Pengampu yang juga jadi Pengganti)
+                  // Getter `kelasTahsin` (kelompokMengajiDiajar.isNotEmpty) akan true untuk keduanya.
+                  if (homeC.kelasTahsin) {
+                    Get.toNamed(Routes.DAFTAR_HALAQOH_PENGAMPU);
+                    return;
+                  }
+
+                  // Kondisi Terakhir: Tidak punya hak akses sama sekali.
+                  Get.snackbar("Informasi", "Maaf, fitur ini khusus untuk Tim Tahsin.");
                 },
               ),
               _MenuItem(
@@ -537,7 +577,7 @@ class _SectionHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
-            if (showSeeAll) TextButton(onPressed: () {}, child: const Text("Lihat Semua")),
+            if (showSeeAll) TextButton(onPressed: () {Get.toNamed(Routes.DAFTAR_INFORMASI);}, child: const Text("Lihat Semua")),
           ],
         ),
       ),
@@ -766,8 +806,6 @@ class _JurnalCard extends GetView<HomeController> {
 }
 
 class _InformasiList extends GetView<HomeController> {
-  // Kode untuk _InformasiList tidak perlu diubah, sudah cukup baik.
-  // ... (salin kode _InformasiList Anda yang lama di sini)
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -801,7 +839,7 @@ class _InformasiList extends GetView<HomeController> {
                   child: Row( /* ... konten Anda ... */ 
                      children: [
                       CachedNetworkImage(
-                        imageUrl: dataInfo['url_gambar'] ?? "https://picsum.photos/id/${index + 356}/200/200",
+                        imageUrl: dataInfo['imageUrl'] ?? "https://picsum.photos/id/${index + 356}/200/200",
                         width: 100, height: 100, fit: BoxFit.cover,
                         placeholder: (c, u) => Container(color: Colors.grey.shade200),
                         errorWidget: (c, u, e) => const Icon(Icons.broken_image, color: Colors.grey),

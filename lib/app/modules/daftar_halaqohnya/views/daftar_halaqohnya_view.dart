@@ -9,9 +9,10 @@ import '../../../models/siswa_halaqoh.dart';
 import '../../tambah_kelompok_mengaji/controllers/tambah_kelompok_mengaji_controller.dart';
 import '../controllers/daftar_halaqohnya_controller.dart';
 import '../../../routes/app_pages.dart';
+import '../../../widgets/tandai_siap_ujian_sheet.dart';
 
 class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
-  const DaftarHalaqohnyaView({Key? key}) : super(key: key);
+  const DaftarHalaqohnyaView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,40 +75,52 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
     );
   }
 
-  void _showGantiPengampuDialog() async {
-    // Kita buat instance sementara dari controller lain untuk meminjam fungsinya
-    final tambahKelompokController = Get.put(TambahKelompokMengajiController());
-    
-    // Tampilkan dialog dan tunggu sampai ditutup
-    await Get.dialog(
+  void _showGantiPengampuDialog() {
+    // [BARU] Buat state lokal di dalam dialog untuk menampung pilihan sementara.
+    final Rxn<Map<String, dynamic>> pengampuTerpilih = Rxn<Map<String, dynamic>>();
+
+    Get.dialog(
       AlertDialog(
         title: const Text("Pilih Pengampu Baru"),
         content: SizedBox(
           width: Get.width * 0.8,
+          // [DIUBAH] Dropdown sekarang hanya akan memperbarui state lokal.
           child: DropdownSearch<Map<String, dynamic>>(
-            items: (f, cs) async {
-              // Panggil fungsinya, lalu kembalikan state list-nya
-              await tambahKelompokController.fetchAvailablePengampu(controller.fase.value);
-              return tambahKelompokController.availablePengampu;
-            },
+            // items-nya tidak perlu diubah, tapi kita pinjam service sekarang
+            items: (f, cs) => controller.halaqohService.fetchAvailablePengampu(controller.fase.value),
             itemAsString: (item) => item['alias']!,
             compareFn: (item1, item2) => item1['uid'] == item2['uid'],
             popupProps: const PopupProps.menu(showSearchBox: true),
-            decoratorProps: const DropDownDecoratorProps(decoration: InputDecoration(labelText: "Pengampu Tersedia")),
+            decoratorProps: const DropDownDecoratorProps(
+              decoration: InputDecoration(labelText: "Pengampu Tersedia"),
+            ),
+            // onChanged sekarang hanya mengisi variabel sementara, tidak memanggil aksi besar.
             onChanged: (selected) {
-              if (selected != null) {
-                // Jangan tutup dialog di sini, biarkan gantiPengampu yang menutupnya
-                controller.gantiPengampu(selected);
-              }
+              pengampuTerpilih.value = selected;
             },
           ),
         ),
+        // [BARU] Tambahkan tombol aksi untuk konfirmasi.
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Batal"),
+          ),
+          // Bungkus tombol Ganti dengan Obx agar bisa aktif/nonaktif.
+          Obx(() => ElevatedButton(
+                // Tombol akan nonaktif sampai ada pengampu yang dipilih.
+                onPressed: pengampuTerpilih.value == null
+                    ? null
+                    : () {
+                        // Aksi besar dipanggil di sini, SETELAH konfirmasi.
+                        controller.gantiPengampu(pengampuTerpilih.value);
+                      },
+                child: const Text("Ganti"),
+              )),
+        ],
       ),
+      // Kita tidak perlu lagi menghapus controller sementara karena kita memanggil service.
     );
-
-    // Setelah dialog ditutup (baik dengan memilih atau menekan tombol batal),
-    // bersihkan controller sementara dari memori.
-    Get.delete<TambahKelompokMengajiController>();
   }
 
   void _showPilihSiswaBottomSheet(BuildContext context) {
@@ -229,43 +242,10 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
 
   // --- FUNGSI BARU UNTUK MENAMPILKAN BOTTOM SHEET UJIAN (VERSI LENGKAP & FINAL) ---
   void _showTandaiUjianSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    controller.santriTerpilihUntukUjian.clear(); controller.capaianUjianC.clear(); controller.levelUjianC.clear();
-    Get.bottomSheet( Container( height: MediaQuery.of(context).size.height * 0.9, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-        child: Column( children: [
-            Container( margin: const EdgeInsets.only(bottom: 16), width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Expanded( child: ListView( children: [
-                  Text("1. Isi Detail Ujian", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 16),
-                  TextField(controller: controller.levelUjianC, decoration: const InputDecoration(labelText: 'Level Ujian (Contoh: Jilid 1, Juz 30)', border: OutlineInputBorder())), const SizedBox(height: 12),
-                  TextField(controller: controller.capaianUjianC, decoration: const InputDecoration(labelText: 'Capaian Terakhir Santri', border: OutlineInputBorder()), maxLines: 3), const SizedBox(height: 24),
-                  Text("2. Pilih Santri yang Siap Ujian", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 8),
-                  Obx(() => ListView.builder( shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: controller.daftarSiswa.length,
-                    itemBuilder: (ctx, index) {
-                      final siswa = controller.daftarSiswa[index]; final status = siswa.statusUjian;
-                      return Obx(() {
-                        final isSelected = controller.santriTerpilihUntukUjian.contains(siswa.nisn);
-                        return CheckboxListTile(
-                          title: Text(siswa.namaSiswa), subtitle: Text("Status saat ini: ${status ?? 'Normal'}"), value: isSelected,
-                          onChanged: (status == 'siap_ujian') ? null : (val) { controller.toggleSantriSelectionForUjian(siswa.nisn); },
-                          controlAffinity: ListTileControlAffinity.leading, activeColor: theme.colorScheme.primary,
-                        );
-                      });
-                    },
-                  )),
-                ],
-              ),
-            ),
-            Obx(() => SizedBox( width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: controller.isDialogLoading.value ? null : controller.tandaiSiapUjianMassal,
-                  style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, foregroundColor: theme.colorScheme.onPrimary, padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: Text(controller.isDialogLoading.value ? "Menyimpan..." : "Tandai Siap Ujian"),
-                ),
-              )), const SizedBox(height: 8),
-          ],
-        ),
-      ), isScrollControlled: true,
+    Get.bottomSheet(
+      TandaiSiapUjianSheet(controller: controller), // Cukup panggil widget terpusat
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 
@@ -333,37 +313,82 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
   void _showInputNilaiMassalSheet(BuildContext context) {
     final theme = Theme.of(context);
     controller.clearNilaiForm();
-    Get.bottomSheet( isScrollControlled: true, backgroundColor: Colors.transparent,
-      Container( height: MediaQuery.of(context).size.height * 0.9, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
-        child: Column( children: [
-            Container( margin: const EdgeInsets.only(bottom: 16), width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Expanded( child: ListView( children: [
-                  Text("1. Isi Template Nilai", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 16),
-                  TextField(controller: controller.suratC, decoration: _inputDecorator(theme, 'Surat Hafalan', Icons.book_outlined)), const SizedBox(height: 12),
-                  TextField(controller: controller.ayatHafalC, decoration: _inputDecorator(theme, 'Ayat yang Dihafal', Icons.format_list_numbered_rtl_outlined)), const SizedBox(height: 12),
-                  TextField(controller: controller.capaianC, decoration: _inputDecorator(theme, 'Capaian', Icons.flag_outlined)), const SizedBox(height: 12),
-                  TextField(controller: controller.materiC, decoration: _inputDecorator(theme, 'Materi UMMI/Al-Quran', Icons.lightbulb_outline)), const SizedBox(height: 12),
-                  TextField( controller: controller.nilaiC, decoration: _inputDecorator(theme, 'Nilai (Maks. 98)', Icons.star_border_outlined), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (value) {
-                      if (value.isNotEmpty) {
-                        int nilai = int.tryParse(value) ?? 0;
-                        if (nilai > 98) { controller.nilaiC.text = '98'; controller.nilaiC.selection = TextSelection.fromPosition(TextPosition(offset: controller.nilaiC.text.length)); }
-                      }
-                    },
-                  ), const SizedBox(height: 24),
+
+    // Pastikan controller nilai per siswa di-inisialisasi
+    controller.nilaiMassalControllers.clear();
+    for (var siswa in controller.daftarSiswa) {
+      controller.nilaiMassalControllers[siswa.nisn] = TextEditingController();
+    }
+    
+    Get.bottomSheet(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 50, height: 5,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+            ),
+            Expanded(
+              child: ListView(
+                children: [
+                  Text("1. Isi Template Materi (Untuk Semua)", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  TextField(controller: controller.suratC, decoration: _inputDecorator(theme, 'Surat Hafalan', Icons.book_outlined)),
+                  const SizedBox(height: 12),
+                  TextField(controller: controller.ayatHafalC, decoration: _inputDecorator(theme, 'Ayat yang Dihafal', Icons.format_list_numbered_rtl_outlined)),
+                  const SizedBox(height: 12),
+                  TextField(controller: controller.capaianC, decoration: _inputDecorator(theme, 'Capaian', Icons.flag_outlined)),
+                  const SizedBox(height: 12),
+                  TextField(controller: controller.materiC, decoration: _inputDecorator(theme, 'Materi', Icons.lightbulb_outline)),
+                  // Hapus TextField nilai tunggal dari sini
+                  const SizedBox(height: 24),
                   Text("Catatan Pengampu", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  _buildKeteranganSection(theme), const SizedBox(height: 24),
-                  Text("2. Pilih Santri Penerima Nilai", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 8),
-                  Obx(() => ListView.builder( shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: controller.daftarSiswa.length,
+                  _buildKeteranganSection(theme), // Fungsi ini harus ada di view
+                  const SizedBox(height: 24),
+                  Text("2. Pilih Santri & Input Nilai Individual", style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Obx(() => ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: controller.daftarSiswa.length,
                     itemBuilder: (ctx, index) {
                       final santri = controller.daftarSiswa[index];
                       return Obx(() {
                         final isSelected = controller.santriTerpilihUntukNilai.contains(santri.nisn);
-                        return CheckboxListTile(
-                          title: Text(santri.namaSiswa), subtitle: Text("Kelas: ${santri.kelas}"), value: isSelected,
-                          onChanged: (val) => controller.toggleSantriSelection(santri.nisn),
-                          controlAffinity: ListTileControlAffinity.leading, activeColor: theme.colorScheme.primary,
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Checkbox(
+                            value: isSelected,
+                            onChanged: (val) { controller.toggleSantriSelection(santri.nisn); },
+                            activeColor: theme.colorScheme.primary,
+                          ),
+                          title: Text(santri.namaSiswa),
+                          trailing: SizedBox(
+                            width: 70, // Lebarkan sedikit
+                            child: TextFormField(
+                              // Gunakan controller yang spesifik per siswa
+                              controller: controller.nilaiMassalControllers[santri.nisn],
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(2), // Maks 2 digit
+                              ],
+                              decoration: const InputDecoration(
+                                hintText: "Nilai",
+                                isDense: true,
+                              ),
+                            ),
+                          ),
                         );
                       });
                     },
@@ -373,14 +398,20 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
             ),
             const SizedBox(height: 16),
             Obx(() => ElevatedButton.icon(
-              icon: controller.isSavingNilai.value ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary)) : const Icon(Icons.save),
+              icon: controller.isSavingNilai.value 
+                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary)) 
+                  : const Icon(Icons.save),
               label: Text(controller.isSavingNilai.value ? "Menyimpan..." : "Simpan untuk Santri Terpilih"),
               onPressed: controller.isSavingNilai.value ? null : controller.simpanNilaiMassal,
-              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: theme.colorScheme.primary, foregroundColor: theme.colorScheme.onPrimary),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+              ),
             )),
           ],
         ),
-      )
+      ),
     );
   }
 
@@ -464,21 +495,30 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
 
   /// Membangun Card Siswa yang informatif dan interaktif
   Widget _buildSiswaCard(SiswaHalaqoh siswa) {
-  return Card(
-    elevation: 3,
-    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(15),
-      onTap: () {
-        Get.toNamed(Routes.DAFTAR_NILAI, arguments: siswa.rawData);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            // Avatar Siswa (tidak berubah)
-            CircleAvatar(
+    final bool isSiapUjian = siswa.statusUjian == 'siap_ujian';
+    
+    return Card(
+      elevation: isSiapUjian ? 4 : 2,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        // [VISUAL] Tambahkan border jika siap ujian
+        side: isSiapUjian 
+          ? BorderSide(color: Colors.amber.shade700, width: 2) 
+          : BorderSide.none,
+      ),
+      // [VISUAL] Beri warna latar yang berbeda
+      color: isSiapUjian ? Colors.amber.shade50 : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: () { Get.toNamed(Routes.DAFTAR_NILAI, arguments: siswa.rawData); },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
               radius: 30,
               backgroundColor: Colors.blueGrey.shade50,
               backgroundImage: siswa.profileImageUrl != null ? NetworkImage(siswa.profileImageUrl!) : null,
@@ -517,7 +557,7 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
               ),
             ),
             
-                  // Tombol Aksi (tidak berubah)
+            // Tombol Aksi (tidak berubah)
                   Obx(() {
                     if (controller.canPerformWriteActions) {
                       return PopupMenuButton<String>(
@@ -535,10 +575,21 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
                   }),
                 ],
               ),
-            ),
+            if (isSiapUjian)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: Chip(
+                    avatar: Icon(Icons.star, color: Colors.yellow.shade800),
+                    label: const Text("SIAP UJIAN", style: TextStyle(fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.amber.shade200,
+                  ),
+                ),
+            ],
           ),
-        );
-      }
+        ),
+      ),
+    );
+  }
 
       void _showPindahHalaqohDialog(SiswaHalaqoh siswa) {
     final Rxn<Map<String, dynamic>> tujuanTerpilih = Rxn<Map<String, dynamic>>();
@@ -595,18 +646,6 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
       cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
     );
   }
-
-  /// Dialog untuk memindahkan siswa (Anda bisa lengkapi nanti)
-  // void _showPindahHalaqohDialog(SiswaHalaqoh siswa) {
-  //   // Implementasi dialog pindah, mirip dengan Al-Husna.
-  //   // Anda perlu membuat fungsi `getTargetPengampu` di controller Anda.
-  //   Get.defaultDialog(
-  //     title: "Fitur Dalam Pengembangan",
-  //     middleText: "Fitur untuk memindahkan siswa akan segera tersedia.",
-  //     textConfirm: "OK",
-  //     onConfirm: () => Get.back(),
-  //   );
-  // }
   
 }
 

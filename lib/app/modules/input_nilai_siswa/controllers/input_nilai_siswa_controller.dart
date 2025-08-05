@@ -87,13 +87,6 @@ class InputNilaiSiswaController extends GetxController {
         .collection('daftarsiswa').doc(idSiswa)
         .collection('matapelajaran').doc(namaMapel);
 
-    // --- TAMBAHAN: Path ke koleksi Tujuan Pembelajaran ---
-    // Diasumsikan struktur ini ada
-    // tpCollectionRef = firestore.collection('Sekolah').doc(homeC.idSekolah)
-    //     .collection('tahunajaran').doc(idTahunAjaran)
-    //     .collection('perangkatajar').doc(namaMapel)
-    //     .collection('tujuanpembelajaran');
-
     isInitSuccess = true;
     loadInitialData();
   }
@@ -178,21 +171,6 @@ class InputNilaiSiswaController extends GetxController {
       fetchRekapNilaiMapelLain(); 
     }
   }
-
-  //   Future<void> checkIsWaliKelas() async {
-//     final kelasDoc = await firestore.collection('Sekolah').doc(homeC.idSekolah)
-//         .collection('tahunajaran').doc(idTahunAjaran)
-//         .collection('kelastahunajaran').doc(idKelas).get();
-    
-//     if (kelasDoc.exists) {
-//       final idWaliDb = kelasDoc.data()?['idwalikelas'] ?? '';
-//       if (idWaliDb == homeC.idUser) {
-//         isWaliKelas.value = true;
-//         // Jika dia wali kelas, langsung muat rekap nilai mapel lain
-//         fetchRekapNilaiMapelLain(); 
-//       }
-//     }
-//   }
 
   Future<void> fetchRekapNilaiMapelLain() async {
     final snapshot = await siswaMapelRef.parent.get();
@@ -285,21 +263,50 @@ class InputNilaiSiswaController extends GetxController {
     finally { isSaving.value = false; }
   }
 
+  // Future<void> simpanNilaiHarian(String kategori) async {
+  //   int? nilai = int.tryParse(nilaiC.text.trim());
+  //   if (nilai == null || nilai > 100 || nilai < 0) {
+  //     Get.snackbar("Peringatan", "Nilai harus angka antara 0-100."); return;
+  //   }
+  //   isSaving.value = true;
+  //   try {
+  //     await siswaMapelRef.collection('nilai_harian').add({
+  //       'kategori': kategori, 'nilai': nilai,
+  //       'catatan': catatanC.text, 'tanggal': Timestamp.now(),
+  //     });
+  //     await fetchNilaiHarian();
+  //     hitungNilaiAkhir();
+  //     Get.back();
+  //   } catch(e) { Get.snackbar("Error", "Gagal menyimpan nilai: $e"); } 
+  //   finally { isSaving.value = false; }
+  // }
+
   Future<void> simpanNilaiHarian(String kategori) async {
     int? nilai = int.tryParse(nilaiC.text.trim());
-    if (nilai == null || nilai > 100 || nilai < 0) {
-      Get.snackbar("Peringatan", "Nilai harus angka antara 0-100."); return;
-    }
+    if (nilai == null || nilai > 100 || nilai < 0) { 
+      Get.snackbar("Peringatan", "Nilai harus angka antara 0-100.");
+      return; }
     isSaving.value = true;
     try {
-      await siswaMapelRef.collection('nilai_harian').add({
+      final ref = await siswaMapelRef.collection('nilai_harian').add({
         'kategori': kategori, 'nilai': nilai,
         'catatan': catatanC.text, 'tanggal': Timestamp.now(),
       });
+
+      // --- [TIMELINE] Mencatat event nilai baru ---
+      final catatan = catatanC.text.isNotEmpty ? catatanC.text : "Nilai $kategori";
+      await _buatCatatanTimeline(
+        tipe: 'NILAI_MASUK',
+        judul: 'Penilaian Baru: $kategori',
+        deskripsi: 'Ananda mendapatkan nilai $nilai untuk "$catatan".',
+        refId: ref.id
+      );
+      // -----------------------------------------
+
       await fetchNilaiHarian();
       hitungNilaiAkhir();
       Get.back();
-    } catch(e) { Get.snackbar("Error", "Gagal menyimpan nilai: $e"); } 
+    } catch(e) { /* ... */ } 
     finally { isSaving.value = false; }
   }
 
@@ -335,76 +342,136 @@ class InputNilaiSiswaController extends GetxController {
     }
   }
 
+
+
   Future<void> deleteNilaiHarian(String idNilai) async {
-  // Tampilkan dialog konfirmasi untuk mencegah salah hapus
-  Get.defaultDialog(
-    title: "Konfirmasi Hapus",
-    middleText: "Apakah Anda yakin ingin menghapus nilai ini secara permanen?",
-    confirm: TextButton(
-      style: TextButton.styleFrom(backgroundColor: Colors.red),
-      onPressed: () async {
-        if (Get.isDialogOpen!) Get.back(); // Tutup dialog konfirmasi
+    Get.defaultDialog(
+      title: "Konfirmasi Hapus",
+      middleText: "Apakah Anda yakin ingin menghapus nilai ini?",
+      confirm: TextButton(
+        onPressed: () async {
+          if (Get.isDialogOpen!) Get.back();
+          try {
+            // Ambil data nilai dulu untuk dicatat di timeline
+            final docToDelete = await siswaMapelRef.collection('nilai_harian').doc(idNilai).get();
+            // final dataLama = docToDelete.data();
 
-        try {
-          // 1. Hapus dokumen dari Firestore
-          await siswaMapelRef.collection('nilai_harian').doc(idNilai).delete();
-          
-          // 2. Hapus dari state lokal agar UI langsung update
-          daftarNilaiHarian.removeWhere((nilai) => nilai.id == idNilai);
+            await siswaMapelRef.collection('nilai_harian').doc(idNilai).delete();
+            
+            // --- [TIMELINE] Mencatat event penghapusan nilai ---
+            // if (dataLama != null) {
+            //   final catatan = dataLama['catatan']?.isNotEmpty ?? false ? dataLama['catatan'] : "Nilai ${dataLama['kategori']}";
+            //   await _buatCatatanTimeline(
+            //     tipe: 'NILAI_DIHAPUS',
+            //     judul: 'Nilai Dihapus',
+            //     deskripsi: 'Nilai ${dataLama['nilai']} untuk "$catatan" telah dihapus oleh guru.',
+            //     refId: idNilai
+            //   );
+            // }
+            // // ----------------------------------------------
 
-          // 3. Hitung ulang nilai akhir
-          hitungNilaiAkhir();
-          
-          Get.snackbar("Berhasil", "Nilai telah dihapus.", backgroundColor: Colors.green);
-        } catch (e) {
-          Get.snackbar("Error", "Gagal menghapus nilai: $e", backgroundColor: Colors.red);
-        }
-      },
-      child: const Text("Ya, Hapus", style: TextStyle(color: Colors.white)),
-    ),
-    cancel: TextButton(
-      onPressed: () => Get.back(),
-      child: const Text("Batal"),
-    ),
-  );
-}
+            daftarNilaiHarian.removeWhere((nilai) => nilai.id == idNilai);
+            hitungNilaiAkhir();
+            Get.snackbar("Berhasil", "Nilai telah dihapus.");
+          } catch (e) { 
+            Get.snackbar("Error", "Gagal menghapus nilai: $e", backgroundColor: Colors.red);
+           }
+        },
+        child: const Text("Ya, Hapus", style: TextStyle(color: Colors.red)),
+      ),
+      cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
+    );
+  }
 
 /// Memperbarui satu dokumen nilai harian di Firestore.
-Future<void> updateNilaiHarian(String idNilai) async {
-  // Validasi input dari dialog
-  int? nilai = int.tryParse(nilaiC.text.trim());
-  if (nilai == null || nilai < 0 || nilai > 100) {
-    Get.snackbar("Peringatan", "Nilai harus berupa angka antara 0-100.");
-    return;
-  }
+// Future<void> updateNilaiHarian(String idNilai) async {
+//   // Validasi input dari dialog
+//   int? nilai = int.tryParse(nilaiC.text.trim());
+//   if (nilai == null || nilai < 0 || nilai > 100) {
+//     Get.snackbar("Peringatan", "Nilai harus berupa angka antara 0-100.");
+//     return;
+//   }
   
-  isSaving.value = true;
-  try {
-    // 1. Siapkan data baru
-    final Map<String, dynamic> dataToUpdate = {
-      'nilai': nilai,
-      'catatan': catatanC.text,
-      'tanggal': Timestamp.now(), // Perbarui tanggal modifikasi
-    };
+//   isSaving.value = true;
+//   try {
+//     // 1. Siapkan data baru
+//     final Map<String, dynamic> dataToUpdate = {
+//       'nilai': nilai,
+//       'catatan': catatanC.text,
+//       'tanggal': Timestamp.now(), // Perbarui tanggal modifikasi
+//     };
 
-    // 2. Update dokumen di Firestore
-    await siswaMapelRef.collection('nilai_harian').doc(idNilai).update(dataToUpdate);
+//     // 2. Update dokumen di Firestore
+//     await siswaMapelRef.collection('nilai_harian').doc(idNilai).update(dataToUpdate);
 
-    // 3. Muat ulang semua data nilai harian untuk memastikan konsistensi
-    await fetchNilaiHarian();
+//     // 3. Muat ulang semua data nilai harian untuk memastikan konsistensi
+//     await fetchNilaiHarian();
     
-    // 4. Hitung ulang nilai akhir
-    hitungNilaiAkhir();
+//     // 4. Hitung ulang nilai akhir
+//     hitungNilaiAkhir();
     
-    if (Get.isDialogOpen!) Get.back(); // Tutup dialog input
-    Get.snackbar("Berhasil", "Nilai berhasil diperbarui.", backgroundColor: Colors.green);
+//     if (Get.isDialogOpen!) Get.back(); // Tutup dialog input
+//     Get.snackbar("Berhasil", "Nilai berhasil diperbarui.", backgroundColor: Colors.green);
 
-  } catch (e) {
-    Get.snackbar("Error", "Gagal memperbarui nilai: $e", backgroundColor: Colors.red);
-  } finally {
-    isSaving.value = false;
+//   } catch (e) {
+//     Get.snackbar("Error", "Gagal memperbarui nilai: $e", backgroundColor: Colors.red);
+//   } finally {
+//     isSaving.value = false;
+//   }
+// }
+
+    Future<void> updateNilaiHarian(String idNilai) async {
+    int? nilai = int.tryParse(nilaiC.text.trim());
+    if (nilai == null || nilai < 0 || nilai > 100) { 
+      Get.snackbar("Peringatan", "Nilai harus berupa angka antara 0-100.");
+      return; }
+    
+    isSaving.value = true;
+    try {
+      final dataToUpdate = { 'nilai': nilai, 'catatan': catatanC.text, 'tanggal': Timestamp.now() };
+      await siswaMapelRef.collection('nilai_harian').doc(idNilai).update(dataToUpdate);
+
+      // --- [TIMELINE] Mencatat event pembaruan nilai ---
+      // final catatan = catatanC.text.isNotEmpty ? catatanC.text : "Nilai Harian";
+      // await _buatCatatanTimeline(
+      //   tipe: 'NILAI_DIPERBARUI',
+      //   judul: 'Nilai Diperbarui',
+      //   deskripsi: 'Nilai untuk "$catatan" telah diperbarui menjadi $nilai.',
+      //   refId: idNilai
+      // );
+      // -----------------------------------------------
+
+      await fetchNilaiHarian();
+      hitungNilaiAkhir();
+      if (Get.isDialogOpen!) Get.back();
+      Get.snackbar("Berhasil", "Nilai berhasil diperbarui.");
+      } catch (e) {
+      Get.snackbar("Error", "Gagal memperbarui nilai: $e", backgroundColor: Colors.red);
+    } finally {
+      isSaving.value = false;
+    }
   }
-}
+
+   Future<void> _buatCatatanTimeline({
+      required String tipe,
+      required String judul,
+      required String deskripsi,
+      String? refId, // ID dari dokumen asli (nilai/tugas) untuk referensi
+      }) async {
+        try {
+      await siswaMapelRef.collection('timeline_akademik').add({
+        'tipe': tipe,
+        'judul': judul,
+        'deskripsi': deskripsi,
+        'tanggal': FieldValue.serverTimestamp(),
+        'refId': refId, // Simpan ID untuk kemungkinan navigasi di masa depan
+        });
+      } catch (e) {
+          // Gagal membuat catatan timeline tidak boleh menghentikan alur utama.
+          print("Error [Non-Fatal] saat membuat catatan timeline: $e");
+          Get.snackbar("Error", "Gagal membuat catatan timeline tidak boleh menghentikan alur utama. $e", backgroundColor: Colors.red);
+      }
+   }
 
   /// Menyimpan deskripsi capaian manual.
   Future<void> simpanDeskripsiCapaian() async {
@@ -488,368 +555,3 @@ Future<void> updateNilaiHarian(String idNilai) async {
     return listNilai.fold(0, (sum, item) => sum + item.nilai).toDouble();
   }
 }
-
-// // lib/app/modules/input_nilai_siswa/controllers/input_nilai_siswa_controller.dart
-
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:flutter/material.dart';
-// import 'package:get/get.dart';
-// import '../../../modules/home/controllers/home_controller.dart';
-// import '../../../models/nilai_harian_model.dart'; // <-- Kita akan buat model ini nanti
-
-// class InputNilaiSiswaController extends GetxController {
-  
-//   // --- DEPENDENSI & DATA DASAR ---
-//   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-//   final HomeController homeC = Get.find<HomeController>();
-//   late String idKelas, namaMapel, idSiswa, namaSiswa;
-//   late String idTahunAjaran, semesterAktif;
-//   late DocumentReference siswaMapelRef; // Path utama ke buku rapor siswa
-
-//   // --- STATE MANAGEMENT ---
-//   final RxBool isLoading = true.obs;
-//   final RxBool isSaving = false.obs;
-
-//  // --- STATE BARU UNTUK HAK AKSES WALI KELAS --
-//   final RxBool isWaliKelas = false.obs;
-//   // Menyimpan rekap semua nilai akhir jika user adalah wali kelas
-//   final RxList<Map<String, dynamic>> rekapNilaiMapelLain = <Map<String, dynamic>>[].obs;
-
-//   // State untuk menyimpan data nilai
-//   final RxList<NilaiHarian> daftarNilaiHarian = <NilaiHarian>[].obs;
-//   final RxMap<String, int> bobotNilai = <String, int>{}.obs;
-  
-//   // State untuk nilai utama
-//   final Rxn<int> nilaiPTS = Rxn<int>();
-//   final Rxn<int> nilaiPAS = Rxn<int>();
-//   final Rxn<double> nilaiAkhir = Rxn<double>(); // Nilai rapor
-
-//   // --- TEXT EDITING CONTROLLERS UNTUK DIALOG ---
-//   final TextEditingController nilaiC = TextEditingController();
-//   final TextEditingController catatanC = TextEditingController();
-
-//   // --- TEXT EDITING CONTROLLERS UNTUK BOBOT NILAI ---
-//   final TextEditingController harianC = TextEditingController();
-//   final TextEditingController ulanganC = TextEditingController();
-//   final TextEditingController ptsC = TextEditingController();
-//   final TextEditingController pasC = TextEditingController();
-//   final TextEditingController tambahanC = TextEditingController();
-
-//   bool isInitSuccess = false;
-
-//    @override
-//   void onInit() {
-//     super.onInit();
-//     // nilaiC = TextEditingController();
-//     // catatanC = TextEditingController();
-
-//     // --- BLOK DEBUGGING DIMULAI ---
-//     debugPrint("=========================================");
-//     debugPrint("[DEBUG] onInit InputNilaiSiswaController");
-
-//     final Map<String, dynamic>? args = Get.arguments;
-
-//     if (args == null) {
-//       debugPrint("   -> HASIL: Gagal, Get.arguments adalah null.");
-//       _handleInitError("Data navigasi tidak ditemukan (args null).");
-//       debugPrint("=========================================");
-//       return;
-//     }
-    
-//     // Cetak semua argumen yang diterima
-//     debugPrint("   -> Argumen yang diterima: $args");
-    
-//     idKelas = args['idKelas'] ?? '';
-//     namaMapel = args['idMapel'] ?? '';
-//     idSiswa = args['idSiswa'] ?? '';
-//     namaSiswa = args['namaSiswa'] ?? '';
-    
-//     debugPrint("   -> idKelas: '$idKelas'");
-//     debugPrint("   -> namaMapel: '$namaMapel'");
-//     debugPrint("   -> idSiswa: '$idSiswa'");
-//     debugPrint("   -> namaSiswa: '$namaSiswa'");
-    
-//     // Periksa apakah ada argumen penting yang kosong
-//     if (idKelas.isEmpty || namaMapel.isEmpty || idSiswa.isEmpty) {
-//       debugPrint("   -> HASIL: Gagal, salah satu argumen penting kosong.");
-//       _handleInitError("Informasi kelas/mapel/siswa tidak lengkap.");
-//       debugPrint("=========================================");
-//       return;
-//     }
-    
-//     final idTahunAjaranDariHome = homeC.idTahunAjaran.value;
-//     final semesterAktifDariHome = homeC.semesterAktifId.value;
-
-//     if (idTahunAjaranDariHome == null || semesterAktifDariHome.isEmpty) {
-//       debugPrint("   -> HASIL: Gagal, data dari HomeController belum siap.");
-//       _handleInitError("Data sesi belum siap. Silakan coba lagi.");
-//       debugPrint("=========================================");
-//       return;
-//     }
-    
-//     idTahunAjaran = idTahunAjaranDariHome;
-//     semesterAktif = semesterAktifDariHome;
-//     isInitSuccess = true;
-//     debugPrint("   -> HASIL: Inisialisasi BERHASIL.");
-//     debugPrint("=========================================");
-
-//     siswaMapelRef = firestore.collection('Sekolah').doc(homeC.idSekolah)
-//         .collection('tahunajaran').doc(idTahunAjaran)
-//         .collection('kelastahunajaran').doc(idKelas)
-//         .collection('semester').doc(semesterAktif)
-//         .collection('daftarsiswa').doc(idSiswa)
-//         .collection('matapelajaran').doc(namaMapel);
-    
-//     loadInitialData();
-//   }
-
-//   @override
-//   void onClose() {
-//     // Selalu dispose controller
-//     harianC.dispose(); ulanganC.dispose(); ptsC.dispose(); pasC.dispose();
-//     tambahanC.dispose();
-//     nilaiC.dispose();
-//     catatanC.dispose();
-//     super.onClose();
-//   }
-
-//   Future<void> simpanBobotNilai() async {
-//     final Map<String, int> bobotBaru = {
-//       'harian': int.tryParse(harianC.text) ?? 0,
-//       'ulangan': int.tryParse(ulanganC.text) ?? 0,
-//       'pts': int.tryParse(ptsC.text) ?? 0,
-//       'pas': int.tryParse(pasC.text) ?? 0,
-//       'tambahan': int.tryParse(tambahanC.text) ?? 0,
-//     };
-    
-//     int totalBobot = bobotBaru.values.reduce((a, b) => a + b);
-//     if (totalBobot > 100) { // Beri toleransi jika total kurang, tapi tidak boleh lebih
-//       Get.snackbar("Peringatan", "Total bobot tidak boleh melebihi 100%. Saat ini totalnya $totalBobot%.");
-//       return;
-//     }
-
-//     isSaving.value = true;
-//     try {
-//       // Path ke dokumen penugasan, tempat bobot disimpan
-//       final ref = firestore.collection('Sekolah').doc(homeC.idSekolah)
-//           .collection('tahunajaran').doc(idTahunAjaran)
-//           .collection('penugasan').doc(idKelas)
-//           .collection('matapelajaran').doc(namaMapel);
-
-//       await ref.set({'bobot_nilai': bobotBaru}, SetOptions(merge: true));
-//       Get.back(); // Tutup dialog
-//       Get.snackbar("Berhasil", "Bobot nilai telah disimpan.");
-//       // Muat ulang data bobot dan hitung ulang nilai akhir
-//       await fetchBobotNilai();
-//       hitungNilaiAkhir();
-//     } catch (e) { Get.snackbar("Error", "Gagal menyimpan bobot: $e"); }
-//     finally { isSaving.value = false; }
-//   }
-
-//   void _handleInitError(String message) {
-//     isInitSuccess = false;
-//     // Tunda aksi UI hingga setelah build frame pertama selesai
-//     WidgetsBinding.instance.addPostFrameCallback((_) {
-//       Get.snackbar("Error Kritis", message);
-//       if (Get.key.currentState?.canPop() ?? false) {
-//         Get.back();
-//       }
-//     });
-//   }
-
-//   /// Memuat semua data yang diperlukan secara bersamaan.
-//   Future<void> loadInitialData() async {
-//     try {
-//       isLoading.value = true;
-//       await Future.wait([
-//         fetchBobotNilai(),
-//         fetchNilaiUtama(),
-//         fetchNilaiHarian(),
-//         checkIsWaliKelas(),
-//       ]);
-//       // Setelah semua data dimuat, langsung hitung nilai akhir
-//       hitungNilaiAkhir();
-//     } catch (e) {
-//       Get.snackbar("Error", "Gagal memuat data nilai siswa: $e");
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-
-//   //========================================================================
-//   // --- FUNGSI PENGAMBILAN DATA (FETCH) ---
-//   //========================================================================
-
-//   Future<void> checkIsWaliKelas() async {
-//     final kelasDoc = await firestore.collection('Sekolah').doc(homeC.idSekolah)
-//         .collection('tahunajaran').doc(idTahunAjaran)
-//         .collection('kelastahunajaran').doc(idKelas).get();
-    
-//     if (kelasDoc.exists) {
-//       final idWaliDb = kelasDoc.data()?['idwalikelas'] ?? '';
-//       if (idWaliDb == homeC.idUser) {
-//         isWaliKelas.value = true;
-//         // Jika dia wali kelas, langsung muat rekap nilai mapel lain
-//         fetchRekapNilaiMapelLain(); 
-//       }
-//     }
-//   }
-
-//   Future<void> fetchRekapNilaiMapelLain() async {
-//     // Fungsi ini hanya dijalankan jika user adalah wali kelas
-//     rekapNilaiMapelLain.clear();
-//     final snapshot = await siswaMapelRef.parent.get(); // .parent akan mengambil semua mapel
-    
-//     List<Map<String, dynamic>> rekap = [];
-//     for (var doc in snapshot.docs) {
-//       // Jangan tampilkan mapel yang sedang dibuka saat ini di daftar rekap
-//       if (doc.id != namaMapel) {
-//         rekap.add({
-//           'mapel': doc.id,
-//           'nilai_akhir': (doc.data() as Map<String, dynamic>)['nilai_akhir'] ?? '-',
-//         });
-//       }
-//     }
-//     rekapNilaiMapelLain.assignAll(rekap);
-//   }
-
-//   Future<void> fetchBobotNilai() async {
-//     // Mengambil data bobot dari koleksi 'penugasan'
-//     final doc = await firestore.collection('Sekolah').doc(homeC.idSekolah)
-//         .collection('tahunajaran').doc(idTahunAjaran)
-//         .collection('penugasan').doc(idKelas)
-//         .collection('matapelajaran').doc(namaMapel).get();
-//     if (doc.exists && doc.data()?['bobot_nilai'] != null) {
-//       bobotNilai.value = Map<String, int>.from(doc.data()!['bobot_nilai']);
-//     } else {
-//       // Bobot default jika tidak diatur
-//       bobotNilai.value = {'harian': 20, 'ulangan': 20, 'pts': 20, 'pas': 20, 'tambahan': 20};
-//     }
-//   }
-
-//   Future<void> fetchNilaiUtama() async {
-//     final doc = await siswaMapelRef.get();
-//     if (doc.exists && doc.data() != null) {
-//       final data = doc.data()! as Map<String, dynamic>;
-//       nilaiPTS.value = data['nilai_pts'];
-//       nilaiPAS.value = data['nilai_pas'];
-//     }
-//   }
-
-//   Future<void> fetchNilaiHarian() async {
-//     final snapshot = await siswaMapelRef.collection('nilai_harian').orderBy('tanggal', descending: true).get();
-//     daftarNilaiHarian.assignAll(snapshot.docs.map((doc) => NilaiHarian.fromFirestore(doc)).toList());
-//   }
-
-//   //========================================================================
-//   // --- FUNGSI SIMPAN & HITUNG (LOGIKA INTI) ---
-//   //========================================================================
-
-//   /// Menyimpan nilai untuk kategori Harian, Ulangan, atau Tambahan.
-//   Future<void> simpanNilaiHarian(String kategori) async {
-//     if (nilaiC.text.isEmpty) { Get.snackbar("Peringatan", "Nilai tidak boleh kosong."); return; }
-//     isSaving.value = true;
-//     try {
-
-//       int? nilai = int.tryParse(nilaiC.text.trim());
-//       if (nilai == null) { Get.snackbar("Peringatan", "Nilai harus berupa angka."); return; }
-//       if (nilai > 100) { Get.snackbar("Peringatan", "Nilai maksimal adalah 100."); return; }
-
-//       await siswaMapelRef.collection('nilai_harian').add({
-//         'kategori': kategori,
-//         'nilai': int.parse(nilaiC.text),
-//         'catatan': catatanC.text,
-//         'tanggal': Timestamp.now(),
-//       });
-//       await fetchNilaiHarian(); // Ambil ulang daftar nilai harian
-//       hitungNilaiAkhir();   // Hitung ulang nilai akhir
-//       Get.back(); // Tutup dialog
-//     } catch(e) { Get.snackbar("Error", "Gagal menyimpan nilai: $e"); } 
-//     finally { isSaving.value = false; }
-//   }
-
-//   /// Menyimpan nilai PTS atau PAS.
-//   Future<void> simpanNilaiUtama(String jenisNilai) async { // jenisNilai: 'nilai_pts' atau 'nilai_pas'
-//     if (nilaiC.text.isEmpty) { Get.snackbar("Peringatan", "Nilai tidak boleh kosong."); return; }
-//     isSaving.value = true;
-//     try {
-
-//       int? nilai = int.tryParse(nilaiC.text.trim());
-//       if (nilai == null) { Get.snackbar("Peringatan", "Nilai harus berupa angka."); return; }
-//       if (nilai > 100) { Get.snackbar("Peringatan", "Nilai maksimal adalah 100."); return; }
-
-//       await siswaMapelRef.set({
-//         jenisNilai: int.parse(nilaiC.text)
-//       }, SetOptions(merge: true)); // merge:true agar tidak menimpa nilai lain
-      
-//       await fetchNilaiUtama(); // Ambil ulang nilai PTS/PAS
-//       hitungNilaiAkhir();   // Hitung ulang nilai akhir
-//       Get.back();
-//     } catch(e) { Get.snackbar("Error", "Gagal menyimpan nilai: $e"); }
-//     finally { isSaving.value = false; }
-//   }
-
-//   /// [FUNGSI AJAIB] Menghitung nilai akhir berdasarkan semua data yang ada.
-//   void hitungNilaiAkhir() {
-//     if (bobotNilai.isEmpty) return;
-
-//     // Hitung rata-rata untuk setiap kategori
-//     double avgHarian = _calculateAverage('Harian/PR');
-//     double avgUlangan = _calculateAverage('Ulangan Harian');
-//     double totalTambahan = _calculateSum('Nilai Tambahan'); // Nilai tambahan biasanya dijumlah
-
-//     // Ambil nilai PTS dan PAS, anggap 0 jika null
-//     int pts = nilaiPTS.value ?? 0;
-//     int pas = nilaiPAS.value ?? 0;
-
-//     // Ambil bobot, anggap 0 jika null
-//     int bobotHarian = bobotNilai['harian'] ?? 0;
-//     int bobotUlangan = bobotNilai['ulangan'] ?? 0;
-//     int bobotPts = bobotNilai['pts'] ?? 0;
-//     int bobotPas = bobotNilai['pas'] ?? 0;
-//     int bobotTambahan = bobotNilai['tambahan'] ?? 0;
-
-//     // Hitung nilai akhir
-//     double finalScore = 
-//       (avgHarian * (bobotHarian / 100)) +
-//       (avgUlangan * (bobotUlangan / 100)) +
-//       (pts * (bobotPts / 100)) +
-//       (pas * (bobotPas / 100)) +
-//       (totalTambahan * (bobotTambahan / 100)); // Biasanya bobot tambahan kecil
-
-//     nilaiAkhir.value = finalScore;
-
-//     // Simpan nilai akhir ke Firestore (opsional, tapi sangat direkomendasikan)
-//     siswaMapelRef.set({'nilai_akhir': finalScore}, SetOptions(merge: true));
-//   }
-  
-//   // Helper untuk menghitung rata-rata
-//   // double _calculateAverage(String kategori) {
-//   //   final listNilai = daftarNilaiHarian.where((n) => n.kategori == kategori).toList();
-//   //   if (listNilai.isEmpty) return 0;
-//   //   final total = listNilai.fold(0, (sum, item) => sum + item.nilai);
-//   //   return total / listNilai.length;
-//   // }
-
-//   // --Perbaikan
-//    double _calculateAverage(String kategori) {
-//     List<NilaiHarian> listNilai;
-//     if (kategori == "Harian/PR") {
-//       // Ambil semua nilai yang kategorinya "Harian/PR" ATAU "PR"
-//       listNilai = daftarNilaiHarian.where((n) => n.kategori == "Harian/PR" || n.kategori == "PR").toList();
-//     } else {
-//       listNilai = daftarNilaiHarian.where((n) => n.kategori == kategori).toList();
-//     }
-    
-//     if (listNilai.isEmpty) return 0;
-//     final total = listNilai.fold(0, (sum, item) => sum + item.nilai);
-//     return total / listNilai.length;
-//   }
-
-//   // Helper untuk menjumlahkan nilai
-//   double _calculateSum(String kategori) {
-//     final listNilai = daftarNilaiHarian.where((n) => n.kategori == kategori).toList();
-//     if (listNilai.isEmpty) return 0;
-//     return listNilai.fold(0, (sum, item) => (sum + item.nilai).toDouble());
-//   }
-// }

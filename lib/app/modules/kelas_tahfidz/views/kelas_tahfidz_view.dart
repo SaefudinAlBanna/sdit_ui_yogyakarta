@@ -6,28 +6,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../../routes/app_pages.dart';
 import '../controllers/kelas_tahfidz_controller.dart';
+// import '';
 
 class KelasTahfidzView extends GetView<KelasTahfidzController> {
   const KelasTahfidzView({super.key});
 
-  @override
+   @override
   Widget build(BuildContext context) {
-    Get.put(KelasTahfidzController());
+    Get.put(KelasTahfidzController()); // Atau gunakan binding yang benar
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelas Tahfidz'),
         actions: [
           Obx(() {
-            // Tampilkan tombol ini hanya jika user punya akses dan bukan read-only
+            // Tampilkan tombol hanya jika user punya akses dan bukan read-only
             if (controller.hasAccess.value && !controller.isReadOnly.value) {
-              return IconButton(
-                icon: const Icon(Icons.print_rounded),
-                tooltip: 'Cetak Laporan Kelas',
-                onPressed: () {
-                  // Panggil fungsi baru di controller
-                  controller.showCetakLaporanKelasDialog();
-                },
+              return Row( // Bungkus dengan Row
+                children: [
+                  // --- TOMBOL BARU DI SINI ---
+                  IconButton(
+                    icon: const Icon(Icons.assessment_outlined),
+                    tooltip: 'Kelola Nilai Rapor Tahfidz',
+                    onPressed: () {
+                      Get.toNamed(
+                        Routes.PENILAIAN_RAPOR_HALAQOH,
+                        arguments: {
+                          'idKelas': controller.idKelas.value,
+                          'jenisHalaqoh': 'Tahfidz',
+                        },
+                      );
+                    },
+                  ),
+                  // ---------------------------
+                  IconButton(
+                    icon: const Icon(Icons.print_rounded),
+                    tooltip: 'Cetak Laporan Kelas',
+                    onPressed: () {
+                      controller.showCetakLaporanKelasDialog();
+                    },
+                  ),
+                ],
               );
             }
             return const SizedBox.shrink();
@@ -195,44 +215,56 @@ class KelasTahfidzView extends GetView<KelasTahfidzController> {
 
       /// Menampilkan dialog popup untuk memilih guru pendamping yang tersedia.
   void _showAddPendampingDialog() {
+    final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
+    Map<String, dynamic>? guruTerpilih;
+
     Get.dialog(
       AlertDialog(
         title: const Text("Pilih Pendamping"),
-        content: SizedBox(
-          width: Get.width * 0.8,
-          child: DropdownSearch<Map<String, dynamic>>(
-            items: (c, fs) => controller.getAvailablePendamping(),
-            itemAsString: (item) => item['nama']!,
-            popupProps: PopupProps.menu(
-              showSearchBox: true,
-              searchFieldProps: const TextFieldProps(
-                decoration: InputDecoration(labelText: "Cari Nama Guru"),
+        content: Form(
+          key: dialogFormKey,
+          child: SizedBox(
+            width: Get.width * 0.8,
+            child: DropdownSearch<Map<String, dynamic>>(
+              items: (f, cs) => controller.getAvailablePendamping(),
+              
+              // --- SEKARANG INI AKAN BEKERJA ---
+              itemAsString: (item) => item['nama']!, 
+
+              popupProps: PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: TextFieldProps(decoration: InputDecoration(labelText: "Cari Nama Guru")),
+                emptyBuilder: (context, searchEntry) => const Center(child: Text("Tidak ada guru yang tersedia.")),
               ),
-              emptyBuilder: (context, searchEntry) => const Center(
-                child: Text("Tidak ada guru pengampu yang tersedia."),
+              decoratorProps: const DropDownDecoratorProps(
+                decoration: InputDecoration(labelText: "Guru Pengampu", hintText: "Pilih guru yang tersedia"),
               ),
+              compareFn: (item, selectedItem) => item['uid'] == selectedItem['uid'],
+              onSaved: (selectedItem) {
+                guruTerpilih = selectedItem;
+              },
+              validator: (item) => (item == null) ? "Guru pendamping harus dipilih." : null,
             ),
-            decoratorProps: const DropDownDecoratorProps(
-              decoration: InputDecoration(
-                labelText: "Guru Pengampu",
-                hintText: "Pilih guru yang tersedia",
-              ),
-            ),
-            compareFn: (item, selectedItem) => item['uid'] == selectedItem['uid'],
-            onChanged: (selectedItem) {
-              if (selectedItem != null) {
-                final uid = selectedItem['uid']! as String;
-                final nama = selectedItem['nama']! as String;
-                Get.back();
-                controller.addPendamping(uid, nama);
-              }
-            },
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Batal"),
+          TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
+          ElevatedButton(
+            onPressed: () {
+              if (dialogFormKey.currentState!.validate()) {
+                dialogFormKey.currentState!.save();
+                if (guruTerpilih != null) {
+                  final uid = guruTerpilih!['uid']! as String;
+                  
+                  // --- DAN INI JUGA AKAN BEKERJA ---
+                  final nama = guruTerpilih!['nama']! as String; 
+                  
+                  Get.back();
+                  controller.addPendamping(uid, nama);
+                }
+              }
+            },
+            child: const Text("Simpan"),
           ),
         ],
       ),
@@ -369,7 +401,16 @@ class KelasTahfidzView extends GetView<KelasTahfidzController> {
                     elevation: 1,
                     child: ListTile(
                       title: Text("Murojaah: ${data['murojaah'] ?? '-'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: Text("Hafalan: ${data['hafalan'] ?? '-'}\nNilai: ${data['nilai']} | Oleh: ${data['penilai_nama']}"),
+
+                      // --- PERUBAHAN UTAMA DI SINI ---
+                      subtitle: Text(
+                        "Hafalan: ${data['hafalan'] ?? '-'}\n"
+                        "Nilai: ${data['nilai']} | Oleh: ${data['penilai_nama']}\n"
+                        // Tambahkan baris catatan secara kondisional
+                        "Catatan: ${data['catatan_guru'] != null && data['catatan_guru'].isNotEmpty ? data['catatan_guru'] : '-'}"
+                      ),
+                      // ---------------------------------
+
                       isThreeLine: true,
                       leading: Text(tanggal, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
                       trailing: isEditable ? Row(mainAxisSize: MainAxisSize.min, children: [
@@ -388,7 +429,6 @@ class KelasTahfidzView extends GetView<KelasTahfidzController> {
   }
 }
 
-
 class _SiswaCard extends StatelessWidget {
   final Map<String, dynamic> siswa;
   final KelasTahfidzView view;
@@ -404,6 +444,7 @@ class _SiswaCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
+        isThreeLine: true, // <-- Penting untuk memberi ruang ekstra
         leading: CircleAvatar(child: Text(namaSiswa.isNotEmpty ? namaSiswa[0] : '-')),
         title: Text(namaSiswa, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
@@ -411,21 +452,42 @@ class _SiswaCard extends StatelessWidget {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Text("Memuat nilai...", style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic));
             if (!snapshot.hasData || snapshot.data == null) return const Text("Belum ada nilai", style: TextStyle(fontSize: 12, color: Colors.grey));
+            
             final dataNilai = snapshot.data!.data()!;
-            final murojaah = dataNilai['murojaah'];
-            final hafalan = dataNilai['hafalan'];
-            String textToShow = hafalan != null && hafalan.isNotEmpty ? "Hafalan: $hafalan" : "Murojaah: $murojaah";
-            return Text(
-              "$textToShow - Nilai: ${dataNilai['nilai']}",
-              style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.w500),
-              maxLines: 1, overflow: TextOverflow.ellipsis,
+            final murojaah = dataNilai['murojaah'] ?? '';
+            final hafalan = dataNilai['hafalan'] ?? '';
+            final catatan = dataNilai['catatan_guru'] as String? ?? ''; // Ambil catatan
+
+            String textToShow = hafalan.isNotEmpty && hafalan != '-' ? "Hafalan: $hafalan" : "Murojaah: $murojaah";
+            
+            // --- PERUBAHAN UTAMA: Gunakan Column untuk menata subtitle ---
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$textToShow - Nilai: ${dataNilai['nilai']}",
+                  style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.w500),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                // Tampilkan catatan HANYA jika tidak kosong
+                if (catatan.isNotEmpty) 
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: Text(
+                      "Catatan: $catatan",
+                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade700),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
             );
           },
         ),
         trailing: isEditable
             ? OutlinedButton.icon(icon: const Icon(Icons.edit_note, size: 18), label: const Text("Nilai"), onPressed: () => view._showPenilaianDetailSheet(siswa, isEditable: isEditable))
-            : OutlinedButton.icon(icon: const Icon(Icons.visibility_outlined, size: 18), label: const Text("Lihat"), onPressed: () => view._showPenilaianDetailSheet(siswa, isEditable: isEditable)),
-      ),
+            // : OutlinedButton.icon(icon: const Icon(Icons.visibility_outlined, size: 18), label: const Text("Lihat"), onPressed: () => view._showPenilaianDetailSheet(siswa, isEditable: isEditable)),
+            : SizedBox()),
+      // ),
     );
   }
 }

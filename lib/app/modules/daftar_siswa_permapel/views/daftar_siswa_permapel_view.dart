@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:dropdown_search/dropdown_search.dart';
+import '../../../models/siswa_model.dart';
 import '../../../routes/app_pages.dart';
 import '../../input_nilai_siswa/bindings/input_nilai_siswa_binding.dart';
 import '../../input_nilai_siswa/views/input_nilai_siswa_view.dart';
@@ -20,6 +21,23 @@ class DaftarSiswaPermapelView extends GetView<DaftarSiswaPermapelController> {
         title: Obx(() => Text(controller.appBarTitle.value)),
         centerTitle: true,
         actions: [
+          // Tambahkan tombol baru di sini jika pengguna adalah Wali Kelas
+          Obx(() {
+            if (controller.isWaliKelas.value) {
+              return IconButton(
+                icon: const Icon(Icons.edit_document),
+                tooltip: 'Kelola Catatan Rapor',
+                onPressed: () {
+                  Get.toNamed(
+                    Routes.KELOLA_CATATAN_RAPOR,
+                    arguments: controller.idKelas, // Kirim idKelas
+                  );
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+
           PopupMenuButton<String>(
             icon: const Icon(Icons.add_task_rounded),
             tooltip: "Menu Tugas & Penilaian",
@@ -73,22 +91,29 @@ class DaftarSiswaPermapelView extends GetView<DaftarSiswaPermapelController> {
 
   // --- BOTTOMSHEET UNTUK INPUT NILAI MASSAL ---
   void _showInputNilaiMassalSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    // ... (kode untuk bottom sheet ini akan sangat mirip dengan Halaqoh,
-    // tapi dengan DropdownSearch di atas untuk memilih tugas)
-    
-    Get.bottomSheet(
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      Container(
-        height: MediaQuery.of(context).size.height * 0.9,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
+  final theme = Theme.of(context);
+  // Reset state sebelum bottom sheet dibuka
+  controller.tugasTerpilihId.value = null;
+  controller.catatanNilaiC.clear();
+  controller.siswaTerpilihUntukNilai.clear();
+  controller.nilaiIndividualControllers.forEach((_, c) => c.clear());
+
+  Get.bottomSheet(
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    Container(
+      // Gunakan sebagian besar layar, tapi beri sedikit ruang di atas
+      height: MediaQuery.of(context).size.height * 0.9,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      // Gunakan SafeArea untuk menghindari notch/statusbar
+      child: SafeArea(
         child: Column(
           children: [
+            // Drag handle
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               width: 50,
@@ -98,39 +123,102 @@ class DaftarSiswaPermapelView extends GetView<DaftarSiswaPermapelController> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
+            // Dropdown untuk memilih tugas
             DropdownSearch<Map<String, dynamic>>(
-              popupProps: const PopupProps.menu(),
+              popupProps: const PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: TextFieldProps(
+                  decoration: InputDecoration(
+                    hintText: "Cari tugas...",
+                  ),
+                ),
+              ),
               items: (f, cs) => controller.getTugasUntukDinilai(),
               itemAsString: (item) => "[${item['kategori']}] ${item['judul']}",
               onChanged: (item) => controller.tugasTerpilihId.value = item?['id'],
               compareFn: (item, selectedItem) => item['id'] == selectedItem['id'],
               decoratorProps: const DropDownDecoratorProps(
-                decoration: InputDecoration(labelText: "Pilih Tugas/Ulangan yang Akan Dinilai", border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: "Pilih Tugas/Ulangan yang Akan Dinilai",
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            TextField(controller: controller.nilaiMassalC, decoration: const InputDecoration(labelText: 'Nilai untuk Semua'), keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            TextField(controller: controller.catatanNilaiC, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
+            // Catatan umum
+            TextField(
+              controller: controller.catatanNilaiC,
+              decoration: const InputDecoration(
+                labelText: 'Catatan (Opsional, berlaku untuk semua)',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const Divider(height: 24),
-            Text("Pilih Siswa", style: theme.textTheme.titleMedium),
-            Expanded(child: Obx(() => ListView.builder(
-              itemCount: controller.daftarSiswa.length,
-              itemBuilder: (ctx, index) {
-                final siswa = controller.daftarSiswa[index];
-                return Obx(() => CheckboxListTile(
-                  title: Text(siswa['namasiswa']),
-                  value: controller.siswaTerpilihUntukNilai.contains(siswa['idSiswa']),
-                  onChanged: (val) => controller.toggleSiswaSelection(siswa['idSiswa']),
-                ));
-              },
-            ))),
-            ElevatedButton(onPressed: controller.simpanNilaiMassal, child: const Text("Simpan Nilai"))
+            Text("Pilih Siswa & Input Nilai", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            // Daftar siswa
+            Expanded(
+              child: Obx(
+                () => ListView.builder(
+                  itemCount: controller.daftarSiswa.length,
+                  itemBuilder: (ctx, index) {
+                    final siswa = controller.daftarSiswa[index];
+                    final nisn = siswa['idSiswa'] as String;
+                    final nilaiController = controller.nilaiIndividualControllers[nisn];
+
+                    if (nilaiController == null) {
+                      // Safety check, seharusnya tidak pernah terjadi
+                      return const SizedBox.shrink();
+                    }
+
+                    return Obx(
+                      () => CheckboxListTile(
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(siswa['namasiswa']),
+                        value: controller.siswaTerpilihUntukNilai.contains(nisn),
+                        onChanged: (val) => controller.toggleSiswaSelection(nisn),
+                        secondary: SizedBox(
+                          width: 80,
+                          child: TextField(
+                            controller: nilaiController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(
+                              hintText: 'Nilai',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Tombol Simpan
+            SizedBox(
+              width: double.infinity,
+              child: Obx(
+                () => ElevatedButton.icon(
+                  icon: controller.isDialogLoading.value ? const SizedBox.shrink() : const Icon(Icons.save),
+                  label: controller.isDialogLoading.value 
+                      ? const CircularProgressIndicator(color: Colors.white) 
+                      : const Text("Simpan untuk Siswa Terpilih"),
+                  onPressed: controller.isDialogLoading.value ? null : controller.simpanNilaiMassal,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
-      )
-    );
-  }
+      ),
+    ),
+  );
+}
 }
 
 class _SiswaCard extends StatelessWidget {
@@ -198,39 +286,57 @@ class _SiswaCard extends StatelessWidget {
         
         // trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         trailing: Obx(() {
-        // Tampilkan tombol menu HANYA jika pengguna adalah wali kelas
-        if (controller.isWaliKelas.value) {
-          return PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'rapor') {
-                Get.toNamed(
-                  Routes.RAPOR_SISWA,
-                  arguments: {
-                    'idSiswa': idSiswa,
-                    'namaSiswa': namaSiswa,
-                    'idKelas': controller.idKelas,
-                  },
-                );
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'rapor',
-                child: ListTile(leading: Icon(Icons.assessment_outlined), title: Text('Lihat Rapor')),
-              ),
-              const PopupMenuItem(
-                value: 'profil',
-                child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profil Siswa')),
-              ),
-            ],
-          );
-        } else {
-          // Jika bukan wali kelas, tampilkan panah biasa atau tidak sama sekali
-          return const Icon(Icons.chevron_right, color: Colors.grey);
-        }
-      }),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-    ),
-  );
-}
+          if (controller.isWaliKelas.value) {
+            return PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'rapor_akademik') {
+                  // --- INI ADALAH RAPOR LAMA (JANGAN DIHAPUS) ---
+                  Get.toNamed(
+                    Routes.RAPOR_SISWA,
+                    arguments: {
+                      'idSiswa': idSiswa,
+                      'namaSiswa': namaSiswa,
+                      'idKelas': controller.idKelas,
+                    },
+                  );
+                } else if (value == 'rapor_terpadu') {
+                  // --- INI TOMBOL BARU KITA ---
+                  // Kita butuh objek SiswaModel lengkap untuk dikirim
+                  final siswaModel = SiswaModel(
+                    nisn: nis,
+                    nama: namaSiswa,
+                    idKelas: controller.idKelas,
+                    namaKelas: controller.idKelas, // Atau dari field lain jika ada
+                  );
+                  Get.toNamed(
+                    Routes.RAPOR_TERPADU, // Pastikan rute ini sudah dibuat
+                    arguments: siswaModel,
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'rapor_akademik',
+                  child: ListTile(leading: Icon(Icons.assessment_outlined), title: Text('Rapor Akademik')),
+                ),
+                // --- MENU BARU KITA ---
+                const PopupMenuItem(
+                  value: 'rapor_terpadu',
+                  child: ListTile(leading: Icon(Icons.auto_stories), title: Text('Rapor Terpadu')),
+                ),
+                // ---------------------
+                const PopupMenuItem(
+                  value: 'profil',
+                  child: ListTile(leading: Icon(Icons.person_outline), title: Text('Profil Siswa')),
+                ),
+              ],
+            );
+          } else {
+            return const Icon(Icons.chevron_right, color: Colors.grey);
+          }
+        }),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      ),
+    );
+  }
 }

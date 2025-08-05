@@ -1,16 +1,15 @@
-// import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
-// import 'app/controllers/auth_controller.dart';
-// import 'app/controllers/storage_controller.dart';
 import 'app/controller/storage_controller.dart';
 import 'app/routes/app_pages.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'app/services/halaqoh_service.dart';
 
 // Import intl untuk formatting tanggal
 import 'package:intl/date_symbol_data_local.dart';
@@ -42,6 +41,8 @@ Future<void> main() async {
 
     // --- DAFTARKAN STORAGE CONTROLLER DI SINI ---
   Get.put(StorageController(), permanent: true);
+
+  Get.put(HalaqohService());
 
   // ==========================================================
   // --- TAMBAHKAN KODE INISIALISASI TANGGAL DI SINI ---

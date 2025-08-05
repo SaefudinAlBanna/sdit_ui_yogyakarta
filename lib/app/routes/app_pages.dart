@@ -6,6 +6,8 @@ import '../modules/analisis_akademik/bindings/analisis_akademik_binding.dart';
 import '../modules/analisis_akademik/views/analisis_akademik_view.dart';
 import '../modules/atp_form/bindings/atp_form_binding.dart';
 import '../modules/atp_form/views/atp_form_view.dart';
+import '../modules/atur_pengganti/bindings/atur_pengganti_binding.dart';
+import '../modules/atur_pengganti/views/atur_pengganti_view.dart';
 import '../modules/buat_jadwal_pelajaran/bindings/buat_jadwal_pelajaran_binding.dart';
 import '../modules/buat_jadwal_pelajaran/views/buat_jadwal_pelajaran_view.dart';
 import '../modules/buat_sarpras/bindings/buat_sarpras_binding.dart';
@@ -22,6 +24,8 @@ import '../modules/daftar_halaqoh_perfase/bindings/daftar_halaqoh_perfase_bindin
 import '../modules/daftar_halaqoh_perfase/views/daftar_halaqoh_perfase_view.dart';
 import '../modules/daftar_halaqohnya/bindings/daftar_halaqohnya_binding.dart';
 import '../modules/daftar_halaqohnya/views/daftar_halaqohnya_view.dart';
+import '../modules/daftar_informasi/bindings/daftar_informasi_binding.dart';
+import '../modules/daftar_informasi/views/daftar_informasi_view.dart';
 import '../modules/daftar_jurnal_ajar/bindings/daftar_jurnal_ajar_binding.dart';
 import '../modules/daftar_jurnal_ajar/views/daftar_jurnal_ajar_view.dart';
 import '../modules/daftar_kelas/bindings/daftar_kelas_binding.dart';
@@ -36,6 +40,11 @@ import '../modules/daftar_siswa_permapel/bindings/daftar_siswa_permapel_binding.
 import '../modules/daftar_siswa_permapel/views/daftar_siswa_permapel_view.dart';
 import '../modules/daftar_siswa_pindah_halaqoh/bindings/daftar_siswa_pindah_halaqoh_binding.dart';
 import '../modules/daftar_siswa_pindah_halaqoh/views/daftar_siswa_pindah_halaqoh_view.dart';
+import '../modules/dasbor_pembina/bindings/dasbor_pembina_binding.dart';
+import '../modules/dasbor_pembina/bindings/log_ekskul_siswa_binding.dart';
+import '../modules/dasbor_pembina/bindings/pembina_ekskul_binding.dart';
+import '../modules/dasbor_pembina/views/dasbor_pembina_view.dart';
+import '../modules/dasbor_pembina/views/log_ekskul_siswa_view.dart';
 import '../modules/data_sarpras/bindings/data_sarpras_binding.dart';
 import '../modules/data_sarpras/views/data_sarpras_view.dart';
 import '../modules/detail_nilai_halaqoh/bindings/detail_nilai_halaqoh_binding.dart';
@@ -44,6 +53,10 @@ import '../modules/detail_siswa/bindings/detail_siswa_binding.dart';
 import '../modules/detail_siswa/views/detail_siswa_view.dart';
 import '../modules/forgot_password/bindings/forgot_password_binding.dart';
 import '../modules/forgot_password/views/forgot_password_view.dart';
+import '../modules/guru_pengganti/bindings/guru_pengganti_binding.dart';
+import '../modules/guru_pengganti/views/guru_pengganti_view.dart';
+import '../modules/halaman_pengganti/bindings/halaman_pengganti_binding.dart';
+import '../modules/halaman_pengganti/views/halaman_pengganti_view.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/import_pegawai/bindings/import_pegawai_binding.dart';
@@ -58,6 +71,8 @@ import '../modules/input_info_sekolah/bindings/input_info_sekolah_binding.dart';
 import '../modules/input_info_sekolah/views/input_info_sekolah_view.dart';
 import '../modules/input_nilai_siswa/bindings/input_nilai_siswa_binding.dart';
 import '../modules/input_nilai_siswa/views/input_nilai_siswa_view.dart';
+import '../modules/instance_ekskul/bindings/instance_ekskul_binding.dart';
+import '../modules/instance_ekskul/views/instance_ekskul_view.dart';
 import '../modules/jadwal_pelajaran/bindings/jadwal_pelajaran_binding.dart';
 import '../modules/jadwal_pelajaran/views/jadwal_pelajaran_view.dart';
 import '../modules/jurnal_ajar_harian/bindings/jurnal_ajar_harian_binding.dart';
@@ -66,18 +81,30 @@ import '../modules/kalender_akademik/bindings/kalender_akademik_binding.dart';
 import '../modules/kalender_akademik/views/kalender_akademik_view.dart';
 import '../modules/kelas_tahfidz/bindings/kelas_tahfidz_binding.dart';
 import '../modules/kelas_tahfidz/views/kelas_tahfidz_view.dart';
+import '../modules/kelola_catatan_rapor/bindings/kelola_catatan_rapor_binding.dart';
+import '../modules/kelola_catatan_rapor/views/kelola_catatan_rapor_view.dart';
 import '../modules/kelompok_halaqoh/bindings/kelompok_halaqoh_binding.dart';
 import '../modules/kelompok_halaqoh/views/kelompok_halaqoh_view.dart';
+import '../modules/kurikulum_master/bindings/kurikulum_master_binding.dart';
+import '../modules/kurikulum_master/views/kurikulum_master_view.dart';
 import '../modules/laksanakan_ujian/bindings/laksanakan_ujian_binding.dart';
 import '../modules/laksanakan_ujian/views/laksanakan_ujian_view.dart';
 import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
+import '../modules/manajemen_ekskul/bindings/manajemen_ekskul_binding.dart';
+import '../modules/manajemen_ekskul/views/manajemen_ekskul_view.dart';
 import '../modules/manajemen_jabatan/bindings/manajemen_jabatan_binding.dart';
 import '../modules/manajemen_jabatan/views/manajemen_jabatan_view.dart';
+import '../modules/manajemen_jam/bindings/manajemen_jam_binding.dart';
+import '../modules/manajemen_jam/views/manajemen_jam_view.dart';
+import '../modules/manajemen_tahun_ajaran_ekskul/bindings/manajemen_tahun_ajaran_ekskul_binding.dart';
+import '../modules/manajemen_tahun_ajaran_ekskul/views/manajemen_tahun_ajaran_ekskul_view.dart';
 import '../modules/manajemen_tugas/bindings/manajemen_tugas_binding.dart';
 import '../modules/manajemen_tugas/views/manajemen_tugas_view.dart';
 import '../modules/mapel_siswa/bindings/mapel_siswa_binding.dart';
 import '../modules/mapel_siswa/views/mapel_siswa_view.dart';
+import '../modules/master_ekskul/bindings/master_ekskul_binding.dart';
+import '../modules/master_ekskul/views/master_ekskul_view.dart';
 import '../modules/modul_ajar_form/bindings/modul_ajar_form_binding.dart';
 import '../modules/modul_ajar_form/views/modul_ajar_form_view.dart';
 import '../modules/new_password/bindings/new_password_binding.dart';
@@ -92,12 +119,22 @@ import '../modules/pemberian_kelas_siswa/bindings/pemberian_kelas_siswa_binding.
 import '../modules/pemberian_kelas_siswa/views/pemberian_kelas_siswa_view.dart';
 import '../modules/pemberian_nilai_halaqoh/bindings/pemberian_nilai_halaqoh_binding.dart';
 import '../modules/pemberian_nilai_halaqoh/views/pemberian_nilai_halaqoh_view.dart';
+import '../modules/pembina_eksternal/bindings/pembina_eksternal_binding.dart';
+import '../modules/pembina_eksternal/views/pembina_eksternal_view.dart';
+import '../modules/penilaian_rapor_ekskul/bindings/penilaian_rapor_ekskul_binding.dart';
+import '../modules/penilaian_rapor_ekskul/views/penilaian_rapor_ekskul_view.dart';
+import '../modules/penilaian_rapor_halaqoh/bindings/penilaian_rapor_halaqoh_binding.dart';
+import '../modules/penilaian_rapor_halaqoh/views/penilaian_rapor_halaqoh_view.dart';
 import '../modules/perangkat_ajar/bindings/perangkat_ajar_binding.dart';
 import '../modules/perangkat_ajar/views/perangkat_ajar_view.dart';
 import '../modules/prota_prosem/bindings/prota_prosem_binding.dart';
 import '../modules/prota_prosem/views/prota_prosem_view.dart';
+import '../modules/rapor_ekskul_siswa/bindings/rapor_ekskul_siswa_binding.dart';
+import '../modules/rapor_ekskul_siswa/views/rapor_ekskul_siswa_view.dart';
 import '../modules/rapor_siswa/bindings/rapor_siswa_binding.dart';
 import '../modules/rapor_siswa/views/rapor_siswa_view.dart';
+import '../modules/rapor_terpadu/bindings/rapor_terpadu_binding.dart';
+import '../modules/rapor_terpadu/views/rapor_terpadu_view.dart';
 import '../modules/rekap_absensi/bindings/rekap_absensi_binding.dart';
 import '../modules/rekap_absensi/views/rekap_absensi_view.dart';
 import '../modules/rekap_jurnal_admin/bindings/rekap_jurnal_admin_binding.dart';
@@ -108,6 +145,8 @@ import '../modules/rekapitulasi_pembayaran/bindings/rekapitulasi_pembayaran_bind
 import '../modules/rekapitulasi_pembayaran/views/rekapitulasi_pembayaran_view.dart';
 import '../modules/rekapitulasi_pembayaran_rinci/bindings/rekapitulasi_pembayaran_rinci_binding.dart';
 import '../modules/rekapitulasi_pembayaran_rinci/views/rekapitulasi_pembayaran_rinci_view.dart';
+import '../modules/spesialisasi/bindings/spesialisasi_binding.dart';
+import '../modules/spesialisasi/views/spesialisasi_view.dart';
 import '../modules/tambah_kelompok_mengaji/bindings/tambah_kelompok_mengaji_binding.dart';
 import '../modules/tambah_kelompok_mengaji/views/tambah_kelompok_mengaji_view.dart';
 import '../modules/tambah_pegawai/bindings/tambah_pegawai_binding.dart';
@@ -122,6 +161,11 @@ import '../modules/tanggapan_catatan_khusus_siswa/bindings/tanggapan_catatan_khu
 import '../modules/tanggapan_catatan_khusus_siswa/views/tanggapan_catatan_khusus_siswa_view.dart';
 import '../modules/tanggapan_catatan_khusus_siswa_walikelas/bindings/tanggapan_catatan_khusus_siswa_walikelas_binding.dart';
 import '../modules/tanggapan_catatan_khusus_siswa_walikelas/views/tanggapan_catatan_khusus_siswa_walikelas_view.dart';
+// import '../modules/dasbor_pembina/bindings/PembinaEkskulBinding.dart';
+// import '../modules/pembina_area/bindings/pembina_ekskul_detail_binding.dart';
+import '../modules/dasbor_pembina/views/pembina_ekskul_detail_view.dart';
+import '../modules/laporan_ekskul/bindings/laporan_ekskul_binding.dart';
+import '../modules/laporan_ekskul/views/laporan_ekskul_view.dart';
 
 part 'app_routes.dart';
 
@@ -435,6 +479,121 @@ class AppPages {
       name: _Paths.PANTAU_TAHFIDZ,
       page: () => const PantauTahfidzView(),
       binding: PantauTahfidzBinding(),
+    ),
+    GetPage(
+      name: _Paths.ATUR_PENGGANTI,
+      page: () => const AturPenggantiView(),
+      binding: AturPenggantiBinding(),
+    ),
+    GetPage(
+      name: _Paths.HALAMAN_PENGGANTI,
+      page: () => const HalamanPenggantiView(),
+      binding: HalamanPenggantiBinding(),
+    ),
+    GetPage(
+      name: _Paths.KURIKULUM_MASTER,
+      page: () => const KurikulumMasterView(),
+      binding: KurikulumMasterBinding(),
+    ),
+    GetPage(
+      name: _Paths.DAFTAR_INFORMASI,
+      page: () => const DaftarInformasiView(),
+      binding: DaftarInformasiBinding(),
+    ),
+    GetPage(
+      name: _Paths.MANAJEMEN_JAM,
+      page: () => const ManajemenJamView(),
+      binding: ManajemenJamBinding(),
+    ),
+    GetPage(
+      name: _Paths.MANAJEMEN_EKSKUL,
+      page: () => const ManajemenEkskulView(),
+      binding: ManajemenEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.GURU_PENGGANTI,
+      page: () => const GuruPenggantiView(),
+      binding: GuruPenggantiBinding(),
+    ),
+    GetPage(
+      name: _Paths.SPESIALISASI,
+      page: () => const SpesialisasiView(),
+      binding: SpesialisasiBinding(),
+    ),
+    GetPage(
+      name: _Paths.PEMBINA_EKSTERNAL,
+      page: () => const PembinaEksternalView(),
+      binding: PembinaEksternalBinding(),
+    ),
+    GetPage(
+      name: _Paths.MASTER_EKSKUL,
+      page: () => const MasterEkskulView(),
+      binding: MasterEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.INSTANCE_EKSKUL,
+      page: () => const InstanceEkskulView(),
+      binding: InstanceEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.DASBOR_PEMBINA,
+      page: () => const DasborPembinaView(),
+      binding: DasborPembinaBinding(),
+    ),
+    GetPage(
+      name: _Paths.PEMBINA_EKSKUL_DETAIL,
+      page: () {
+        // Ambil nama ekskul dari argumen untuk ditampilkan di AppBar
+        final String namaEkskul = Get.arguments['namaEkskul'];
+        return PembinaEkskulDetailView(namaEkskul: namaEkskul);
+      },
+      binding: PembinaEkskulDetailBinding(),
+    ),
+    GetPage(
+      name: _Paths.LAPORAN_EKSKUL, // <-- Rute yang baru
+      page: () => const LaporanEkskulView(),
+      binding: LaporanEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.MANAJEMEN_TAHUN_AJARAN_EKSKUL, // <-- Rute yang baru
+      page: () => const ManajemenTahunAjaranEkskulView(),
+      binding: ManajemenTahunAjaranEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.MANAJEMEN_TAHUN_AJARAN_EKSKUL, // <-- Rute yang baru
+      page: () => const ManajemenTahunAjaranEkskulView(),
+      binding: ManajemenTahunAjaranEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.PENILAIAN_RAPOR_EKSKUL, // <-- Rute yang baru
+      page: () => const PenilaianRaporEkskulView(),
+      binding: PenilaianRaporEkskulBinding(),
+    ),
+    GetPage(
+      name: _Paths.RAPOR_EKSKUL_SISWA,
+      page: () => const RaporEkskulView(),
+      binding: RaporEkskulSiswaBinding(), // Gunakan binding yang sudah dikoreksi
+    ),
+    GetPage(
+      name: _Paths.RAPOR_TERPADU,
+      page: () => const RaporTerpaduView(),
+      binding: RaporTerpaduBinding(), // Gunakan binding yang sudah dikoreksi
+    ),
+    GetPage(
+      // name: _Paths.LOG_EKSKUL_SISWA, // Buat path baru ini
+      name: _Paths.LOG_EKSKUL_SISWA, // <-- Rute yang baru
+      page: () => const LogEkskulSiswaView(),
+      binding: LogEkskulSiswaBinding(),
+    ),
+    GetPage(
+      name: _Paths.KELOLA_CATATAN_RAPOR,
+      page: () => const KelolaCatatanRaporView(),
+      binding: KelolaCatatanRaporBinding(),
+    ),
+    GetPage(
+      name: _Paths.PENILAIAN_RAPOR_HALAQOH,
+      page: () => const PenilaianRaporHalaqohView(),
+      binding: PenilaianRaporHalaqohBinding(),
     ),
   ];
 }

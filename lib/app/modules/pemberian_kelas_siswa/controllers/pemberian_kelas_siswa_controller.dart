@@ -1,5 +1,3 @@
-// lib/app/modules/pemberian_kelas_siswa/controllers/pemberian_kelas_siswa_controller.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
@@ -33,6 +31,7 @@ class PemberianKelasSiswaController extends GetxController {
 
   // --- STATE BARU UNTUK FITUR DAFTAR SISWA ---
   final RxString searchQuery = ''.obs;
+  final RxBool isChangingWaliKelas = false.obs;
 
   @override
   void onInit() {
@@ -63,7 +62,7 @@ class PemberianKelasSiswaController extends GetxController {
 
   Future<void> gantiKelasTerpilih(String namaKelas) async {
     if (kelasTerpilih.value == namaKelas) return;
-    searchQuery.value = ''; // Reset pencarian saat ganti kelas
+    searchQuery.value = ''; 
     kelasTerpilih.value = namaKelas;
     await fetchKelasDetails(namaKelas);
   }
@@ -114,24 +113,22 @@ class PemberianKelasSiswaController extends GetxController {
     return waliKelasTersedia;
   }
 
-  // --- FUNGSI BARU: Mendapatkan stream siswa yang sudah ada di kelas ---
   Stream<QuerySnapshot<Map<String, dynamic>>> getSiswaDiKelasStream() {
     if (kelasTerpilih.value == null) {
       return const Stream.empty();
     }
     String idTahunAjaran = homeC.idTahunAjaran.value!;
-    String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
+    String semesterAktifId = homeC.semesterAktifId.value; 
 
     return firestore
         .collection('Sekolah').doc(idSekolah)
         .collection('tahunajaran').doc(idTahunAjaran)
         .collection('kelastahunajaran').doc(kelasTerpilih.value!)
-        .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+        .collection('semester').doc(semesterAktifId) 
         .collection('daftarsiswa')
         .snapshots();
   }
 
-  // --- FUNGSI BARU: Menghapus siswa dari kelas (Batal Tambah) ---
   Future<void> removeSiswaFromKelas(String nisn) async {
     if (kelasTerpilih.value == null) return;
     
@@ -139,21 +136,22 @@ class PemberianKelasSiswaController extends GetxController {
     
     try {
       String idTahunAjaran = homeC.idTahunAjaran.value!;
-      String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
+      String semesterAktifId = homeC.semesterAktifId.value; 
       final String namaKelas = kelasTerpilih.value!;
 
-      // Path siswa di dalam kelas, sekarang sudah menyertakan semester
       final siswaDiKelasRef = firestore.collection('Sekolah').doc(idSekolah)
         .collection('tahunajaran').doc(idTahunAjaran)
         .collection('kelastahunajaran').doc(namaKelas)
-        .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+        .collection('semester').doc(semesterAktifId) 
         .collection('daftarsiswa').doc(nisn);
       
       final siswaUtamaRef = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisn);
 
       WriteBatch batch = firestore.batch();
       batch.delete(siswaDiKelasRef);
-      batch.update(siswaUtamaRef, {'status': 'tidak aktif'});
+      // --- [MODIFIKASI] ---
+      // Saat siswa dihapus, set status dan hapus field kelasnya.
+      batch.update(siswaUtamaRef, {'status': 'tidak aktif', 'kelas': FieldValue.delete()});
       await batch.commit();
       
       Get.back();
@@ -165,14 +163,12 @@ class PemberianKelasSiswaController extends GetxController {
     }
   }
 
-  // Di dalam PemberianKelasSiswaController
-
-  /// [FINAL & LENGKAP] Menginisialisasi SEMUA siswa yang berstatus 'baru' ke kelas dengan struktur semester.
   Future<void> inisialisasiSemuaSiswaKeKelas() async {
     if (kelasTerpilih.value == null || waliKelasSiswaC.text.isEmpty) {
       Get.snackbar("Gagal", "Pilih kelas dan tentukan wali kelas terlebih dahulu.");
       return;
     }
+    // ... (Logika konfirmasi dialog tetap sama)
     Get.defaultDialog(
       title: "Konfirmasi Aksi Massal",
       middleText: "Anda yakin ingin menambahkan SEMUA siswa yang belum memiliki kelas ke ${kelasTerpilih.value}?",
@@ -182,18 +178,19 @@ class PemberianKelasSiswaController extends GetxController {
         Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
         isLoadingTambahKelas.value = true;
         try {
+          // ... (Blok persiapan data tetap sama)
           final String namaKelasSaatIni = kelasTerpilih.value!;
           final String idTahunAjaran = homeC.idTahunAjaran.value!;
-          final String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
-
-          // (Sisa logika persiapan data tidak berubah...)
-          final String kelasAngka = namaKelasSaatIni.substring(0, 1);
-          final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
-          final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
+          final String semesterAktifId = homeC.semesterAktifId.value;
+          // ...
           final guruDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').where('alias', isEqualTo: waliKelasSiswaC.text).limit(1).get();
           if (guruDoc.docs.isEmpty) throw Exception("Data wali kelas tidak ditemukan.");
           final String idWaliKelas = guruDoc.docs.first.id;
           final String namaWaliKelas = guruDoc.docs.first.data()['alias'];
+          final String kelasAngka = namaKelasSaatIni.substring(0, 1);
+          final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
+          final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
+          final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
 
           final siswaBaruSnapshot = await firestore.collection('Sekolah').doc(idSekolah).collection('siswa').where('status', isNotEqualTo: 'aktif').get();
           if (siswaBaruSnapshot.docs.isEmpty) {
@@ -203,15 +200,13 @@ class PemberianKelasSiswaController extends GetxController {
           
           WriteBatch batch = firestore.batch();
           final kelasTahunAjaranRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(namaKelasSaatIni);
-          final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
 
           for (var docSiswa in siswaBaruSnapshot.docs) {
             final nisnSiswa = docSiswa.id;
             final namaSiswa = docSiswa.data()['nama'] ?? 'Tanpa Nama';
             
-            // Path siswa di dalam semester
             final siswaDiSemesterRef = kelasTahunAjaranRef
-                .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+                .collection('semester').doc(semesterAktifId)
                 .collection('daftarsiswa').doc(nisnSiswa);
                 
             final siswaUtamaRef = docSiswa.reference;
@@ -219,7 +214,9 @@ class PemberianKelasSiswaController extends GetxController {
             
             batch.set(kelasTahunAjaranRef, dataKelas, SetOptions(merge: true));
             batch.set(siswaDiSemesterRef, dataSiswa);
-            batch.update(siswaUtamaRef, {'status': 'aktif'});
+            // --- [MODIFIKASI] ---
+            // Tambahkan field 'kelas' saat status diupdate.
+            batch.update(siswaUtamaRef, {'status': 'aktif', 'kelas': namaKelasSaatIni});
           }
           
           await batch.commit();
@@ -243,36 +240,37 @@ class PemberianKelasSiswaController extends GetxController {
     }
     isLoadingTambahKelas.value = true;
     try {
+      // ... (Blok persiapan data tetap sama)
       final String namaKelasSaatIni = kelasTerpilih.value!;
       final String idTahunAjaran = homeC.idTahunAjaran.value!;
-      final String semesterAktifId = homeC.semesterAktifId.value; // Ambil semester aktif
-
-      // (Sisa logika persiapan data tidak berubah...)
-      final String kelasAngka = namaKelasSaatIni.substring(0, 1);
-      final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
-      final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
+      final String semesterAktifId = homeC.semesterAktifId.value;
+      // ...
       final guruDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('pegawai').where('alias', isEqualTo: waliKelasSiswaC.text).limit(1).get();
       if (guruDoc.docs.isEmpty) throw Exception("Data wali kelas dengan nama '${waliKelasSiswaC.text}' tidak ditemukan.");
       final String idWaliKelas = guruDoc.docs.first.id;
       final String namaWaliKelas = guruDoc.docs.first.data()['alias'];
+      final String kelasAngka = namaKelasSaatIni.substring(0, 1);
+      final String idFaseRaw = (kelasAngka == '1' || kelasAngka == '2') ? "fase_a" : (kelasAngka == '3' || kelasAngka == '4') ? "fase_b" : "fase_c";
+      final String faseFormatted = "Fase ${idFaseRaw.substring(idFaseRaw.length - 1).toUpperCase()}";
+      final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
 
       WriteBatch batch = firestore.batch();
       
       final kelasTahunAjaranRef = firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).collection('kelastahunajaran').doc(namaKelasSaatIni);
       
-      // Path siswa di dalam struktur semester
       final siswaDiSemesterRef = kelasTahunAjaranRef
-          .collection('semester').doc(semesterAktifId) // <-- Path semester ditambahkan
+          .collection('semester').doc(semesterAktifId)
           .collection('daftarsiswa').doc(nisnSiswa);
           
       final siswaUtamaRef = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisnSiswa);
       
-      final dataKelas = {'namakelas': namaKelasSaatIni, 'idwalikelas': idWaliKelas, 'walikelas': namaWaliKelas, 'fase': faseFormatted};
       final dataSiswa = {'namasiswa': namaSiswa, 'nisn': nisnSiswa, ...dataKelas, 'statuskelompok': "baru"};
       
       batch.set(kelasTahunAjaranRef, dataKelas, SetOptions(merge: true));
       batch.set(siswaDiSemesterRef, dataSiswa);
-      batch.update(siswaUtamaRef, {'status': 'aktif'});
+      // --- [MODIFIKASI] ---
+      // Tambahkan field 'kelas' saat status diupdate.
+      batch.update(siswaUtamaRef, {'status': 'aktif', 'kelas': namaKelasSaatIni});
       
       await batch.commit();
       Get.snackbar("Berhasil", "$namaSiswa telah ditambahkan ke kelas $namaKelasSaatIni.");
@@ -280,6 +278,163 @@ class PemberianKelasSiswaController extends GetxController {
       Get.snackbar('Gagal', e.toString().replaceAll('Exception: ', ''));
     } finally {
       isLoadingTambahKelas.value = false;
+    }
+  }
+
+  // --- [TAMBAHAN] ---
+  /// Fungsi untuk mengupdate field 'kelas' pada semua siswa berdasarkan
+  /// data dari tahun ajaran & semester aktif.
+  /// Fungsi ini bersifat massal dan bisa dijalankan sekali saja.
+  Future<void> updateKelasSiswaMassal() async {
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()), 
+      barrierDismissible: false,
+    );
+    try {
+      final idTahunAjaran = homeC.idTahunAjaran.value;
+      final semesterAktifId = homeC.semesterAktifId.value;
+
+      if (idTahunAjaran == null) {
+        throw Exception("Tahun ajaran aktif tidak ditemukan.");
+      }
+
+      WriteBatch batch = firestore.batch();
+      int siswaUpdatedCount = 0;
+
+      // 1. Dapatkan semua kelas di tahun ajaran ini
+      final kelasSnapshot = await firestore
+          .collection('Sekolah').doc(idSekolah)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelastahunajaran').get();
+
+      if (kelasSnapshot.docs.isEmpty) {
+        throw Exception("Tidak ada data kelas ditemukan di tahun ajaran ini.");
+      }
+
+      // 2. Iterasi setiap kelas
+      for (final kelasDoc in kelasSnapshot.docs) {
+        final namaKelas = kelasDoc.id;
+        
+        // 3. Dapatkan semua siswa di dalam kelas & semester tersebut
+        final daftarSiswaSnapshot = await kelasDoc.reference
+            .collection('semester').doc(semesterAktifId)
+            .collection('daftarsiswa').get();
+
+        // 4. Untuk setiap siswa, siapkan update di batch
+        for (final siswaDiKelasDoc in daftarSiswaSnapshot.docs) {
+          final nisn = siswaDiKelasDoc.id;
+          final siswaUtamaRef = firestore
+              .collection('Sekolah').doc(idSekolah)
+              .collection('siswa').doc(nisn);
+          
+          // Tambahkan operasi update ke batch
+          batch.update(siswaUtamaRef, {'kelas': namaKelas});
+          siswaUpdatedCount++;
+        }
+      }
+
+      // 5. Commit semua perubahan sekaligus
+      await batch.commit();
+
+      Get.back(); // Tutup dialog loading
+      Get.snackbar(
+        "Berhasil", 
+        "Data kelas untuk $siswaUpdatedCount siswa telah berhasil di-update.",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+    } catch (e) {
+      Get.back(); // Tutup dialog loading
+      Get.snackbar(
+        "Gagal", 
+        "Terjadi kesalahan: ${e.toString().replaceAll('Exception: ', '')}",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllGuruKelas() async {
+    final snapshot = await firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('pegawai')
+        .where('role', isEqualTo: 'Guru Kelas')
+        .get();
+        
+    return snapshot.docs.map((doc) => {
+      'uid': doc.id,
+      'nama': doc.data()['alias'] ?? 'Tanpa Nama',
+    }).toList();
+  }
+
+  Future<String?> checkExistingWaliKelas(String guruUid, String kelasSaatIni) async {
+    final snapshot = await firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(homeC.idTahunAjaran.value!)
+        .collection('kelastahunajaran')
+        .where('idwalikelas', isEqualTo: guruUid)
+        .limit(1).get();
+        
+    if (snapshot.docs.isNotEmpty) {
+      final existingKelas = snapshot.docs.first.id;
+      // Pastikan bukan kelas yang sedang kita edit
+      if (existingKelas != kelasSaatIni) {
+        return existingKelas;
+      }
+    }
+    return null;
+  }
+
+  Future<void> changeWaliKelas(String namaKelas, Map<String, dynamic> guruBaru) async {
+    isChangingWaliKelas.value = true;
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    
+    try {
+      final String idTahunAjaran = homeC.idTahunAjaran.value!;
+      final String semesterAktif = homeC.semesterAktifId.value;
+      final String guruBaruUid = guruBaru['uid'];
+      final String guruBaruNama = guruBaru['nama'];
+      
+      WriteBatch batch = firestore.batch();
+      
+      // 1. Path ke dokumen kelas utama
+      final kelasRef = firestore.collection('Sekolah').doc(idSekolah)
+          .collection('tahunajaran').doc(idTahunAjaran)
+          .collection('kelastahunajaran').doc(namaKelas);
+          
+      // 2. Path ke koleksi daftar siswa di dalam kelas tersebut
+      final siswaCollectionRef = kelasRef.collection('semester').doc(semesterAktif).collection('daftarsiswa');
+      
+      // Ambil semua siswa di kelas itu untuk diupdate
+      final siswaSnapshot = await siswaCollectionRef.get();
+
+      // UPDATE #1: Update dokumen kelas utama
+      batch.update(kelasRef, {
+        'idwalikelas': guruBaruUid,
+        'walikelas': guruBaruNama,
+      });
+
+      // UPDATE #2: Update setiap dokumen siswa di dalam kelas tersebut
+      for (final siswaDoc in siswaSnapshot.docs) {
+        batch.update(siswaDoc.reference, {
+          'idwalikelas': guruBaruUid,
+          'walikelas': guruBaruNama,
+        });
+      }
+      
+      // Commit semua perubahan sekaligus
+      await batch.commit();
+      
+      Get.back(); // Tutup dialog loading
+      Get.snackbar("Berhasil", "Wali kelas untuk $namaKelas telah diganti menjadi $guruBaruNama.");
+
+      // Refresh data di UI
+      await fetchKelasDetails(namaKelas);
+
+    } catch (e) {
+      Get.back();
+      Get.snackbar("Gagal", "Terjadi kesalahan: $e");
+    } finally {
+      isChangingWaliKelas.value = false;
     }
   }
 }

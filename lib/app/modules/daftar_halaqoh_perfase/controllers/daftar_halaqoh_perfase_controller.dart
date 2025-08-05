@@ -91,45 +91,6 @@ class DaftarHalaqohPerfaseController extends GetxController {
     }
   }
 
-  // Future<void> loadDataPengampu() async {
-  //   if (selectedFase.value == null) return;
-  //   isLoading.value = true;
-  //   try {
-  //     final namaTahunAjaran = (await homeController.getTahunAjaranTerakhir());
-  //     final namaDokumenFase = "Fase ${selectedFase.value}";
-
-  //     // --- DEBUGGING DIMULAI ---
-  //     print("================ INVESTIGASI DIMULAI ================");
-  //     print("Mencari dokumen 'tempat' dengan kriteria:");
-  //     print("1. Field 'fase' HARUS SAMA PERSIS DENGAN: '$namaDokumenFase'");
-  //     print("2. Field 'tahunajaran' HARUS SAMA PERSIS DENGAN: '$namaTahunAjaran'");
-  //     print("----------------------------------------------------");
-  //     // --- DEBUGGING SELESAI ---
-
-  //     final tempatSnapshot = await firestore.collectionGroup('tempat')
-  //         .where('fase', isEqualTo: namaDokumenFase)
-  //         .where('tahunajaran', isEqualTo: namaTahunAjaran)
-  //         .get();
-      
-  //     print("HASIL: Query collectionGroup('tempat') menemukan ${tempatSnapshot.docs.length} dokumen.");
-  //     print("================ INVESTIGASI SELESAI ================\n");
-
-  //     if (tempatSnapshot.docs.isNotEmpty) {
-  //       // ... sisa fungsi tidak berubah
-  //     } else {
-  //       _semuaPengampu.clear();
-  //       daftarPengampuFiltered.clear();
-  //     }
-  //   } catch (e) {
-  //     if (kDebugMode) print("Error saat loadDataPengampu: $e");
-  //     _semuaPengampu.clear();
-  //     daftarPengampuFiltered.clear();
-  //     Get.snackbar("Error", "Gagal memuat data. Mungkin memerlukan index Firestore. Cek Debug Console.");
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
-
   Future<PengampuInfo?> _createPengampuInfoFromDoc(
     QueryDocumentSnapshot<Map<String, dynamic>> tempatDoc,
     String namaDokumenFase,
@@ -177,6 +138,82 @@ class DaftarHalaqohPerfaseController extends GetxController {
     } catch (e) {
       if (kDebugMode) print("Error memproses detail untuk pengampu ${idPengampu ?? 'UNKNOWN'}: $e");
       return null;
+    }
+  }
+
+  // [FUNGSI BARU] Untuk memperbaiki data shortcut siswa per fase.
+  Future<void> migrasiDataShortcutSiswaPerFase(String namaFase) async {
+    Get.dialog(
+      const AlertDialog(
+        title: Text("Migrasi Data..."),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text("Proses ini bisa memakan waktu beberapa saat. Mohon jangan tutup aplikasi."),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      final idTahunAjaran = homeController.idTahunAjaran.value!;
+      final semesterAktif = homeController.semesterAktifId.value;
+      int siswaDiperbaiki = 0;
+
+      // 1. Ambil semua kelompok di fase ini untuk mendapatkan idpengampu yang benar
+      final tempatSnapshot = await firestore.collectionGroup('tempat')
+          .where('fase', isEqualTo: namaFase)
+          .where('tahunajaran', isEqualTo: idTahunAjaran)
+          .get();
+
+      if (tempatSnapshot.docs.isEmpty) {
+        Get.back();
+        Get.snackbar("Info", "Tidak ada kelompok yang ditemukan di $namaFase untuk dimigrasi.");
+        return;
+      }
+      
+      final WriteBatch batch = firestore.batch();
+
+      // 2. Lakukan iterasi untuk setiap kelompok
+      for (var tempatDoc in tempatSnapshot.docs) {
+        final dataTempat = tempatDoc.data();
+        final String idPengampu = dataTempat['idpengampu'];
+        
+        // 3. Ambil semua siswa di dalam kelompok tersebut
+        final siswaSnapshot = await tempatDoc.reference
+            .collection('semester').doc(semesterAktif)
+            .collection('daftarsiswa').get();
+
+        if (siswaSnapshot.docs.isEmpty) continue; // Lanjut ke kelompok berikutnya jika kosong
+
+        // 4. Untuk setiap siswa, siapkan operasi update pada "shortcut"-nya
+        for (var siswaDoc in siswaSnapshot.docs) {
+          final nisn = siswaDoc.id;
+          final refShortcut = firestore
+              .collection('Sekolah').doc(homeController.idSekolah)
+              .collection('siswa').doc(nisn)
+              .collection('tahunajarankelompok').doc(idTahunAjaran)
+              .collection('semester').doc(semesterAktif)
+              .collection('kelompokmengaji').doc(namaFase);
+
+          // Gunakan .update() untuk menambahkan field baru tanpa menimpa yang lama
+          batch.update(refShortcut, {'idpengampu': idPengampu});
+          siswaDiperbaiki++;
+        }
+      }
+
+      // 5. Jalankan semua operasi update sekaligus
+      await batch.commit();
+      
+      Get.back(); // Tutup dialog loading
+      Get.snackbar("Berhasil", "$siswaDiperbaiki data siswa di $namaFase telah berhasil diperbaiki.");
+
+    } catch (e) {
+      Get.back();
+      Get.snackbar("Error Migrasi", "Terjadi kesalahan: ${e.toString()}");
     }
   }
 }

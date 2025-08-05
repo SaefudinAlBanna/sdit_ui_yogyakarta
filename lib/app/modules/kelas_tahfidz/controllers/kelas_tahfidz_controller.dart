@@ -241,9 +241,40 @@ class KelasTahfidzController extends GetxController {
   // --- FUNGSI MANAJEMEN PENDAMPING & DELEGASI ---
 
   Future<List<Map<String, dynamic>>> getAvailablePendamping() async {
-    final snapshot = await firestore.collection('Sekolah').doc(homeC.idSekolah).collection('pegawai')
-        .where('role', isEqualTo: 'Pengampu').where('tugas_pendamping_tahfidz', isNull: true).get();
-    return snapshot.docs.map((doc) => {'uid': doc.id, 'nama': doc.data()['alias'] ?? 'Tanpa Nama'}).toList();
+    try {
+      final queryByRole = firestore.collection('Sekolah').doc(homeC.idSekolah).collection('pegawai')
+          .where('role', isEqualTo: 'Pengampu').get();
+      final queryByTugas = firestore.collection('Sekolah').doc(homeC.idSekolah).collection('pegawai')
+          .where('tugas', arrayContainsAny: ['Pengampu', 'PTK', 'Media']).get();
+      
+      final results = await Future.wait([queryByRole, queryByTugas]);
+      final roleDocs = results[0].docs;
+      final tugasDocs = results[1].docs;
+
+      final Map<String, Map<String, dynamic>> uniquePegawai = {};
+      
+      // --- PERBAIKAN UTAMA: Gunakan kunci 'nama' secara konsisten ---
+      for (var doc in roleDocs) {
+        uniquePegawai[doc.id] = {'uid': doc.id, 'nama': doc.data()['alias'] ?? 'Tanpa Nama'};
+      }
+      for (var doc in tugasDocs) {
+        uniquePegawai[doc.id] = {'uid': doc.id, 'nama': doc.data()['alias'] ?? 'Tanpa Nama'};
+      }
+      // --- AKHIR PERBAIKAN ---
+
+      final List<Map<String, dynamic>> availablePendamping = [];
+      for (var doc in uniquePegawai.values) {
+        final pegawaiSnapshot = await firestore.collection('Sekolah').doc(homeC.idSekolah).collection('pegawai').doc(doc['uid']).get();
+        final data = pegawaiSnapshot.data();
+        if (data != null && (!data.containsKey('tugas_pendamping_tahfidz') || data['tugas_pendamping_tahfidz'] == null)) {
+          availablePendamping.add(doc);
+        }
+      }
+      return availablePendamping;
+    } catch (e) {
+      Get.snackbar("Error", "Gagal memuat daftar pendamping: $e");
+      return [];
+    }
   }
 
     /// 2. Menambahkan seorang guru sebagai pendamping.
@@ -436,7 +467,7 @@ class KelasTahfidzController extends GetxController {
             "murojaah": murojaah.trim(), // <-- FIELD BARU
             "hafalan": hafalan.trim(),   // <-- FIELD BARU
             "nilai": int.tryParse(nilai) ?? 0,
-            "catatan_guru": "Input massal.",
+            "catatan_guru": "",
             "penilai_uid": auth.currentUser!.uid,
             "penilai_nama": homeC.userRole.value,
             "id_kelas": idKelas.value,
@@ -659,12 +690,11 @@ class KelasTahfidzController extends GetxController {
   }
 
   Future<void> generateLaporanKelasPdf(DateTime start, DateTime end) async {
-    Get.dialog(Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
     try {
-      // 1. Ambil semua catatan penilaian di kelas ini dalam rentang tanggal
       final querySnapshot = await firestore
           .collectionGroup('catatan_tahfidz')
-          .where('id_kelas', isEqualTo: idKelas.value) // Butuh field 'id_kelas' di dokumen nilai
+          .where('id_kelas', isEqualTo: idKelas.value)
           .where('tanggal_penilaian', isGreaterThanOrEqualTo: start)
           .where('tanggal_penilaian', isLessThanOrEqualTo: end)
           .get();
@@ -675,12 +705,11 @@ class KelasTahfidzController extends GetxController {
         return;
       }
       
-      // 2. Proses dan kelompokkan data
       final List<List<String>> tableData = [];
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
-        final String nisn = data['nisn'] ?? ''; // Butuh field 'nisn' di dokumen nilai
-        final String namaSiswa = data['namaSiswa'] ?? 'Siswa'; // Butuh field 'namaSiswa'
+        final String nisn = data['nisn'] ?? '';
+        final String namaSiswa = data['namaSiswa'] ?? 'Siswa';
         final String pendamping = _getPendampingNamaForSiswa(nisn);
         
         tableData.add([
@@ -688,25 +717,28 @@ class KelasTahfidzController extends GetxController {
           pendamping,
           data['murojaah'] ?? '-',
           data['hafalan'] ?? '-',
-          data['catatan_guru'] ?? '-',
+          // --- TAMBAHAN BARU DI SINI ---
+          (data['nilai'] ?? 0).toString(), // Tambahkan kolom nilai
+          // --------------------------------
+          data['catatan_guru'] ?? '-', // Catatan akan kosong jika memang kosong
         ]);
       }
       
-      // 3. Buat PDF
       final pdf = pw.Document();
       final String tglLaporan = DateFormat('dd MMMM yyyy', 'id_ID').format(start) + (start.day != end.day ? " - ${DateFormat('dd MMMM yyyy', 'id_ID').format(end)}" : "");
 
       pdf.addPage(
         pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape, // Gunakan landscape agar muat
+          pageFormat: PdfPageFormat.a4.landscape,
           build: (context) => [
             pw.Header(text: "Laporan Tahfidz Kelas: ${namaKelas.value}"),
             pw.Text("Tanggal Laporan: $tglLaporan"),
             pw.SizedBox(height: 20),
             pw.Table.fromTextArray(
-              headers: ['Nama Siswa', 'Pendamping', 'Murojaah', 'Hafalan', 'Catatan'],
+              // --- PERBAIKI HEADERS DI SINI ---
+              headers: ['Nama Siswa', 'Pendamping', 'Murojaah', 'Hafalan', 'Nilai', 'Catatan'],
               data: tableData,
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               cellPadding: const pw.EdgeInsets.all(5),
               border: pw.TableBorder.all(),
             ),
@@ -714,10 +746,10 @@ class KelasTahfidzController extends GetxController {
         ),
       );
       
-      Get.back(); // Tutup dialog loading
+      Get.back();
       await Printing.layoutPdf(onLayout: (format) async => pdf.save());
 
-    } catch (e) {
+      } catch (e) {
       Get.back();
       print("error membuat laporan : $e");
       Get.snackbar("Error Membuat Laporan", "Terjadi kesalahan: ${e.toString()}\n\nMungkin perlu membuat indeks Firestore.");

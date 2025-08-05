@@ -4,50 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../controllers/rekap_absensi_controller.dart';
 
-// class RekapAbsensiView extends GetView<RekapAbsensiController> {
-//   const RekapAbsensiView({super.key});
-
-// @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: const Text('Rekap Absensi Siswa'),
-  //       centerTitle: true,
-  //     ),
-  //     body: Padding(
-  //       padding: const EdgeInsets.all(16.0),
-  //       child: Column(
-  //         children: [
-  //           // BAGIAN 1: Panel Kontrol (Pemilih Tanggal & Tombol Aksi)
-  //           _buildControlPanel(context),
-  //           const Divider(height: 32),
-            
-  //           // BAGIAN 2: Hasil Rekapitulasi
-  //           Expanded(
-  //             child: Obx(() {
-  //               if (controller.isLoading.value) {
-  //                 return const Center(child: CircularProgressIndicator());
-  //               }
-  //               if (controller.rekapData.isEmpty) {
-  //                 return const Center(
-  //                   child: Text(
-  //                     "Pilih rentang tanggal, lalu klik 'Tampilkan Rekap'.",
-  //                     textAlign: TextAlign.center,
-  //                     style: TextStyle(fontSize: 16, color: Colors.grey),
-  //                   ),
-  //                 );
-  //               }
-  //               // Jika ada data, tampilkan tabel
-  //               return _buildRekapTable();
-  //             }),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
-
 class RekapAbsensiWidget extends GetView<RekapAbsensiController> {
   // Tambahkan konstruktor agar bisa dipanggil dari mana saja
   final String? tag;

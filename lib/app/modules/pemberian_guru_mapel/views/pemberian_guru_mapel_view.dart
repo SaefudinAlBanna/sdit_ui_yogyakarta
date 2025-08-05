@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../routes/app_pages.dart';
 import '../controllers/pemberian_guru_mapel_controller.dart';
 
 class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
@@ -18,6 +19,19 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
           return Text(kelas == null ? 'Atur Guru Mapel' : 'Atur Mapel Kelas $kelas');
         }),
         centerTitle: true,
+        actions: [
+        //   Obx(() {
+        //     if (controller.kelasTerpilih.value == null) return const SizedBox.shrink();
+        //     return IconButton(
+        //       icon: const Icon(Icons.tune),
+        //       tooltip: 'Kustomisasi Kurikulum Kelas Ini',
+        //       onPressed: () => _showCustomizationDialog(context),
+        //     );
+        //   }),
+
+          IconButton(onPressed: (){Get.toNamed(Routes.KURIKULUM_MASTER);}, icon: Icon(Icons.add_box_outlined)),
+          IconButton(onPressed: (){Get.toNamed(Routes.MANAJEMEN_JAM);}, icon: Icon(Icons.star_border_outlined)),
+        ],
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -79,6 +93,9 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
       if (controller.daftarMapelWajib.isEmpty) {
         return const Center(child: Text("Kurikulum untuk fase ini belum diatur."));
       }
+
+      // final listKurikulum = controller.kurikulumFinal;
+      final listKurikulum = controller.daftarMapelWajib;
       
       return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: controller.getAssignedMapelStream(),
@@ -89,21 +106,25 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
 
           final assignedMapelData = {
             for (var doc in snapshot.data?.docs ?? [])
-              doc.data()['namamatapelajaran']: doc.data()['guru']
+              doc.id: doc.data()['guru']
           };
 
           // --- PERUBAHAN UTAMA: Gunakan daftarMapelWajib sebagai sumber ---
           return ListView.builder(
             padding: const EdgeInsets.all(12.0),
+            // itemCount: listKurikulum.length,
             itemCount: controller.daftarMapelWajib.length,
             itemBuilder: (context, index) {
-              final namaMapel = controller.daftarMapelWajib[index];
-              final guruDitugaskan = assignedMapelData[namaMapel];
+              // final mapelData = controller.daftarMapelWajib[index];
+              final mapelData = controller.daftarMapelWajib[index];
+              final idMapel = mapelData['idMapel'] as String; // <-- Dapatkan ID
+              final namaMapel = mapelData['nama'] as String;  // <-- Dapatkan Nama
+              final guruDitugaskan = assignedMapelData[idMapel]; // <-- Cari berdasarkan ID
 
               return Card(
-                margin: const EdgeInsets.only(bottom: 12.0),
-                child: ListTile(
-                  title: Text(namaMapel, style: const TextStyle(fontWeight: FontWeight.bold)),
+               margin: const EdgeInsets.only(bottom: 12.0),
+               child: ListTile(
+                title: Text(namaMapel, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     guruDitugaskan != null ? 'Guru: $guruDitugaskan' : 'Belum ada guru',
                     style: TextStyle(
@@ -111,31 +132,22 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
                       fontStyle: guruDitugaskan != null ? FontStyle.normal : FontStyle.italic,
                     ),
                   ),
-                  trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Tombol baru untuk mengatur bobot
-                        // IconButton(
-                        //   icon: const Icon(Icons.percent_rounded, color: Colors.blue),
-                        //   tooltip: "Atur Bobot Penilaian",
-                        //   onPressed: () => _showBobotDialog(context, namaMapel, guruDitugaskan),
-                        // ),
-                        guruDitugaskan != null 
-                             ? IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => _showConfirmationDialog(
-                            context,
-                            title: 'Hapus Guru',
-                            content: 'Anda yakin ingin menghapus guru dari mapel $namaMapel?',
-                            onConfirm: () => controller.removeGuruFromMapel(namaMapel),
-                          ),
-                        )
-                      : ElevatedButton(
-                          child: const Text('Atur Guru'),
-                          onPressed: () => _showGuruSelectionDialog(context, namaMapel),
+                    trailing: guruDitugaskan != null 
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _showConfirmationDialog(
+                          context,
+                          title: 'Hapus Guru',
+                          content: 'Anda yakin ingin menghapus guru dari mapel $namaMapel?',
+                          // [DIROMBAK] Kirim idMapel, bukan namaMapel
+                          onConfirm: () => controller.removeGuruFromMapel(idMapel),
                         ),
-                      ],
-                    )
+                      )
+                    : ElevatedButton(
+                        child: const Text('Atur Guru'),
+                        // [DIROMBAK] Kirim seluruh objek mapelData
+                        onPressed: () => _showGuruSelectionDialog(context, mapelData),
+                      ),
                 ),
               );
             },
@@ -144,45 +156,13 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
       );
     });
   }
-
-//   void _showBobotDialog(BuildContext context, String namaMapel, String? guru) {
-//   // Buat controller untuk setiap field
-//   final harianC = TextEditingController(text: "25"); // Nilai default
-//   final ulanganC = TextEditingController(text: "25");
-//   final ptsC = TextEditingController(text: "25");
-//   final pasC = TextEditingController(text: "25");
-
-//   Get.defaultDialog(
-//     title: "Atur Bobot Nilai: $namaMapel",
-//     content: Column(
-//       children: [
-//         TextField(controller: harianC, decoration: const InputDecoration(labelText: "Bobot Harian/PR (%)"), keyboardType: TextInputType.number),
-//         TextField(controller: ulanganC, decoration: const InputDecoration(labelText: "Bobot Ulangan Harian (%)"), keyboardType: TextInputType.number),
-//         TextField(controller: ptsC, decoration: const InputDecoration(labelText: "Bobot PTS (%)"), keyboardType: TextInputType.number),
-//         TextField(controller: pasC, decoration: const InputDecoration(labelText: "Bobot PAS (%)"), keyboardType: TextInputType.number),
-//       ],
-//     ),
-//     confirm: ElevatedButton(
-//       onPressed: () {
-//         final bobot = {
-//           'namaMapel': namaMapel,
-//           'harian': int.tryParse(harianC.text) ?? 0,
-//           'ulangan': int.tryParse(ulanganC.text) ?? 0,
-//           'pts': int.tryParse(ptsC.text) ?? 0,
-//           'pas': int.tryParse(pasC.text) ?? 0,
-//           'tambahan': 0, // Default
-//         };
-//         controller.simpanBobotNilai(bobot);
-//       },
-//       child: const Text("Simpan Bobot")
-//     )
-//   );
-//  }
   
-  void _showGuruSelectionDialog(BuildContext context, String namaMapel) {
-     Get.defaultDialog(
-      title: 'Pilih Guru untuk $namaMapel',
-      content: SizedBox(
+  void _showGuruSelectionDialog(BuildContext context, Map<String, dynamic> mapelData) {
+   final idMapel = mapelData['idMapel'] as String;
+   final namaMapel = mapelData['nama'] as String;
+   Get.defaultDialog(
+    title: 'Pilih Guru untuk $namaMapel',
+    content: SizedBox(
         width: Get.width * 0.8,
         child: DropdownSearch<Map<String, String>>(
           popupProps: const PopupProps.menu(showSearchBox: true),
@@ -193,23 +173,23 @@ class PemberianGuruMapelView extends GetView<PemberianGuruMapelController> {
             decoration: InputDecoration(labelText: "Pilih Guru"),
           ),
           onChanged: (Map<String, String>? selectedGuru) {
-            if (selectedGuru != null) {
-              Get.back();
-              _showConfirmationDialog(
-                context,
-                title: 'Konfirmasi',
-                content: 'Tugaskan ${selectedGuru['nama']} ke mapel $namaMapel?',
-                onConfirm: () => controller.assignGuruToMapel(
-                  selectedGuru['uid']!,
-                  selectedGuru['nama']!,
-                  namaMapel,
-                ),
-              );
-            }
-          },
-        ),
+          if (selectedGuru != null) {
+            Get.back();
+            _showConfirmationDialog(
+              context,
+              title: 'Konfirmasi',
+              content: 'Tugaskan ${selectedGuru['nama']} ke mapel $namaMapel?',
+              onConfirm: () => controller.assignGuruToMapel(
+                selectedGuru['uid']!,
+                selectedGuru['nama']!,
+                idMapel,      // <-- Kirim ID
+                namaMapel,    // <-- Kirim Nama
+              ),
+            );
+          }
+        },
       ),
-    );
+    ));
   }
 
   void _showConfirmationDialog(BuildContext context, {

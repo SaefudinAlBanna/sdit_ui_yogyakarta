@@ -14,12 +14,32 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
         title: const Text('Pantauan Halaqoh per Fase'),
         centerTitle: true,
         actions: [
-          if(controller.homeController.tambahHalaqohFase)
-          IconButton(
-            onPressed: (){
-            Get.toNamed(Routes.TAMBAH_KELOMPOK_MENGAJI);
-            },
-            icon: const Icon(Icons.add))
+          // Bungkus semua actions dengan Obx agar reaktif
+          Obx(() {
+            return Row(
+              children: [
+                // Tombol untuk MENGATUR PENGGANTI
+                if (controller.homeController.canEditOrDeleteHalaqoh || controller.homeController.isAdminKepsek)
+                  IconButton(
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    tooltip: 'Atur Pengganti Halaqoh',
+                    onPressed: () {
+                      Get.toNamed(Routes.ATUR_PENGGANTI); // Perlu binding
+                    },
+                  ),
+
+                // Tombol untuk MENAMBAH KELOMPOK BARU
+                if (controller.homeController.canEditOrDeleteHalaqoh)
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Buat Kelompok Halaqoh Baru',
+                    onPressed: () {
+                      Get.toNamed(Routes.TAMBAH_KELOMPOK_MENGAJI); // Perlu binding
+                    },
+                  ),
+              ],
+            );
+          }),
         ],
       ),
       body: Padding(
@@ -69,12 +89,27 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
                         onTap: () => Get.toNamed(Routes.DAFTAR_HALAQOHNYA, arguments: {
                           'fase': pengampu.fase, 'namapengampu': pengampu.namaPengampu,
                           'idpengampu': pengampu.idPengampu, 'namatempat': pengampu.namaTempat,
-                        }),
+                        }),                   
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
                           child: Row(
                             children: [
-                              CircleAvatar( /* ... (Avatar tidak berubah) ... */ ),
+                              CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: Colors.grey.shade200, // Warna latar jika tidak ada gambar
+                                    // Gunakan NetworkImage jika URL tersedia
+                                    backgroundImage: pengampu.profileImageUrl != null
+                                        ? NetworkImage(pengampu.profileImageUrl!)
+                                        : null,
+                                    // Tampilkan initial nama HANYA jika tidak ada gambar
+                                    child: pengampu.profileImageUrl == null
+                                        ? Text(
+                                            // Safety check: pastikan nama tidak kosong sebelum mengambil initial
+                                            pengampu.namaPengampu.isNotEmpty ? pengampu.namaPengampu[0].toUpperCase() : 'P',
+                                            style: const TextStyle(fontSize: 24, color: Colors.grey),
+                                          )
+                                        : null, // Jangan tampilkan apa-apa jika ada gambar
+                                  ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
@@ -119,7 +154,7 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
 
   Widget _buildFaseSelector() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0), // Padding horizontal
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -128,27 +163,48 @@ class DaftarHalaqohPerfaseView extends GetView<DaftarHalaqohPerfaseController> {
             style: Get.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          // Obx untuk merebuild chip saat pilihan berubah
           Obx(() => Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround, // Agar chip terdistribusi rata
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: controller.listPilihanFase.map((fase) {
               final isSelected = controller.selectedFase.value == fase;
-              return ChoiceChip(
-                label: Text("Fase $fase"),
-                avatar: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-                selected: isSelected,
-                onSelected: (selected) {
-                  if (selected) {
-                    // Panggil fungsi di controller seperti sebelumnya
-                    controller.onFaseChanged(fase);
-                  }
-                },
-                selectedColor: Colors.teal.shade500, // Warna bisa disesuaikan
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              final namaDokumenFase = "Fase $fase";
+              
+              // [BARU] Bungkus dengan Row agar bisa menambahkan tombol
+              return Row(
+                children: [
+                  ChoiceChip(
+                    label: Text("Fase $fase"),
+                    avatar: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                    labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) controller.onFaseChanged(fase);
+                    },
+                    selectedColor: Colors.teal.shade500,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                  
+                  // [BARU] Tombol migrasi khusus Super Admin
+                  // if (controller.homeController.isDalang || controller.homeController.kapten)
+                  if (controller.homeController.isDalang)
+                    IconButton(
+                      icon: const Icon(Icons.cleaning_services_rounded),
+                      tooltip: "Perbaiki data shortcut siswa di Fase $fase",
+                      color: Colors.blueGrey,
+                      onPressed: () {
+                        Get.defaultDialog(
+                          title: "Konfirmasi Migrasi",
+                          middleText: "Anda akan memperbaiki semua data shortcut siswa di $namaDokumenFase. Proses ini tidak bisa dibatalkan. Lanjutkan?",
+                          textConfirm: "Ya, Lanjutkan",
+                          textCancel: "Batal",
+                          onConfirm: () {
+                            Get.back();
+                            controller.migrasiDataShortcutSiswaPerFase(namaDokumenFase);
+                          }
+                        );
+                      },
+                    ),
+                ],
               );
             }).toList(),
           )),

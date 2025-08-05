@@ -7,64 +7,131 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../models/siswa_halaqoh.dart';
+import '../../daftar_halaqoh_perfase/controllers/daftar_halaqoh_perfase_controller.dart';
 import '../../home/controllers/home_controller.dart';
 
-class DaftarHalaqohnyaController extends GetxController {
-  
-  // --- DEPENDENSI & INFO DASAR ---
+import '../../../services/halaqoh_service.dart';
+import '../../../interfaces/input_nilai_massal_interface.dart';
+import '../../../widgets/tandai_siap_ujian_sheet.dart';
+
+class DaftarHalaqohnyaController extends GetxController 
+    implements IInputNilaiMassalController, ITandaiSiapUjianController {
+
+
+      // --- [BERSIH] GRUP 1: DEPENDENSI ---
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final HomeController homeC = Get.find<HomeController>();
+  final HalaqohService halaqohService = Get.find();
   final String idSekolah = '20404148';
 
-  // --- HAK AKSES (SESUAI ARSITEKTUR BARU) ---
-  bool get canPerformWriteActions => homeC.canManageTahsin || homeC.userTugas.contains('Koordinator Halaqoh') || homeC.kapten || homeC.isDalang;
-
-
-   // --- STATE INFO HALAQOH (SEKARANG REAKTIF) ---
+  // --- [BERSIH] GRUP 2: IMPLEMENTASI KONTRAK (PROPERTY) ---
+  @override
+  final RxBool isDialogLoading = false.obs;
+  @override
+  final RxList<String> santriTerpilihUntukUjian = <String>[].obs;
+  @override
+  final RxBool isSavingNilai = false.obs;
+  @override
+  final RxList<SiswaHalaqoh> daftarSiswa = <SiswaHalaqoh>[].obs;
+  @override
+  final RxList<String> santriTerpilihUntukNilai = <String>[].obs;
+  @override
+  Map<String, TextEditingController> nilaiMassalControllers = {};
+  @override
+  final TextEditingController suratC = TextEditingController();
+  @override
+  final TextEditingController ayatHafalC = TextEditingController();
+  @override
+  final TextEditingController capaianC = TextEditingController();
+  @override
+  final TextEditingController materiC = TextEditingController();
+  @override
+  RxString get keteranganHalaqoh => _keteranganHalaqoh;
+  final RxString _keteranganHalaqoh = "".obs;
+  
+  // --- [BERSIH] GRUP 3: STATE & CONTROLLER SPESIFIK UNTUK HALAMAN INI ---
+  // Variabel state halaman Pimpinan
   final RxString fase = ''.obs;
   final RxString namaPengampu = ''.obs;
   final RxString idPengampu = ''.obs;
   final RxString namaTempat = ''.obs;
   final Rxn<String> urlFotoPengampu = Rxn<String>();
-
-  // --- STATE DAFTAR SISWA ---
   final RxBool isLoading = true.obs;
-  final RxList<SiswaHalaqoh> daftarSiswa = <SiswaHalaqoh>[].obs;
-  StreamSubscription? _siswaSubscription;
   
-  // --- STATE UNTUK DIALOG & AKSI ---
-  final RxBool isDialogLoading = false.obs;
-  final TextEditingController umiC = TextEditingController();
-  final TextEditingController bulkUpdateUmiC = TextEditingController();
-  final RxList<String> siswaTerpilihUntukUpdateMassal = <String>[].obs;
-
-  //========================================================================
-  // --- [BARU] STATE DICANGKOK DARI 'TAMBAH_KELOMPOK_MENGAJI' ---
-  //========================================================================
-  // "Keranjang Belanja" untuk menampung siswa yang akan ditambahkan
+  // Variabel untuk fitur "Tambah Siswa"
   final RxMap<String, Map<String, dynamic>> siswaTerpilih = <String, Map<String, dynamic>>{}.obs;
   final RxString kelasAktifDiSheet = ''.obs;
   final RxList<String> availableKelas = <String>[].obs;
   final RxString searchQueryInSheet = ''.obs;
-  // Ini tetap dibutuhkan untuk logika internal penambahan siswa
-  final TextEditingController kelasSiswaC = TextEditingController(); 
-  //========================================================================
-  // final homeC homeC = Get.find<homeC>();
-
-  final RxBool isSavingNilai = false.obs;
-  final TextEditingController suratC = TextEditingController();
-  final TextEditingController ayatHafalC = TextEditingController();
-  final TextEditingController capaianC = TextEditingController();
-  final TextEditingController materiC = TextEditingController();
-  final TextEditingController nilaiC = TextEditingController();
+  final TextEditingController kelasSiswaC = TextEditingController();
   
-  final RxString keteranganHalaqoh = "".obs;
-  final RxList<String> santriTerpilihUntukNilai = <String>[].obs;
+  // Variabel untuk fitur "Update UMI"
+  final TextEditingController umiC = TextEditingController();
+  final TextEditingController bulkUpdateUmiC = TextEditingController();
+  final RxList<String> siswaTerpilihUntukUpdateMassal = <String>[].obs;
   final List<String> listLevelUmi = ['Jilid 1', 'Jilid 2', 'Jilid 3', 'Jilid 4', 'Jilid 5', 'Jilid 6', 'Al-Quran', 'Gharib', 'Tajwid', 'Turjuman', 'Juz 30', 'Juz 29', 'Juz 28', 'Juz 1', 'Juz 2', 'Juz 3', 'Juz 4', 'Juz 5'];
+  
+  // --- [BERSIH] GRUP 4: WORKER & STREAM SUBSCRIPTION ---
+  StreamSubscription? _siswaSubscription;
 
+  // --- [BERSIH] GRUP 5: GETTERS ---
+  bool get canPerformWriteActions => homeC.canManageTahsin 
+    || homeC.userTugas.contains('Koordinator Halaqoh') 
+    || homeC.kapten || homeC.isDalang;
+
+  
+  final TextEditingController nilaiC = TextEditingController();
   final TextEditingController capaianUjianC = TextEditingController();
-  final TextEditingController levelUjianC = TextEditingController(); 
-  final RxList<String> santriTerpilihUntukUjian = <String>[].obs;
+  final TextEditingController levelUjianC = TextEditingController();
+
+
+  @override
+  Future<void> tandaiSiapUjianMassal() async {
+    // Validasi sederhana, pastikan ada siswa yang dipilih.
+    if (santriTerpilihUntukUjian.isEmpty) {
+      Get.snackbar("Peringatan", "Pilih minimal satu santri.");
+      return;
+    }
+
+    isDialogLoading.value = true;
+
+    // Filter objek SiswaHalaqoh lengkap berdasarkan NISN yang terpilih di UI.
+    final List<SiswaHalaqoh> siswaTerpilihObjek = daftarSiswa
+        .where((siswa) => santriTerpilihUntukUjian.contains(siswa.nisn))
+        .toList();
+
+    // Siapkan info kelompok dari state controller ini.
+    final infoKelompok = {
+      'fase': fase.value,
+      'idpengampu': idPengampu.value,
+      'namapengampu': namaPengampu.value,
+      'tempatmengaji': namaTempat.value,
+    };
+
+    // Panggil service untuk melakukan tugas berat.
+    final bool isSuccess = await halaqohService.tandaiSiapUjianMassal(
+      infoKelompok: infoKelompok,
+      siswaTerpilih: siswaTerpilihObjek,
+    );
+
+    isDialogLoading.value = false;
+
+    if (isSuccess) {
+      Get.back(); // Tutup bottom sheet jika berhasil
+      Get.snackbar("Berhasil", "${santriTerpilihUntukUjian.length} santri telah ditandai siap ujian.");
+      santriTerpilihUntukUjian.clear(); // Bersihkan pilihan
+    }
+    // Jika gagal, service sudah akan menampilkan snackbar error.
+  }
+
+  @override
+  void toggleSantriSelectionForUjian(String nisn) {
+    if (santriTerpilihUntukUjian.contains(nisn)) {
+      santriTerpilihUntukUjian.remove(nisn);
+    } else {
+      santriTerpilihUntukUjian.add(nisn);
+    }
+  }
 
   @override
   void onInit() {
@@ -105,9 +172,17 @@ class DaftarHalaqohnyaController extends GetxController {
   }
 
   CollectionReference _getDaftarSiswaCollectionRef() {
-    return _getPengampuDocRef()
+    final idTahunAjaran = homeC.idTahunAjaran.value!;
+    final semesterAktif = homeC.semesterAktifId.value;
+
+    // --- PERBAIKAN UTAMA DI SINI ---
+    return firestore
+        .collection('Sekolah').doc(idSekolah)
+        .collection('tahunajaran').doc(idTahunAjaran)
+        .collection('kelompokmengaji').doc(fase.value)
+        .collection('pengampu').doc(idPengampu.value) // <-- GUNAKAN UID DARI STATE
         .collection('tempat').doc(namaTempat.value)
-        .collection('semester').doc(homeC.semesterAktifId.value)
+        .collection('semester').doc(semesterAktif)
         .collection('daftarsiswa');
   }
 
@@ -124,84 +199,33 @@ class DaftarHalaqohnyaController extends GetxController {
     }
   }
 
-   void toggleSantriSelectionForUjian(String nisn) {
-    if (santriTerpilihUntukUjian.contains(nisn)) {
-      santriTerpilihUntukUjian.remove(nisn);
-    } else {
-      santriTerpilihUntukUjian.add(nisn);
-    }
-  }
-
-  Future<void> tandaiSiapUjianMassal() async {
-    if (levelUjianC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Level Ujian wajib diisi."); return; }
-    if (capaianUjianC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Capaian Akhir wajib diisi."); return; }
-    if (santriTerpilihUntukUjian.isEmpty) { Get.snackbar("Peringatan", "Pilih minimal satu santri."); return; }
-
-    isDialogLoading.value = true;
-    try {
-      final batch = firestore.batch();
-      final refDaftarSiswa = await _getDaftarSiswaCollectionRef();
-      final now = DateTime.now();
-      final String uidPendaftar = homeC.auth.currentUser!.uid;
-
-      for (String nisn in santriTerpilihUntukUjian) {
-        final docSiswaIndukRef = refDaftarSiswa.doc(nisn);
-        final docUjianBaruRef = docSiswaIndukRef.collection('ujian').doc();
-
-        batch.update(docSiswaIndukRef, {'status_ujian': 'siap_ujian'});
-
-        final santriData = daftarSiswa.firstWhere((s) => s.nisn == nisn);
-
-        batch.set(docUjianBaruRef, {
-          'namasiswa': santriData.namaSiswa,
-          'status_ujian': 'siap_ujian',
-          'level_ujian': levelUjianC.text.trim(),
-          'capaian_saat_didaftarkan': capaianUjianC.text.trim(),
-          'tanggal_didaftarkan': now,
-          'didaftarkan_oleh': uidPendaftar,
-          'semester': homeC.semesterAktifId.value,
-          'tanggal_ujian': null,
-          'diuji_oleh': null,
-          'catatan_penguji': null,
-        });
-      }
-
-      await batch.commit();
-      Get.back();
-      Get.snackbar("Berhasil", "${santriTerpilihUntukUjian.length} santri telah ditandai siap ujian.");
-      santriTerpilihUntukUjian.clear();
-      capaianUjianC.clear();
-      levelUjianC.clear();
-    } catch (e) {
-      Get.snackbar("Error", "Gagal menandai siswa: $e");
-    } finally {
-      isDialogLoading.value = false;
-    }
-  }
-
-  // Future<void> _listenToDaftarSiswa() async {
-  //   isLoading.value = true;
-  //   try {
-  //     _siswaSubscription?.cancel();
-  //     _siswaSubscription = _getDaftarSiswaCollectionRef().orderBy('namasiswa').snapshots().listen((snapshot) {
-  //       daftarSiswa.assignAll(snapshot.docs.map((doc) => SiswaHalaqoh.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList());
-  //       isLoading.value = false;
-  //     });
-  //   } catch (e) {
-  //     Get.snackbar("Error", "Gagal menyiapkan koneksi data: $e");
-  //     isLoading.value = false;
-  //   }
-  // }
+  
 
   Future<void> _listenToDaftarSiswa() async {
     isLoading.value = true;
     try {
       _siswaSubscription?.cancel();
       _siswaSubscription = _getDaftarSiswaCollectionRef().orderBy('namasiswa').snapshots().listen((snapshot) {
-        // --- PERBAIKAN UTAMA DI SINI ---
-        final siswaList = snapshot.docs
+        
+        var siswaList = snapshot.docs
             .map((doc) => SiswaHalaqoh.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
-            .toList(); // <-- TAMBAHKAN .toList() SECARA EKSPLISIT
+            .toList();
+
+        // --- [LOGIKA SORTING CERDAS] ---
+        siswaList.sort((a, b) {
+          bool aSiap = a.statusUjian == 'siap_ujian';
+          bool bSiap = b.statusUjian == 'siap_ujian';
+
+          if (aSiap && !bSiap) {
+            return -1; // Siswa A (siap) didahulukan.
+          }
+          if (!aSiap && bSiap) {
+            return 1; // Siswa B (siap) didahulukan.
+          }
+          // Jika statusnya sama (keduanya siap atau keduanya tidak), urutkan berdasarkan nama.
+          return a.namaSiswa.compareTo(b.namaSiswa);
+        });
+        // --- [AKHIR LOGIKA SORTING] ---
 
         daftarSiswa.assignAll(siswaList);
         isLoading.value = false;
@@ -215,118 +239,108 @@ class DaftarHalaqohnyaController extends GetxController {
     }
   }
 
+
   Future<void> gantiPengampu(Map<String, dynamic>? pengampuBaru) async {
-  // Cek apakah pengampuBaru null atau tidak lengkap
-  if (pengampuBaru == null || pengampuBaru['uid'] == null || pengampuBaru['alias'] == null) {
-    Get.snackbar("Error", "Data pengampu tidak lengkap.");
-    return;
-  }
-
-  Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
-
-  try {
+    // 1. Validasi awal (tidak berubah)
+    if (pengampuBaru == null || pengampuBaru['uid'] == null || pengampuBaru['alias'] == null) {
+      Get.snackbar("Error", "Data pengampu tidak lengkap.");
+      return;
+    }
     final String idPengampuBaru = pengampuBaru['uid'];
     final String aliasPengampuBaru = pengampuBaru['alias'];
-
-    // Cek apakah pengampu yang dipilih sama
     if (idPengampu.value == idPengampuBaru) {
-      Get.back();
       Get.snackbar("Info", "Anda memilih pengampu yang sama.");
       return;
     }
 
-    // Referensi dokumen lama dan data siswa
-    final pengampuLamaRef = _getPengampuDocRef();
-    final tempatLamaRef = pengampuLamaRef.collection('tempat').doc(namaTempat.value);
-    final siswaSnapshot = await _getDaftarSiswaCollectionRef().get();
+    // 2. Tutup dialog pemilihan & tampilkan loading halaman penuh
+    Get.back();
+    isLoading.value = true;
 
-    // Referensi dokumen baru
-    final pengampuBaruRef = firestore
-        .collection('Sekolah')
-        .doc(homeC.idSekolah)
-        .collection('tahunajaran')
-        .doc(homeC.idTahunAjaran.value!)
-        .collection('kelompokmengaji')
-        .doc(fase.value)
-        .collection('pengampu')
-        .doc(idPengampuBaru);
-    final tempatBaruRef = pengampuBaruRef.collection('tempat').doc(namaTempat.value);
+    try {
+      // 3. Semua logika WriteBatch untuk memindahkan data di Firestore (tidak berubah)
+      // ... (kode batch.set, batch.delete, dll. tetap sama persis)
+      final String idPengampuLama = idPengampu.value;
+      final String idPengampuBaru = pengampuBaru!['uid'];
+      final String aliasPengampuBaru = pengampuBaru['alias'];
+      
+      final pengampuLamaRef = _getPengampuDocRef();
+      final tempatLamaRef = pengampuLamaRef.collection('tempat').doc(namaTempat.value);
+      final siswaSnapshot = await _getDaftarSiswaCollectionRef().get();
 
-    WriteBatch batch = firestore.batch();
+      final pengampuBaruRef = firestore.collection('Sekolah').doc(homeC.idSekolah)
+          .collection('tahunajaran').doc(homeC.idTahunAjaran.value!)
+          .collection('kelompokmengaji').doc(fase.value)
+          .collection('pengampu').doc(idPengampuBaru);
+      final tempatBaruRef = pengampuBaruRef.collection('tempat').doc(namaTempat.value);
 
-    // Ambil dan salin data tempat lama
-    final tempatDataSnapshot = await tempatLamaRef.get();
-    if (!tempatDataSnapshot.exists) {
-      throw Exception("Data tempat lama tidak ditemukan.");
+      final refShortcutLama = firestore.collection('Sekolah').doc(homeC.idSekolah)
+          .collection('pegawai').doc(idPengampuLama)
+          .collection('tahunajarankelompok').doc(homeC.idTahunAjaran.value!)
+          .collection('semester').doc(homeC.semesterAktifId.value)
+          .collection('kelompokmengaji').doc(fase.value);
+      
+      final refShortcutBaru = firestore.collection('Sekolah').doc(homeC.idSekolah)
+          .collection('pegawai').doc(idPengampuBaru)
+          .collection('tahunajarankelompok').doc(homeC.idTahunAjaran.value!)
+          .collection('semester').doc(homeC.semesterAktifId.value)
+          .collection('kelompokmengaji').doc(fase.value);
+
+      WriteBatch batch = firestore.batch();
+      final tempatDataSnapshot = await tempatLamaRef.get();
+      if (!tempatDataSnapshot.exists) throw Exception("Data tempat lama tidak ditemukan.");
+      
+      final tempatData = Map<String, dynamic>.from(tempatDataSnapshot.data() ?? {});
+      tempatData['namapengampu'] = aliasPengampuBaru;
+      tempatData['idpengampu'] = idPengampuBaru;
+
+      batch.set(pengampuBaruRef, {'namaPengampu': aliasPengampuBaru, 'uidPengampu': idPengampuBaru, 'createdAt': Timestamp.now()});
+      batch.set(tempatBaruRef, tempatData);
+
+      // (Logika pemindahan siswa tidak berubah)
+      for (var siswaDoc in siswaSnapshot.docs) {
+          final rawData = siswaDoc.data();
+          if (rawData is! Map<String, dynamic>) continue;
+          final siswaData = Map<String, dynamic>.from(rawData);
+          siswaData['namapengampu'] = aliasPengampuBaru;
+          siswaData['idpengampu'] = idPengampuBaru;
+          final siswaRefBaru = tempatBaruRef.collection('semester').doc(homeC.semesterAktifId.value).collection('daftarsiswa').doc(siswaDoc.id);
+          batch.set(siswaRefBaru, siswaData);
+          batch.delete(siswaDoc.reference);
+      }
+
+      batch.delete(tempatLamaRef);
+      batch.delete(pengampuLamaRef);
+      
+      batch.delete(refShortcutLama);
+      batch.set(refShortcutBaru, {
+        'fase': fase.value, 'tempatmengaji': namaTempat.value,
+        'namapengampu': aliasPengampuBaru, 'idpengampu': idPengampuBaru,
+        'lokasi_terakhir': tempatData['lokasi_terakhir'] ?? namaTempat.value,
+      });
+
+      // 4. Eksekusi semua perubahan ke server
+      await batch.commit();
+
+      // 5. Perbarui state di halaman INI
+      idPengampu.value = idPengampuBaru;
+      namaPengampu.value = aliasPengampuBaru;
+
+      // --- [PERINTAH KUNCI UNTUK AUTO-REFRESH] ---
+      // 6. Temukan controller halaman Pimpinan yang "tidur" dan panggil fungsinya.
+      Get.find<DaftarHalaqohPerfaseController>().loadDataPengampu();
+      // --- [AKHIR PERINTAH KUNCI] ---
+      
+      Get.snackbar("Berhasil", "Pengampu telah diganti menjadi $aliasPengampuBaru.");
+
+      // 7. Refresh data di halaman ini sendiri
+      await _listenToDaftarSiswa();
+
+    } catch (e) {
+      Get.snackbar("Error", "Gagal mengganti pengampu: ${e.toString()}");
+      isLoading.value = false; // Matikan loading jika terjadi error
     }
-
-    final tempatData = Map<String, dynamic>.from(tempatDataSnapshot.data() ?? {});
-    tempatData['namapengampu'] = aliasPengampuBaru;
-    tempatData['idpengampu'] = idPengampuBaru;
-
-    // Buat data pengampu baru dan tempatnya
-    batch.set(pengampuBaruRef, {
-      'namaPengampu': aliasPengampuBaru,
-      'uidPengampu': idPengampuBaru,
-      'createdAt': Timestamp.now(),
-    });
-    batch.set(tempatBaruRef, tempatData);
-
-    // Pindahkan siswa ke tempat baru
-    for (var siswaDoc in siswaSnapshot.docs) {
-      final rawData = siswaDoc.data();
-      if (rawData is! Map<String, dynamic>) continue;
-
-      final siswaData = Map<String, dynamic>.from(rawData);
-      siswaData['namapengampu'] = aliasPengampuBaru;
-      siswaData['idpengampu'] = idPengampuBaru;
-
-      final siswaRefBaru = tempatBaruRef
-          .collection('semester')
-          .doc(homeC.semesterAktifId.value)
-          .collection('daftarsiswa')
-          .doc(siswaDoc.id);
-
-      batch.set(siswaRefBaru, siswaData);
-      batch.delete(siswaDoc.reference);
-    }
-
-    // Hapus tempat dan pengampu lama
-    batch.delete(tempatLamaRef);
-    batch.delete(pengampuLamaRef);
-
-    // Update data pegawai lama
-    final pegawaiLamaRef = firestore
-        .collection('Sekolah')
-        .doc(homeC.idSekolah)
-        .collection('pegawai')
-        .doc(idPengampu.value);
-
-    final pegawaiBaruRef = firestore
-        .collection('Sekolah')
-        .doc(homeC.idSekolah)
-        .collection('pegawai')
-        .doc(idPengampuBaru);
-
-    batch.update(pegawaiLamaRef, {'tahunajarankelompok': {}});
-
-    // Komit semua perubahan
-    await batch.commit();
-
-    // Update UI state
-    idPengampu.value = idPengampuBaru;
-    namaPengampu.value = aliasPengampuBaru;
-
-    Get.back(); // Tutup loading
-    Get.back(); // Tutup dialog pilih pengampu
-    Get.snackbar("Berhasil", "Pengampu telah diganti menjadi $aliasPengampuBaru.");
-
-    _loadInitialData();
-  } catch (e) {
-    Get.back(); // Pastikan dialog loading ditutup
-    Get.snackbar("Error", "Gagal mengganti pengampu: ${e.toString()}");
   }
-}
 
 
   Future<void> openSiswaPicker() async {
@@ -386,76 +400,40 @@ class DaftarHalaqohnyaController extends GetxController {
     Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
     
     try {
-      final semesterAktif = homeC.semesterAktifId.value;
-      final idTahunAjaran = homeC.idTahunAjaran.value!;
-      final tahunAjaranDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(idTahunAjaran).get();
+      // Siapkan informasi kelompok dari state controller ini
+      final tahunAjaranDoc = await firestore.collection('Sekolah').doc(idSekolah).collection('tahunajaran').doc(homeC.idTahunAjaran.value!).get();
       final tahunajarannya = tahunAjaranDoc.data()!['namatahunajaran'];
       
-      WriteBatch batch = firestore.batch();
-      
-      final groupData = {
-        'tahunajaran': tahunajarannya, 'idTahunAjaran': idTahunAjaran,
-        'fase': fase, 'namapengampu': namaPengampu,
-        'idpengampu': idPengampu, 'tempatmengaji': namaTempat,
+      final infoKelompok = {
+        'idTahunAjaran': homeC.idTahunAjaran.value!,
+        'tahunajaran': tahunajarannya,
+        'fase': fase.value,
+        'idpengampu': idPengampu.value,
+        'namapengampu': namaPengampu.value,
+        'tempatmengaji': namaTempat.value,
       };
 
-      for (var siswa in siswaTerpilih.values) {
-        _addSiswaToBatch(batch, siswa['namasiswa'], siswa['nisn'], siswa['kelas'], groupData, semesterAktif);
-    
-        // Panggil fungsi yang sudah diperbaiki dengan parameter semesterAktif
-        _updateStatusSiswaInBatch(batch, siswa['nisn'], 'aktif', idTahunAjaran, siswa['kelas'], semesterAktif); 
+      // Panggil service yang sama persis
+      final bool isSuccess = await halaqohService.addSiswaToKelompok(
+        daftarSiswaTerpilih: siswaTerpilih.values.toList(),
+        infoKelompok: infoKelompok,
+      );
+
+      Get.back(); // Tutup dialog loading
+
+      if (isSuccess) {
+        Get.snackbar("Berhasil", "${siswaTerpilih.length} siswa telah ditambahkan.");
+        siswaTerpilih.clear();
       }
-      
-      await batch.commit();
-      Get.back(); 
-      Get.snackbar("Berhasil", "${siswaTerpilih.length} siswa telah ditambahkan.");
-      siswaTerpilih.clear();
+      // Jika gagal, service sudah menampilkan snackbar error.
 
     } catch (e) {
       Get.back();
-      Get.snackbar("Error", "Gagal menambahkan siswa: $e");
+      Get.snackbar("Error", "Gagal menyiapkan info kelompok: $e");
     } finally {
       isDialogLoading.value = false;
     }
   }
-
-  void _addSiswaToBatch(WriteBatch batch, String namaSiswa, String nisnSiswa, String kelasSiswa, Map<String, dynamic> groupData, String semesterAktif) {
-    final idTahunAjaran = groupData['idTahunAjaran'];
-    final dataSiswa = {
-      'namasiswa': namaSiswa, 'nisn': nisnSiswa, 'kelas': kelasSiswa, 'fase': groupData['fase'],
-      'tempatmengaji': groupData['tempatmengaji'], 'tahunajaran': groupData['tahunajaran'],
-      'kelompokmengaji': groupData['namapengampu'], 'namapengampu': groupData['namapengampu'],
-      'idpengampu': groupData['idpengampu'], 'emailpenginput': homeC.emailAdmin,
-      'idpenginput': homeC.idUser, 'tanggalinput': DateTime.now().toIso8601String(),
-      'idsiswa': nisnSiswa, 'ummi': '0', 'semester': semesterAktif,
-    };
-
-    DocumentReference siswaDiKelompokRef = firestore.collection('Sekolah').doc(idSekolah)
-        .collection('tahunajaran').doc(idTahunAjaran)
-        .collection('kelompokmengaji').doc(groupData['fase'])
-        .collection('pengampu').doc(groupData['namapengampu'])
-        .collection('tempat').doc(groupData['tempatmengaji'])
-        .collection('semester').doc(semesterAktif)
-        .collection('daftarsiswa').doc(nisnSiswa);
-    batch.set(siswaDiKelompokRef, dataSiswa);
-
-    DocumentReference refDiSiswa = firestore.collection('Sekolah').doc(idSekolah).collection('siswa').doc(nisnSiswa)
-        .collection('tahunajarankelompok').doc(idTahunAjaran);
-    batch.set(refDiSiswa, {'namatahunajaran': groupData['tahunajaran']});
-    batch.set(refDiSiswa.collection('semester').doc(semesterAktif).collection('kelompokmengaji').doc(groupData['fase']), {
-        'fase': groupData['fase'], 'namapengampu': groupData['namapengampu'], 'tempatmengaji': groupData['tempatmengaji']
-    });
-  }
-
-  void _updateStatusSiswaInBatch(WriteBatch batch, String nisnSiswa, String newStatus, String idTahunAjaran, String kelasId, String semesterId) {
-  final DocumentReference siswaRef = firestore
-      .collection('Sekolah').doc(idSekolah)
-      .collection('tahunajaran').doc(idTahunAjaran)
-      .collection('kelastahunajaran').doc(kelasId)
-      .collection('semester').doc(semesterId) // <-- PATH SEMESTER DITAMBAHKAN
-      .collection('daftarsiswa').doc(nisnSiswa);
-  batch.update(siswaRef, {'statuskelompok': newStatus});
-}
 
   Future<List<String>> getDataKelasYangAda() async {
     final idTahunAjaran = homeC.idTahunAjaran.value;
@@ -491,22 +469,6 @@ class DaftarHalaqohnyaController extends GetxController {
         .collection('daftarsiswa').where('statuskelompok', isEqualTo: 'baru')
         .snapshots();
 }
-
-  Future<String> _fetchCapaianTerakhir(DocumentReference siswaRef) async {
-    try {
-      final nilaiSnapshot = await siswaRef
-          .collection('nilai')
-          .orderBy('tanggalinput', descending: true)
-          .limit(1)
-          .get();
-      if (nilaiSnapshot.docs.isNotEmpty) {
-        return nilaiSnapshot.docs.first.data()['capaian'] ?? '';
-      }
-      return ''; // Kembalikan string kosong jika tidak ada nilai
-    } catch (e) {
-      return ''; // Kembalikan string kosong jika error
-    }
-  }
   
   //========================================================================
   // --- LOGIKA BARU UNTUK FITUR INPUT NILAI MASSAL ---
@@ -555,68 +517,9 @@ class DaftarHalaqohnyaController extends GetxController {
     }
   }
 
-
- /// Mengambil daftar siswa yang belum punya kelompok dari kelas tertentu
-  Stream<QuerySnapshot<Map<String, dynamic>>> getSiswaBaruStream(String namaKelas) async* {
-    final ref = (await _getTahunAjaranRef()).collection('kelastahunajaran');
-    yield* ref
-        .doc(namaKelas)
-        .collection('daftarsiswa')
-        .where('statuskelompok', isEqualTo: 'baru')
-        .snapshots();
-  }
-
-  /// Helper untuk mendapatkan referensi TAHUN AJARAN terakhir. Mencegah duplikasi kode.
-  Future<DocumentReference<Map<String, dynamic>>> _getTahunAjaranRef() async {
-    final snapshot = await firestore
-        .collection('Sekolah').doc(idSekolah).collection('tahunajaran')
-        .orderBy('namatahunajaran', descending: true).limit(1).get();
-    if (snapshot.docs.isEmpty) throw Exception("Tahun Ajaran tidak ditemukan");
-    return snapshot.docs.first.reference;
-  }
-
-  /// Menambahkan siswa baru ke kelompok halaqoh (menggantikan `simpanSiswaKelompok`)
-  Future<void> tambahSiswaKeHalaqoh(Map<String, dynamic> dataSiswa) async {
-    isDialogLoading.value = true;
-    try {
-      final String nisn = dataSiswa['nisn'];
-      final refDaftarSiswaHalaqoh = (await _getDaftarSiswaCollectionRef()).doc(nisn);
-      final refSiswaDiKelasAsal = (await _getTahunAjaranRef())
-          .collection('kelastahunajaran').doc(dataSiswa['namakelas'])
-          .collection('daftarsiswa').doc(nisn);
-
-      WriteBatch batch = firestore.batch();
-     
-
-      // 1. Tambahkan siswa ke daftar siswa halaqoh ini
-      batch.set(refDaftarSiswaHalaqoh, {
-        'namasiswa': dataSiswa['namasiswa'],
-        'nisn': nisn,
-        'kelas': dataSiswa['namakelas'],
-        'ummi': '0', // Nilai default UMI
-        'profileImageUrl': dataSiswa['profileImageUrl'],
-        'fase': fase,
-        'namapengampu': namaPengampu,
-        'tempatmengaji': namaTempat,
-        'tanggalinput': FieldValue.serverTimestamp(),
-      });
-
-      // 2. Update status siswa di daftar kelas asal
-      batch.update(refSiswaDiKelasAsal, {'statuskelompok': 'aktif'});
-
-      // (Opsional) Tambahkan juga rekam jejak di koleksi /Sekolah/{id}/siswa/{nisn}/...
-      // Logika ini bisa ditambahkan di sini jika diperlukan
-
-      await batch.commit();
-      Get.snackbar("Berhasil", "${dataSiswa['namasiswa']} telah ditambahkan.");
-    } catch (e) {
-      Get.snackbar("Error", "Gagal menambahkan siswa: ${e.toString()}");
-    } finally {
-      isDialogLoading.value = false;
-    }
-  }
-
   /// Mengelola checkbox santri. Dipanggil dari UI.
+  
+  @override
   void toggleSantriSelection(String nisn) {
     if (santriTerpilihUntukNilai.contains(nisn)) {
       santriTerpilihUntukNilai.remove(nisn);
@@ -625,70 +528,56 @@ class DaftarHalaqohnyaController extends GetxController {
     }
   }
 
+  @override
   Future<void> simpanNilaiMassal() async {
-    // Validasi tidak berubah
-    if (santriTerpilihUntukNilai.isEmpty) { Get.snackbar("Peringatan", "Pilih minimal satu santri."); return; }
-    if (materiC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Materi wajib diisi."); return; }
-    if (nilaiC.text.trim().isEmpty) { Get.snackbar("Peringatan", "Nilai wajib diisi."); return; }
-
+    if (santriTerpilihUntukNilai.isEmpty) {
+      Get.snackbar("Peringatan", "Pilih minimal satu santri.");
+      return;
+    }
+    if (materiC.text.trim().isEmpty) {
+        Get.snackbar("Peringatan", "Materi wajib diisi.");
+        return;
+    }
     isSavingNilai.value = true;
-    try {
-      final now = DateTime.now();
-      final docIdNilaiHarian = DateFormat('yyyy-MM-dd').format(now);
-      
-      int nilaiNumerik = int.tryParse(nilaiC.text.trim()) ?? 0;
-      if (nilaiNumerik > 98) nilaiNumerik = 98;
-      String grade = _getGrade(nilaiNumerik);
-      
-      final batch = firestore.batch();
-      final refDaftarSiswa = _getDaftarSiswaCollectionRef();
+    final infoKelompok = {
+      'idTahunAjaran': homeC.idTahunAjaran.value!,
+      'fase': fase.value,
+      'idpengampu': idPengampu.value,
+      'namapengampu': namaPengampu.value,
+      'tempatmengaji': namaTempat.value,
+      'lokasi_terakhir': namaTempat.value,
+    };
+    
+    // [PERBAIKAN KUNCI] Ambil nilai dari Map, bukan controller tunggal
+    final Map<String, String> nilaiPerSiswa = {};
+    for (var nisn in santriTerpilihUntukNilai) {
+      nilaiPerSiswa[nisn] = nilaiMassalControllers[nisn]?.text ?? '';
+    }
 
-      final dataNilaiTemplate = {
-        "tanggalinput": now.toIso8601String(),
-        "emailpenginput": homeC.auth.currentUser!.email,
-        "namapengampu": namaPengampu.value, // Ambil nilai string-nya
-        "hafalansurat": suratC.text.trim(),
-        "ayathafalansurat": ayatHafalC.text.trim(),
-        "capaian": capaianC.text.trim(),
-        "materi": materiC.text.trim(),
-        "nilai": nilaiNumerik,
-        "nilaihuruf": grade,
-        "keteranganpengampu": keteranganHalaqoh.value,
-        "uidnilai": docIdNilaiHarian,
-        "semester": homeC.semesterAktifId.value,
-        "tempatmengaji": namaTempat.value,
-      };
+    final templateData = {
+      'surat': suratC.text.trim(),
+      'ayat': ayatHafalC.text.trim(),
+      'capaian': capaianC.text.trim(),
+      'materi': materiC.text.trim(),
+      'keterangan': keteranganHalaqoh.value,
+    };
 
-      for (String nisn in santriTerpilihUntukNilai) {
-        final santriData = daftarSiswa.firstWhere((s) => s.nisn == nisn);
-        final docNilaiRef = refDaftarSiswa.doc(nisn).collection('nilai').doc(docIdNilaiHarian);
-        
-        // --- PERBAIKAN UTAMA DI SINI ---
-        final dataFinal = { 
-          ...dataNilaiTemplate, 
-          "idsiswa": nisn, 
-          "namasiswa": santriData.namaSiswa,
-          // Ambil idpengampu dari state controller, tapi gunakan .value
-          "idpengampu": idPengampu.value, 
-        };
-        
-        batch.set(docNilaiRef, dataFinal, SetOptions(merge: true));
+    final bool isSuccess = await halaqohService.inputNilaiMassal(
+      infoKelompok: infoKelompok,
+      semuaSiswaDiKelompok: daftarSiswa.map((s) => s.rawData).toList(),
+      daftarNisnTerpilih: santriTerpilihUntukNilai.toList(),
+      nilaiPerSiswa: nilaiPerSiswa, // Kirim map nilai yang sudah benar
+      templateData: templateData,
+    );
 
-        // Update capaian terakhir di dokumen induk
-        batch.update(refDaftarSiswa.doc(nisn), {
-          'capaian_terakhir': capaianC.text.trim(),
-          'tanggal_update_terakhir': now,
-        });
-      }
-      await batch.commit();
+    isSavingNilai.value = false;
 
-      Get.back(); // Tutup bottom sheet
-      Get.snackbar("Berhasil", "Nilai berhasil disimpan untuk ${santriTerpilihUntukNilai.length} santri.");
-      clearNilaiForm(); // Bersihkan form
-    } catch (e) {
-      Get.snackbar("Error", "Gagal menyimpan nilai: ${e.toString()}");
-    } finally {
-      isSavingNilai.value = false;
+    if (isSuccess) {
+      Get.back();
+      Get.snackbar("Berhasil", "Nilai berhasil disimpan.");
+      clearNilaiForm();
+      // Bersihkan juga semua textfield nilai individual
+      nilaiMassalControllers.forEach((_, controller) => controller.clear());
     }
   }
 
@@ -725,15 +614,80 @@ class DaftarHalaqohnyaController extends GetxController {
     }
   }
 
+    // Future<void> pindahHalaqoh(SiswaHalaqoh siswa, Map<String, dynamic> tujuan) async {
+    //   Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+    //   try {
+    //     final String idTahunAjaran = homeC.idTahunAjaran.value!;
+    //     final String semesterAktif = homeC.semesterAktifId.value;
+
+    //     final refSiswaAsal = _getDaftarSiswaCollectionRef().doc(siswa.nisn);
+
+    //     final refSiswaTujuan = firestore
+    //         .collection('Sekolah').doc(homeC.idSekolah)
+    //         .collection('tahunajaran').doc(idTahunAjaran)
+    //         .collection('kelompokmengaji').doc(fase.value)
+    //         .collection('pengampu').doc(tujuan['idpengampu'])
+    //         .collection('tempat').doc(tujuan['namatempat'])
+    //         .collection('semester').doc(semesterAktif)
+    //         .collection('daftarsiswa').doc(siswa.nisn);
+
+    //     final refDiSiswaUtama = firestore
+    //         .collection('Sekolah').doc(homeC.idSekolah)
+    //         .collection('siswa').doc(siswa.nisn)
+    //         .collection('tahunajarankelompok').doc(idTahunAjaran)
+    //         .collection('semester').doc(semesterAktif)
+    //         .collection('kelompokmengaji').doc(fase.value);
+
+    //     WriteBatch batch = firestore.batch();
+
+    //     // Ambil data siswa asal
+    //     final siswaDoc = await refSiswaAsal.get();
+    //     final rawData = siswaDoc.data();
+
+    //     if (rawData == null || rawData is! Map<String, dynamic>) {
+    //       throw Exception("Data siswa sumber tidak ditemukan atau tidak valid.");
+    //     }
+
+    //     // Salin dan modifikasi data siswa
+    //     final Map<String, dynamic> siswaData = Map<String, dynamic>.from(rawData);
+
+    //     siswaData['namapengampu'] = tujuan['namapengampu'];
+    //     siswaData['idpengampu'] = tujuan['idpengampu'];
+    //     siswaData['tempatmengaji'] = tujuan['namatempat'];
+
+    //     // Tambahkan semua operasi batch
+    //     batch.set(refSiswaTujuan, siswaData);
+    //     batch.delete(refSiswaAsal);
+    //     batch.set(refDiSiswaUtama, {
+    //       'fase': fase.value,
+    //       'namapengampu': tujuan['namapengampu'],
+    //       'tempatmengaji': tujuan['namatempat'],
+    //     });
+
+    //     await batch.commit();
+
+    //     Get.back(); // Tutup loading dialog
+    //     Get.back(); // Kembali ke layar sebelumnya
+    //     Get.snackbar("Berhasil", "${siswa.namaSiswa} telah dipindahkan.");
+    //   } catch (e) {
+    //     Get.back(); // Tutup loading dialog jika error
+    //     Get.snackbar("Error", "Gagal memindahkan siswa: ${e.toString()}");
+    //   }
+    // }
+
     Future<void> pindahHalaqoh(SiswaHalaqoh siswa, Map<String, dynamic> tujuan) async {
-      Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+      // 1. [BARU] Tutup dialog PEMILIHAN terlebih dahulu.
+      Get.back();
+
+      // 2. [BARU] Gunakan loading HALAMAN PENUH.
+      isLoading.value = true;
 
       try {
+        // 3. Semua logika WriteBatch tetap sama persis.
         final String idTahunAjaran = homeC.idTahunAjaran.value!;
         final String semesterAktif = homeC.semesterAktifId.value;
-
         final refSiswaAsal = _getDaftarSiswaCollectionRef().doc(siswa.nisn);
-
         final refSiswaTujuan = firestore
             .collection('Sekolah').doc(homeC.idSekolah)
             .collection('tahunajaran').doc(idTahunAjaran)
@@ -742,7 +696,6 @@ class DaftarHalaqohnyaController extends GetxController {
             .collection('tempat').doc(tujuan['namatempat'])
             .collection('semester').doc(semesterAktif)
             .collection('daftarsiswa').doc(siswa.nisn);
-
         final refDiSiswaUtama = firestore
             .collection('Sekolah').doc(homeC.idSekolah)
             .collection('siswa').doc(siswa.nisn)
@@ -751,49 +704,46 @@ class DaftarHalaqohnyaController extends GetxController {
             .collection('kelompokmengaji').doc(fase.value);
 
         WriteBatch batch = firestore.batch();
-
-        // Ambil data siswa asal
         final siswaDoc = await refSiswaAsal.get();
         final rawData = siswaDoc.data();
-
         if (rawData == null || rawData is! Map<String, dynamic>) {
-          throw Exception("Data siswa sumber tidak ditemukan atau tidak valid.");
+          throw Exception("Data siswa sumber tidak ditemukan.");
         }
-
-        // Salin dan modifikasi data siswa
         final Map<String, dynamic> siswaData = Map<String, dynamic>.from(rawData);
-
         siswaData['namapengampu'] = tujuan['namapengampu'];
         siswaData['idpengampu'] = tujuan['idpengampu'];
         siswaData['tempatmengaji'] = tujuan['namatempat'];
 
-        // Tambahkan semua operasi batch
         batch.set(refSiswaTujuan, siswaData);
         batch.delete(refSiswaAsal);
-        batch.set(refDiSiswaUtama, {
-          'fase': fase.value,
-          'namapengampu': tujuan['namapengampu'],
-          'tempatmengaji': tujuan['namatempat'],
-        });
+        batch.set(refDiSiswaUtama, { 'fase': fase.value, 'namapengampu': tujuan['namapengampu'], 'tempatmengaji': tujuan['namatempat'] });
 
+        // 4. Eksekusi batch
         await batch.commit();
-
-        Get.back(); // Tutup loading dialog
-        Get.back(); // Kembali ke layar sebelumnya
+        
+        // 5. [PENTING] Karena kita menggunakan Stream, kita tidak perlu me-refresh manual.
+        // Stream akan secara otomatis mendeteksi bahwa satu siswa telah "hilang" dari daftar.
+        // Cukup tampilkan notifikasi berhasil.
         Get.snackbar("Berhasil", "${siswa.namaSiswa} telah dipindahkan.");
+
       } catch (e) {
-        Get.back(); // Tutup loading dialog jika error
         Get.snackbar("Error", "Gagal memindahkan siswa: ${e.toString()}");
+      } finally {
+        // 6. [PENTING] Pastikan loading SELALU dimatikan, baik berhasil maupun gagal.
+        isLoading.value = false;
       }
     }
 
 
 
   /// Membersihkan form template nilai.
+  @override
   void clearNilaiForm() {
-    suratC.clear(); ayatHafalC.clear(); capaianC.clear();
-    materiC.clear(); nilaiC.clear();
-    keteranganHalaqoh.value = "";
+    suratC.clear();
+    ayatHafalC.clear();
+    capaianC.clear();
+    materiC.clear();
+    _keteranganHalaqoh.value = ""; // Gunakan variabel privat
     santriTerpilihUntukNilai.clear();
   }
 
