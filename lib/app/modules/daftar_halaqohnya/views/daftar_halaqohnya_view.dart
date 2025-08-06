@@ -511,7 +511,17 @@ class DaftarHalaqohnyaView extends GetView<DaftarHalaqohnyaController> {
       color: isSiapUjian ? Colors.amber.shade50 : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: () { Get.toNamed(Routes.DAFTAR_NILAI, arguments: siswa.rawData); },
+        // onTap: () { Get.toNamed(Routes.DAFTAR_NILAI, arguments: siswa.rawData); },
+        onTap: () {
+            // Buat map baru yang bisa diubah
+            final arguments = Map<String, dynamic>.from(siswa.rawData);
+            // Tambahkan informasi konteks dari controller halaman ini
+            arguments['idpengampu'] = controller.idPengampu.value;
+            arguments['tempatmengaji'] = controller.namaTempat.value;
+            arguments['fase'] = controller.fase.value;
+            
+            Get.toNamed(Routes.DAFTAR_NILAI, arguments: arguments);
+          },
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(

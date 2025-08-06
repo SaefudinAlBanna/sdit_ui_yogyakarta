@@ -90,36 +90,40 @@ class DaftarNilaiView extends GetView<DaftarNilaiController> {
   }
 
    void _showEditDialog(NilaiHalaqohUmi nilai) {
-    // Isi controller dengan data yang ada saat ini
-    controller.suratEditC.text = nilai.hafalanSurat;
-    controller.ayatEditC.text = nilai.ayatHafalan;
-    controller.capaianEditC.text = nilai.capaian;
-    controller.nilaiEditC.text = nilai.nilai.toString();
+  // Isi controller dengan data yang ada saat ini
+  controller.suratEditC.text = nilai.hafalanSurat;
+  controller.ayatEditC.text = nilai.ayatHafalan;
+  controller.capaianEditC.text = nilai.capaian;
+  controller.materiC.text = nilai.materi; // <-- [DITAMBAHKAN]
+  controller.nilaiEditC.text = nilai.nilai.toString();
 
-    Get.defaultDialog(
-      title: "Edit Nilai",
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextField(controller: controller.suratEditC, decoration: const InputDecoration(labelText: 'Surat Hafalan')),
-            const SizedBox(height: 8),
-            TextField(controller: controller.ayatEditC, decoration: const InputDecoration(labelText: 'Ayat')),
-            const SizedBox(height: 8),
-            TextField(controller: controller.capaianEditC, decoration: const InputDecoration(labelText: 'Capaian')),
-            const SizedBox(height: 8),
-            TextField(controller: controller.nilaiEditC, decoration: const InputDecoration(labelText: 'Nilai (Maks. 98)'), keyboardType: TextInputType.number),
-          ],
-        ),
+  Get.defaultDialog(
+    title: "Edit Nilai",
+    content: SingleChildScrollView(
+      child: Column(
+        children: [
+          TextField(controller: controller.suratEditC, decoration: const InputDecoration(labelText: 'Surat Hafalan')),
+          const SizedBox(height: 8),
+          TextField(controller: controller.ayatEditC, decoration: const InputDecoration(labelText: 'Ayat')),
+          const SizedBox(height: 8),
+          TextField(controller: controller.capaianEditC, decoration: const InputDecoration(labelText: 'Capaian')),
+          const SizedBox(height: 8),
+          TextField(controller: controller.materiC, decoration: const InputDecoration(labelText: 'Materi')), // <-- [DITAMBAHKAN]
+          const SizedBox(height: 8),
+          TextField(controller: controller.nilaiEditC, decoration: const InputDecoration(labelText: 'Nilai'), keyboardType: TextInputType.number),
+        ],
       ),
-      confirm: Obx(() => ElevatedButton(
-        onPressed: controller.isDialogLoading.value ? null : () => controller.updateNilai(nilai),
-        child: controller.isDialogLoading.value 
-          ? const CircularProgressIndicator() 
-          : const Text("Simpan Perubahan"),
-      )),
-      cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
-    );
-  }
+    ),
+    confirm: Obx(() => ElevatedButton(
+      // [PERBAIKAN] Panggil controller.updateNilai yang sudah diperbaiki
+      onPressed: controller.isDialogLoading.value ? null : () => controller.updateNilai(nilai),
+      child: controller.isDialogLoading.value 
+        ? const CircularProgressIndicator(color: Colors.white)
+        : const Text("Simpan Perubahan"),
+    )),
+    cancel: TextButton(onPressed: () => Get.back(), child: const Text("Batal")),
+  );
+}
 
   // --- KARTU NILAI (Inti dari halaman ini, adaptasi dari Al-Husna) ---
   /// Membangun kartu nilai yang bisa diperluas (ExpansionTile) untuk melihat detail

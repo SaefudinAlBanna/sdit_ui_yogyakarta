@@ -161,11 +161,21 @@ class DaftarHalaqohPengampuView extends GetView<DaftarHalaqohPengampuController>
   }
 
   void _showInputNilaiMassalSheet(BuildContext context) {
+    // PERBAIKAN: Bersihkan state SEBELUM menampilkan sheet.
+    // Ini memastikan setiap kali sheet dibuka, kondisinya bersih dan siap pakai.
+    controller.clearNilaiForm();
+
     Get.bottomSheet(
+      // Widget sheet sekarang benar-benar 'bodoh' dan hanya menampilkan state.
       InputNilaiMassalSheet(controller: controller),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-    );
+    ).whenComplete(() {
+      // OPSIONAL TAPI SANGAT DIREKOMENDASIKAN:
+      // Membersihkan list santri terpilih jika sheet ditutup tanpa menyimpan
+      // (misalnya dengan swipe ke bawah atau menekan tombol back).
+      controller.santriTerpilihUntukNilai.clear();
+    });
   }
 
     void _showTandaiUjianSheet(BuildContext context) {
@@ -261,9 +271,12 @@ class _SantriCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // [PERBAIKAN KUNCI] Temukan controller yang aktif menggunakan Get.find()
+    // Ini membuat 'controller' tersedia di dalam scope build method ini.
+    final controller = Get.find<DaftarHalaqohPengampuController>();
+    
     final bool isSiapUjian = siswa.statusUjian == 'siap_ujian';
 
-    // Siapkan ImageProvider, bisa null jika tidak ada URL
     ImageProvider? backgroundImageProvider;
     if (siswa.profileImageUrl != null && siswa.profileImageUrl!.trim().isNotEmpty) {
       backgroundImageProvider = NetworkImage(siswa.profileImageUrl!);
@@ -281,7 +294,14 @@ class _SantriCard extends StatelessWidget {
       color: isSiapUjian ? Colors.amber.shade50 : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onTap: () => Get.toNamed(Routes.DAFTAR_NILAI, arguments: siswa.rawData),
+        // Sekarang, 'controller' sudah dikenali dan bisa digunakan di sini
+        onTap: () {
+          final arguments = {
+            ...siswa.rawData,
+            ...controller.halaqohTerpilih.value!,
+          };
+          Get.toNamed(Routes.DAFTAR_NILAI, arguments: arguments);
+        },
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
@@ -294,7 +314,6 @@ class _SantriCard extends StatelessWidget {
                     backgroundImage: backgroundImageProvider,
                     onBackgroundImageError: backgroundImageProvider != null 
                         ? (exception, stackTrace) {
-                            // Cukup print di console, tidak perlu crash
                             print('Error memuat gambar untuk ${siswa.namaSiswa}: $exception');
                           }
                         : null,
@@ -352,22 +371,27 @@ class _SantriCard extends StatelessWidget {
 
 // [BARU] Tambahkan dua fungsi helper ini di bagian bawah file view Anda
 Widget _buildCapaianInfo(String capaian) {
+  // [PERBAIKAN] Cek apakah capaian null atau string kosong setelah di-trim
   if (capaian.trim().isEmpty) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
       child: Row( mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.hourglass_empty_rounded, color: Colors.grey.shade500, size: 16), const SizedBox(width: 8),
+          Icon(Icons.history_toggle_off, color: Colors.grey.shade500, size: 16), // Ikon yang lebih sesuai
+          const SizedBox(width: 8),
           Text("Belum ada capaian", style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic, fontSize: 13)),
         ],
       ),
     );
   }
+  // Jika ada isinya, tampilkan seperti ini
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green.shade100)),
     child: Row( mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.trending_up_rounded, color: Colors.green.shade700, size: 16), const SizedBox(width: 8),
+        Icon(Icons.trending_up_rounded, color: Colors.green.shade700, size: 16), 
+        const SizedBox(width: 8),
+        // Gunakan Flexible agar tidak overflow jika teks panjang
         Flexible( child: Text(capaian, style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis)),
       ],
     ),

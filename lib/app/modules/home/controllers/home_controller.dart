@@ -37,6 +37,7 @@ class HomeController extends GetxController {
 
   final RxString semesterAktifId = "1".obs;
   final RxBool isReady = false.obs;
+  final RxMap<String, dynamic> infoUser = <String, dynamic>{}.obs;
   
   // Variabel ini akan diisi oleh _fetchKelasAktif
   List<DocumentSnapshot<Map<String, dynamic>>> kelasAktifList = []; 
@@ -144,6 +145,7 @@ class HomeController extends GetxController {
       // Ambil data permanen (role, tugas, dll) dari dokumen pegawai
       if (userDoc.exists && userDoc.data() != null) {
         final data = userDoc.data()!;
+        infoUser.value = data;
         userRole.value = data['role'] as String?;
         final tugasData = data['tugas'];
         if (tugasData is List) {

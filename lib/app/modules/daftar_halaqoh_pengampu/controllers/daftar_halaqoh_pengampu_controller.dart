@@ -342,16 +342,22 @@ class DaftarHalaqohPengampuController extends GetxController implements IInputNi
 // --- FUNGSI HELPER (PENDUKUNG) ---
 
   CollectionReference<Map<String, dynamic>> _getDaftarSiswaCollectionRef() {
-    final kelompok = halaqohTerpilih.value!;
-    return firestore
-        .collection('Sekolah').doc(homeC.idSekolah)
-        .collection('tahunajaran').doc(homeC.idTahunAjaran.value!)
-        .collection('kelompokmengaji').doc(kelompok['fase'])
-        .collection('pengampu').doc(auth.currentUser!.uid)
-        .collection('tempat').doc(kelompok['tempatmengaji'])
-        .collection('semester').doc(homeC.semesterAktifId.value)
-        .collection('daftarsiswa');
-  }
+  final kelompok = halaqohTerpilih.value!;
+  
+  // [PERBAIKAN] Gunakan idPengampuAsli jika ini adalah sesi pengganti
+  // Ini memastikan kita selalu membaca daftar siswa dari kelompok yang benar, 
+  // bukan dari data guru pengganti.
+  final idPengampuUntukQuery = kelompok['idPengampuAsli'] ?? kelompok['idpengampu'];
+  
+  return firestore
+      .collection('Sekolah').doc(homeC.idSekolah)
+      .collection('tahunajaran').doc(homeC.idTahunAjaran.value!)
+      .collection('kelompokmengaji').doc(kelompok['fase'])
+      .collection('pengampu').doc(idPengampuUntukQuery) // <-- Menggunakan ID yang sudah divalidasi
+      .collection('tempat').doc(kelompok['tempatmengaji'])
+      .collection('semester').doc(homeC.semesterAktifId.value)
+      .collection('daftarsiswa');
+}
   
   String _getGrade(int score) {
     if (score >= 90) return 'A';

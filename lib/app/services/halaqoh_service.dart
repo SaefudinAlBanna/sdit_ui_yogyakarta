@@ -51,7 +51,6 @@ class HalaqohService extends GetxService {
   }
 
 
-  // ... (Fungsi addSiswaToKelompok, _addSiswaToBatch, _updateStatusSiswaInBatch tidak berubah)
   Future<bool> addSiswaToKelompok({
     required List<Map<String, dynamic>> daftarSiswaTerpilih,
     required Map<String, dynamic> infoKelompok,
@@ -151,67 +150,119 @@ class HalaqohService extends GetxService {
   }
 
   Future<bool> inputNilaiMassal({
-    required Map<String, dynamic> infoKelompok,
-    required List<Map<String, dynamic>> semuaSiswaDiKelompok,
-    required List<String> daftarNisnTerpilih,
-    required Map<String, String> nilaiPerSiswa,
-    required Map<String, dynamic> templateData,
-    }) async {
-    if (daftarNisnTerpilih.isEmpty) {
-      Get.snackbar("Info", "Tidak ada siswa yang dipilih.");
-      return false;
-    }
-
-    // --- TAHAP 1: Simpan data nilai (Tidak ada perubahan di sini) ---
-    try {
-      final WriteBatch batch = _firestore.batch();
-      final DateTime now = DateTime.now();
-      final String docIdNilaiHarian = DateFormat('yyyy-MM-dd').format(now);
-      await batch.commit();
-
-      // --- [NOTIFIKASI] TAHAP 2: Buat notifikasi dengan path yang benar ---
-      try {
-        final WriteBatch notifBatch = _firestore.batch();
-        final siswaYangDinilai = semuaSiswaDiKelompok
-            .where((siswa) => daftarNisnTerpilih.contains(siswa['nisn']))
-            .toList();
-
-        for (var siswaData in siswaYangDinilai) {
-          final nisn = siswaData['nisn'] as String;
-          final namaSiswa = siswaData['namasiswa'] as String;
-          final nilaiInput = nilaiPerSiswa[nisn] ?? '';
-
-          if (nilaiInput.isNotEmpty) {
-            // [PERBAIKAN KUNCI] Path ini sekarang menunjuk ke koleksi 'siswa' utama.
-            final siswaDocRef = _firestore
-                .collection('Sekolah').doc(_idSekolah)
-                .collection('siswa').doc(nisn);
-
-            final notifDocRef = siswaDocRef.collection('notifikasi').doc();
-            final notifData = {
-              'judul': 'Nilai Harian Tahsin',
-              'isi': 'Ananda $namaSiswa baru saja mendapatkan nilai "$nilaiInput" dari ${infoKelompok['namapengampu']}.',
-              'tipe': 'NILAI_HALAQOH',
-              'tanggal': FieldValue.serverTimestamp(),
-              'isRead': false,
-              'deepLink': '/halaqoh/nilai_harian/$nisn',
-              'pengirim': infoKelompok['namapengampu'],
-            };
-
-            notifBatch.set(notifDocRef, notifData);
-            notifBatch.update(siswaDocRef, {'unreadNotificationCount': FieldValue.increment(1)});
-          }
+        required Map<String, dynamic> infoKelompok,
+        required List<Map<String, dynamic>> semuaSiswaDiKelompok,
+        required List<String> daftarNisnTerpilih,
+        required Map<String, String> nilaiPerSiswa,
+        required Map<String, dynamic> templateData,
+      }) async {
+        if (daftarNisnTerpilih.isEmpty) {
+            Get.snackbar("Info", "Tidak ada siswa yang dipilih.");
+            return false;
         }
-        await notifBatch.commit();
-        print("Log: Notifikasi dan counter berhasil dibuat ke path siswa utama.");
-      } catch (e) {
-        print("Error [Non-Fatal]: Gagal saat membuat notifikasi: $e");
-      }
 
-      return true;
-    } catch (e) {
-      Get.snackbar("Error Service", "Gagal menyimpan nilai massal: $e");
-      return false;
+        try {
+            final WriteBatch batch = _firestore.batch();
+            final DateTime now = DateTime.now();
+            final String docIdNilaiHarian = DateFormat('yyyy-MM-dd').format(now);
+
+            final siswaYangDinilai = semuaSiswaDiKelompok
+                .where((siswa) => daftarNisnTerpilih.contains(siswa['nisn']))
+                .toList();
+
+            int operationsCount = 0;
+
+            for (var siswaData in siswaYangDinilai) {
+                final nisn = siswaData['nisn'] as String;
+                final nilaiInput = nilaiPerSiswa[nisn]?.trim() ?? '';
+                final capaianBaru = templateData['capaian'] as String;
+
+                if (nilaiInput.isNotEmpty) {
+                    operationsCount++; 
+
+                    final refNilaiHarian = _getRefSiswaInduk(infoKelompok, nisn)
+                        .collection('nilai').doc(docIdNilaiHarian);
+
+                    final refSiswaUtama = _getRefSiswaInduk(infoKelompok, nisn);
+
+                    // [PERBAIKAN UTAMA #1: STRUKTUR DATA & TIPE DATA]
+                    // Kita definisikan field satu per satu agar sesuai dengan model NilaiHalaqohUmi
+                    final dataNilai = {
+                      'surat': templateData['surat'],
+                      'ayat': templateData['ayat'],
+                      'capaian': templateData['capaian'],
+                      'materi': templateData['materi'],
+                      'keterangan': templateData['keterangan'],
+
+                      // Mengonversi nilai dari String ke int sebelum disimpan
+                      'nilai': int.tryParse(nilaiInput) ?? 0, 
+
+                      'grade': _getGrade(int.tryParse(nilaiInput) ?? 0),
+                      'tanggal_input': now, // Menggunakan field 'tanggal_input' agar konsisten
+                      'diinput_oleh_id': _homeController.auth.currentUser!.uid,
+                      'diinput_oleh_nama': _homeController.infoUser['nama'] ?? _homeController.infoUser['alias'] ?? 'Pengampu',
+                      'id_kelompok': infoKelompok['fase'],
+                      'lokasi_saat_input': infoKelompok['lokasi_terakhir'] ?? infoKelompok['tempatmengaji'],
+                    };
+
+                    batch.set(refNilaiHarian, dataNilai, SetOptions(merge: true));
+
+                    // [PERBAIKAN UTAMA #2: NAMA FIELD CAPAIAN]
+                    // Update 'capaian_terakhir' agar dibaca oleh model SiswaHalaqoh
+                    if (capaianBaru.trim().isNotEmpty) {
+                        batch.update(refSiswaUtama, {
+                            'capaian': capaianBaru, // Tetap diupdate untuk konsistensi
+                            'capaian_terakhir': capaianBaru // Ini yang dibaca oleh UI utama
+                        });
+                    }
+                }
+            }
+
+            if (operationsCount > 0) {
+              await batch.commit();
+            } else {
+              Get.snackbar("Peringatan", "Tidak ada nilai yang diisi untuk siswa terpilih.");
+              return false;
+            }
+
+            // --- Logika Notifikasi (tidak perlu diubah) ---
+            // ... (sisa kode fungsi ini sama seperti milik Anda)
+            try {
+                final WriteBatch notifBatch = _firestore.batch();
+                int notifCount = 0; 
+                for (var siswaData in siswaYangDinilai) {
+                    final nisn = siswaData['nisn'] as String;
+                    final namaSiswa = siswaData['namasiswa'] as String;
+                    final nilaiInput = nilaiPerSiswa[nisn] ?? '';
+                    if (nilaiInput.isNotEmpty) {
+                        notifCount++;
+                        final siswaDocRef = _firestore.collection('Sekolah').doc(_idSekolah).collection('siswa').doc(nisn);
+                        final notifDocRef = siswaDocRef.collection('notifikasi').doc();
+                        notifBatch.set(notifDocRef, {
+                            'judul': 'Nilai Harian Tahsin',
+                            'isi': 'Ananda $namaSiswa baru saja mendapatkan nilai "$nilaiInput" dari ${infoKelompok['namapengampu']}.',
+                            'tipe': 'NILAI_HALAQOH', 'tanggal': FieldValue.serverTimestamp(), 'isRead': false,
+                            'deepLink': '/halaqoh/nilai_harian/$nisn', 'pengirim': infoKelompok['namapengampu'],
+                        });
+                        notifBatch.update(siswaDocRef, {'unreadNotificationCount': FieldValue.increment(1)});
+                    }
+                }
+                if (notifCount > 0) {
+                  await notifBatch.commit();
+                }
+            } catch (e) {
+                print("Error [Non-Fatal]: Gagal saat membuat notifikasi: $e");
+            }
+
+            return true;
+
+        } catch (e, stackTrace) {
+            print("--- ERROR KRITIS SAAT SIMPAN NILAI MASSAL ---");
+            print("Error: $e");
+            print("StackTrace: $stackTrace");
+            print("---------------------------------------------");
+            Get.snackbar("Error Service", "Gagal menyimpan nilai: $e");
+            return false;
     }
   }
 

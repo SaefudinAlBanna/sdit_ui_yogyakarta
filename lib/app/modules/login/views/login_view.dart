@@ -43,7 +43,7 @@ class LoginView extends GetView<LoginController> {
                     ),
                   ),
                   Text(
-                    "Silahkan login untuk melanjutkan",
+                    "V. 1.0.0",
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey.shade600,

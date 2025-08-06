@@ -614,68 +614,6 @@ class DaftarHalaqohnyaController extends GetxController
     }
   }
 
-    // Future<void> pindahHalaqoh(SiswaHalaqoh siswa, Map<String, dynamic> tujuan) async {
-    //   Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
-
-    //   try {
-    //     final String idTahunAjaran = homeC.idTahunAjaran.value!;
-    //     final String semesterAktif = homeC.semesterAktifId.value;
-
-    //     final refSiswaAsal = _getDaftarSiswaCollectionRef().doc(siswa.nisn);
-
-    //     final refSiswaTujuan = firestore
-    //         .collection('Sekolah').doc(homeC.idSekolah)
-    //         .collection('tahunajaran').doc(idTahunAjaran)
-    //         .collection('kelompokmengaji').doc(fase.value)
-    //         .collection('pengampu').doc(tujuan['idpengampu'])
-    //         .collection('tempat').doc(tujuan['namatempat'])
-    //         .collection('semester').doc(semesterAktif)
-    //         .collection('daftarsiswa').doc(siswa.nisn);
-
-    //     final refDiSiswaUtama = firestore
-    //         .collection('Sekolah').doc(homeC.idSekolah)
-    //         .collection('siswa').doc(siswa.nisn)
-    //         .collection('tahunajarankelompok').doc(idTahunAjaran)
-    //         .collection('semester').doc(semesterAktif)
-    //         .collection('kelompokmengaji').doc(fase.value);
-
-    //     WriteBatch batch = firestore.batch();
-
-    //     // Ambil data siswa asal
-    //     final siswaDoc = await refSiswaAsal.get();
-    //     final rawData = siswaDoc.data();
-
-    //     if (rawData == null || rawData is! Map<String, dynamic>) {
-    //       throw Exception("Data siswa sumber tidak ditemukan atau tidak valid.");
-    //     }
-
-    //     // Salin dan modifikasi data siswa
-    //     final Map<String, dynamic> siswaData = Map<String, dynamic>.from(rawData);
-
-    //     siswaData['namapengampu'] = tujuan['namapengampu'];
-    //     siswaData['idpengampu'] = tujuan['idpengampu'];
-    //     siswaData['tempatmengaji'] = tujuan['namatempat'];
-
-    //     // Tambahkan semua operasi batch
-    //     batch.set(refSiswaTujuan, siswaData);
-    //     batch.delete(refSiswaAsal);
-    //     batch.set(refDiSiswaUtama, {
-    //       'fase': fase.value,
-    //       'namapengampu': tujuan['namapengampu'],
-    //       'tempatmengaji': tujuan['namatempat'],
-    //     });
-
-    //     await batch.commit();
-
-    //     Get.back(); // Tutup loading dialog
-    //     Get.back(); // Kembali ke layar sebelumnya
-    //     Get.snackbar("Berhasil", "${siswa.namaSiswa} telah dipindahkan.");
-    //   } catch (e) {
-    //     Get.back(); // Tutup loading dialog jika error
-    //     Get.snackbar("Error", "Gagal memindahkan siswa: ${e.toString()}");
-    //   }
-    // }
-
     Future<void> pindahHalaqoh(SiswaHalaqoh siswa, Map<String, dynamic> tujuan) async {
       // 1. [BARU] Tutup dialog PEMILIHAN terlebih dahulu.
       Get.back();
